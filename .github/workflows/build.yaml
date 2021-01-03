@@ -38,6 +38,11 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
+      - name: Check License
+        uses: apache/skywalking-eyes@d7cc2d55e706869d52400f6bac146977439b2744
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Lint Codes
         run: make lint
 
