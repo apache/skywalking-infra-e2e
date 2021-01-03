@@ -11,7 +11,7 @@
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
+// Kind, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
 //
@@ -29,9 +29,10 @@ import (
 
 // Root represents the base command when called without any subcommands
 var Root = &cobra.Command{
-	Use:     "e2e command [flags]",
-	Short:   "The next generation End-to-End Testing framework",
-	Version: version,
+	Use:           "e2e command [flags]",
+	Short:         "The next generation End-to-End Testing framework",
+	Version:       version,
+	SilenceErrors: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -12,16 +12,19 @@
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
+// Kind, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
 package setup
 
 import (
-	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
@@ -34,20 +37,19 @@ func init() {
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
-	Run: func(cmd *cobra.Command, args []string) {
-		// check if env commands in PATH
-		if flags.Env == setup.COMPOSE {
-			if setup.Which(setup.COMPOSECOMMAND) != nil {
-				logger.Log.Errorf("command %s not found, is it in the PATH?", setup.COMPOSECOMMAND)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flags.Env == setup.Compose {
+			if util.Which(setup.ComposeCommand) != nil {
+				return fmt.Errorf("command %s not found in the PATH", setup.ComposeCommand)
 			}
 			logger.Log.Info("env for docker-compose not implemented")
-		} else if flags.Env == setup.KIND {
-			if setup.Which(setup.KINDCOMMAND) != nil {
-				logger.Log.Errorf("command %s not found, is it in the PATH?", setup.COMPOSECOMMAND)
+		} else if flags.Env == setup.Kind {
+			if err := setup.KindSetupInCommand(); err != nil {
+				return err
 			}
-			setup.KindSetupInCommand()
 		} else {
-			logger.Log.Errorf("No such env for setup: [%s]. Should use kind or compose instead", flags.Env)
+			return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
 		}
+		return nil
 	},
 }

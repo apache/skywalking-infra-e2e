@@ -26,7 +26,8 @@ import (
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Not implemented.")
+		return nil
 	},
 }

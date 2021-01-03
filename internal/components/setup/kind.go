@@ -11,7 +11,7 @@
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
+// Kind, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
 //
@@ -19,9 +19,10 @@
 package setup
 
 import (
-	"bytes"
-	"os/exec"
 	"strings"
+
+	kind "sigs.k8s.io/kind/cmd/kind/app"
+	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
 	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
@@ -35,8 +36,8 @@ type ExecResult struct {
 }
 
 const (
-	KIND        = "kind"
-	KINDCOMMAND = "kind"
+	Kind        = "kind"
+	KindCommand = "kind"
 )
 
 var (
@@ -45,48 +46,25 @@ var (
 )
 
 // setup for kind, invoke from command line
-func KindSetupInCommand() {
+func KindSetupInCommand() error {
 	kindConfigFile = flags.File
 
-	execResult := createKindCluster()
-	err := execResult.Error
-	if err != nil {
-		cmd := strings.Join(execResult.Command, " ")
-		logger.Log.Errorf("Kind cluster create exited abnormally whilst running [%s]\n"+
-			"err: %s\nstdout: %s\nstderr: %s", cmd, err, execResult.Stdout, execResult.StdErr)
-	} else {
-		defer cleanupKindCluster()
+	if err := createKindCluster(); err != nil {
+		return err
 	}
+	return nil
 }
 
-func kindExec(args []string) ExecResult {
-	cmd := exec.Command(KINDCOMMAND, args...)
-	var stdoutBytes, stderrBytes bytes.Buffer
-	cmd.Stdout = &stdoutBytes
-	cmd.Stderr = &stderrBytes
-
-	err := cmd.Run()
-	execCmd := []string{KINDCOMMAND}
-	execCmd = append(execCmd, args...)
-
-	return ExecResult{
-		Command: execCmd,
-		Error:   err,
-		Stdout:  stdoutBytes.String(),
-		StdErr:  stderrBytes.String(),
-	}
-}
-
-func createKindCluster() ExecResult {
+func createKindCluster() error {
 	args := []string{"create", "cluster", "--config", kindConfigFile}
+	// quiet mode to suppress status output, so that the error is not logged repeatedly
+	args = append(args, "--quiet")
 
 	logger.Log.Info("creating kind cluster...")
-	return kindExec(args)
-}
-
-func cleanupKindCluster() ExecResult {
-	args := []string{"delete", "cluster"}
-
-	logger.Log.Info("deleting kind cluster...")
-	return kindExec(args)
+	logger.Log.Debugf("cluster create commands: %s %s", KindCommand, strings.Join(args, " "))
+	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
+		return err
+	}
+	logger.Log.Info("create kind cluster succeed")
+	return nil
 }
