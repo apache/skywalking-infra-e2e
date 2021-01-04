@@ -16,13 +16,10 @@
 // under the License.
 //
 
-package util
+package constant
 
-import "os/exec"
-
-// Which check if binary is present in PATH.
-func Which(binary string) error {
-	_, err := exec.LookPath(binary)
-
-	return err
-}
+const (
+	Kind                   = "kind"
+	KindCommand            = "kind"
+	KindClusterDefaultName = "kind"
+)

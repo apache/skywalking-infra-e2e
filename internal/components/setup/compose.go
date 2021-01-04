@@ -17,8 +17,3 @@
 //
 
 package setup
-
-const (
-	Compose        = "compose"
-	ComposeCommand = "docker-compose"
-)

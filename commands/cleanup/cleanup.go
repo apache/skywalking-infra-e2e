@@ -20,14 +20,35 @@ package cleanup
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/components/cleanup"
+
 	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+
+	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
+
+func init() {
+	Cleanup.Flags().StringVar(&flags.Env, "env", "kind", "specify test environment")
+	Cleanup.Flags().StringVar(&flags.File, "file", "kind.yaml", "specify configuration file")
+}
 
 var Cleanup = &cobra.Command{
 	Use:   "cleanup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Not implemented.")
+		if flags.Env == constant.Compose {
+			logger.Log.Info("env for docker-compose not implemented")
+		} else if flags.Env == constant.Kind {
+			if err := cleanup.KindCleanupInCommand(); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", flags.Env)
+		}
+
 		return nil
 	},
 }

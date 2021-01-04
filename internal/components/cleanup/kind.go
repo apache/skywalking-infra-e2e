@@ -16,16 +16,18 @@
 // under the License.
 //
 
-package setup
+package cleanup
 
 import (
-	"strings"
+	"io/ioutil"
 
+	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"strings"
 
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
@@ -34,23 +36,52 @@ var (
 	kindConfigFile string
 )
 
-func KindSetupInCommand() error {
+type KindClusterNameConfig struct {
+	Name string
+}
+
+func KindCleanupInCommand() error {
 	kindConfigFile = flags.File
 
-	if err := createKindCluster(); err != nil {
+	if err := cleanKindCluster(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createKindCluster() error {
-	args := []string{"create", "cluster", "--config", kindConfigFile}
+func getKindClusterName() (name string, err error) {
+	data, err := ioutil.ReadFile(kindConfigFile)
+	if err != nil {
+		return "", err
+	}
 
-	logger.Log.Info("creating kind cluster...")
-	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
+	nameConfig := KindClusterNameConfig{}
+	err = yaml.Unmarshal(data, &nameConfig)
+	if err != nil {
+		return "", err
+	}
+
+	if nameConfig.Name == "" {
+		nameConfig.Name = constant.KindClusterDefaultName
+	}
+
+	return nameConfig.Name, nil
+}
+
+func cleanKindCluster() error {
+	clusterName, err := getKindClusterName()
+	if err != nil {
+		return err
+	}
+
+	args := []string{"delete", "cluster", "--name", clusterName}
+
+	logger.Log.Info("deleting kind cluster...")
+	logger.Log.Debugf("cluster delete commands: %s %s", constant.KindCommand, strings.Join(args, " "))
 	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
 		return err
 	}
-	logger.Log.Info("create kind cluster succeeded")
+	logger.Log.Info("delete kind cluster succeeded")
+
 	return nil
 }
