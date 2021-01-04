@@ -20,13 +20,38 @@ package setup
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+
 	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
+
+	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
+
+func init() {
+	Setup.Flags().StringVar(&flags.Env, "env", "kind", "specify test environment")
+	Setup.Flags().StringVar(&flags.File, "file", "kind.yaml", "specify configuration file")
+}
 
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Not implemented.")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flags.Env == constant.Compose {
+			if util.Which(constant.ComposeCommand) != nil {
+				return fmt.Errorf("command %s not found in the PATH", constant.ComposeCommand)
+			}
+			logger.Log.Info("env for docker-compose not implemented")
+		} else if flags.Env == constant.Kind {
+			if err := setup.KindSetupInCommand(); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
+		}
+		return nil
 	},
 }

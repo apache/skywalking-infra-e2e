@@ -26,7 +26,8 @@ import (
 var Trigger = &cobra.Command{
 	Use:   "trigger",
 	Short: "",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Not implemented.")
+		return nil
 	},
 }

@@ -29,9 +29,11 @@ import (
 
 // Root represents the base command when called without any subcommands
 var Root = &cobra.Command{
-	Use:     "e2e command [flags]",
-	Short:   "The next generation End-to-End Testing framework",
-	Version: version,
+	Use:           "e2e command [flags]",
+	Short:         "The next generation End-to-End Testing framework",
+	Version:       version,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,40 +14,43 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package cleanup
+//
+
+package setup
 
 import (
-	"fmt"
+	"strings"
 
-	"github.com/apache/skywalking-infra-e2e/internal/components/cleanup"
-
-	"github.com/spf13/cobra"
+	kind "sigs.k8s.io/kind/cmd/kind/app"
+	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
 	"github.com/apache/skywalking-infra-e2e/internal/flags"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-func init() {
-	Cleanup.Flags().StringVar(&flags.Env, "env", "kind", "specify test environment")
-	Cleanup.Flags().StringVar(&flags.File, "file", "kind.yaml", "specify configuration file")
+var (
+	kindConfigFile string
+)
+
+func KindSetupInCommand() error {
+	kindConfigFile = flags.File
+
+	if err := createKindCluster(); err != nil {
+		return err
+	}
+	return nil
 }
 
-var Cleanup = &cobra.Command{
-	Use:   "cleanup",
-	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if flags.Env == constant.Compose {
-			logger.Log.Info("env for docker-compose not implemented")
-		} else if flags.Env == constant.Kind {
-			if err := cleanup.KindCleanupInCommand(); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", flags.Env)
-		}
+func createKindCluster() error {
+	args := []string{"create", "cluster", "--config", kindConfigFile}
 
-		return nil
-	},
+	logger.Log.Info("creating kind cluster...")
+	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
+	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
+		return err
+	}
+	logger.Log.Info("create kind cluster succeeded")
+	return nil
 }

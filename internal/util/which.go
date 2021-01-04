@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,19 +14,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-package verify
+//
 
-import (
-	"fmt"
+package util
 
-	"github.com/spf13/cobra"
-)
+import "os/exec"
 
-var Verify = &cobra.Command{
-	Use:   "verify",
-	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Not implemented.")
-		return nil
-	},
+// Which checks if binary is present in PATH.
+func Which(binary string) error {
+	_, err := exec.LookPath(binary)
+
+	return err
 }
