@@ -218,6 +218,7 @@ The following components are provided under the Apache License. See project link
 The text of each license is the standard Apache 2.0 license.
 
     cobra v1.1.1: https://github.com/spf13/cobra Apache 2.0
+    kind v0.9.0: https://github.com/kubernetes-sigs/kind Apache 2.0
 
 ========================================================================
 MIT licenses

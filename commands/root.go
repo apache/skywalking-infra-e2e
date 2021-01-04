@@ -33,6 +33,7 @@ var Root = &cobra.Command{
 	Short:         "The next generation End-to-End Testing framework",
 	Version:       version,
 	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -45,7 +45,6 @@ var (
 	kindConfigFile string
 )
 
-// setup for kind, invoke from command line
 func KindSetupInCommand() error {
 	kindConfigFile = flags.File
 
@@ -57,8 +56,6 @@ func KindSetupInCommand() error {
 
 func createKindCluster() error {
 	args := []string{"create", "cluster", "--config", kindConfigFile}
-	// quiet mode to suppress status output, so that the error is not logged repeatedly
-	args = append(args, "--quiet")
 
 	logger.Log.Info("creating kind cluster...")
 	logger.Log.Debugf("cluster create commands: %s %s", KindCommand, strings.Join(args, " "))
