@@ -16,9 +16,32 @@
 // under the License.
 //
 
-package flags
+package config
 
-var Env string
-var File string
-var Manifests string
-var WaitFor string
+type E2EConfig struct {
+	Setup Setup `yaml:"setup"`
+}
+
+type Setup struct {
+	Env       string     `yaml:"env"`
+	File      string     `yaml:"file"`
+	Manifests []Manifest `yaml:"manifests"`
+	Run       []Run      `yaml:"run"`
+	Timeout   int        `yaml:"timeout"`
+}
+
+type Manifest struct {
+	Path  string `yaml:"path"`
+	Waits []Wait `yaml:"wait"`
+}
+
+type Run struct {
+	Command string `yaml:"command"`
+	Waits   []Wait `yaml:"wait"`
+}
+
+type Wait struct {
+	Namespace     string `yaml:"namespace"`
+	LabelSelector string `yaml:"label-selector"`
+	For           string `yaml:"for"`
+}

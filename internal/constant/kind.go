@@ -18,8 +18,14 @@
 
 package constant
 
+import "time"
+
 const (
 	Kind                   = "kind"
 	KindCommand            = "kind"
 	KindClusterDefaultName = "kind"
+	E2EDefaultFile         = "e2e.yaml"
+	K8sClusterConfigFile   = "e2e-k8s.config"
+	WaitForPodReady        = "pod/ready"
+	DefaultWaitTimeout     = 600 * time.Second
 )

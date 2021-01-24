@@ -19,6 +19,11 @@ package setup
 
 import (
 	"fmt"
+	"io/ioutil"
+
+	"gopkg.in/yaml.v2"
+
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 
@@ -32,8 +37,10 @@ import (
 )
 
 func init() {
-	Setup.Flags().StringVar(&flags.Env, "env", "kind", "specify test environment")
-	Setup.Flags().StringVar(&flags.File, "file", "kind.yaml", "specify configuration file")
+	Setup.Flags().StringVar(&flags.Env, "env", "", "specify test environment")
+	Setup.Flags().StringVar(&flags.File, "file", "", "specify configuration file")
+	Setup.Flags().StringVar(&flags.Manifests, "manifests", "", "specify the resources files/directories to apply")
+	Setup.Flags().StringVar(&flags.WaitFor, "wait-for", "", "specify the wait-for strategy")
 }
 
 var Setup = &cobra.Command{
@@ -49,9 +56,42 @@ var Setup = &cobra.Command{
 			if err := setup.KindSetupInCommand(); err != nil {
 				return err
 			}
+		} else if flags.Env == "" {
+			// setup according e2e.yaml
+			err := setupAccordingE2E()
+			if err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
 		}
 		return nil
 	},
+}
+
+func setupAccordingE2E() error {
+	// setup according e2e.yaml
+	e2eFile := constant.E2EDefaultFile
+	logger.Log.Infof("reading e2e config file:%s", e2eFile)
+	data, err := ioutil.ReadFile(e2eFile)
+	if err != nil {
+		return err
+	}
+
+	e2eConfig := config.E2EConfig{}
+	err = yaml.Unmarshal(data, &e2eConfig)
+	if err != nil {
+		return err
+	}
+
+	if e2eConfig.Setup.Env == constant.Kind {
+		err = setup.KindSetup(&e2eConfig)
+		return err
+	} else if e2eConfig.Setup.Env == constant.Compose {
+		logger.Log.Info("env for docker-compose not implemented")
+	} else {
+		return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
+	}
+
+	return nil
 }
