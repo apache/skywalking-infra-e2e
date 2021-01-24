@@ -20,7 +20,7 @@ package util
 
 import "os/exec"
 
-// Which check if binary is present in PATH.
+// Which checks if binary is present in PATH.
 func Which(binary string) error {
 	_, err := exec.LookPath(binary)
 
