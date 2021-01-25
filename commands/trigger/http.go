@@ -18,38 +18,58 @@
 package trigger
 
 import (
-	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
-	"github.com/spf13/cobra"
-
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/flags"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-func init() {
-	Trigger.Flags().StringVar(&flags.Interval, "interval", "3s", "trigger the action every N seconds")
-	Trigger.Flags().IntVar(&flags.Times, "times", 0, "how many times to trigger the action, 0=infinite")
-	Trigger.Flags().StringVar(&flags.Action, "action", "", "the action of the trigger")
-	Trigger.Flags().StringVar(&flags.HttpUrl, "url", "", "the url of the http action")
-	Trigger.Flags().StringVar(&flags.HttpMethod, "method", "get", "the method of the http action")
+type httpAction struct {
+	interval string
+	times    int
+	url      string
+	method   string
 }
 
-var Trigger = &cobra.Command{
-	Use:   "trigger",
-	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var action Action
-		if strings.EqualFold(flags.Action, constant.ActionHTTP) {
-			action = NewHTTPAction()
-		}
-		if action == nil {
-			return fmt.Errorf("no such action for args")
-		}
-		return action.Do()
-	},
+func NewHTTPAction() Action {
+	return &httpAction{
+		interval: flags.Interval,
+		times:    flags.Times,
+		url:      flags.HttpUrl,
+		method:   strings.ToUpper(flags.HttpMethod),
+	}
 }
 
-type Action interface {
-	Do() error
+func (h *httpAction) Do() error {
+
+	t := time.NewTicker(time.Second)
+	c := 1
+	client := &http.Client{}
+	request, err := http.NewRequest(h.method, h.url, nil)
+	if err != nil {
+		logger.Log.Errorf("new request error %v", err)
+		return err
+	}
+
+	for range t.C {
+		response, err := client.Do(request)
+		if err != nil {
+			logger.Log.Errorf("do request error %v", err)
+			return err
+		}
+		response.Body.Close()
+
+		logger.Log.Infof("do request %v response http code %v", h.url, response.StatusCode)
+
+		if h.times > 0 {
+			if h.times <= c {
+				break
+			}
+			c++
+		}
+	}
+
+	return nil
 }
