@@ -37,9 +37,6 @@ func (c *SimpleRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryI
 		return nil, err
 	}
 
-	// The more groups you have, the more discovery requests you need to make.
-	// given 25 groups (our groups + a few custom conf) with one-ish version each, discovery needs to make 50 requests
-	// double it just so we don't end up here again for a while.  This config is only used for discovery.
 	config.Burst = 100
 
 	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
@@ -59,8 +56,6 @@ func (c *SimpleRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 
 func (c *SimpleRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	// use the standard defaults for this client command
-	// DEPRECATED: remove and replace with something more accurate
 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
 
 	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
