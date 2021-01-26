@@ -47,24 +47,31 @@ var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var setUpError error
 		if flags.Env == constant.Compose {
 			if util.Which(constant.ComposeCommand) != nil {
-				return fmt.Errorf("command %s not found in the PATH", constant.ComposeCommand)
+				setUpError = fmt.Errorf("command %s not found in the PATH", constant.ComposeCommand)
 			}
 			logger.Log.Info("env for docker-compose not implemented")
 		} else if flags.Env == constant.Kind {
 			if err := setup.KindSetupInCommand(); err != nil {
-				return err
+				setUpError = err
 			}
 		} else if flags.Env == "" {
 			// setup according e2e.yaml
 			err := setupAccordingE2E()
 			if err != nil {
-				return err
+				setUpError = err
 			}
 		} else {
-			return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
+			setUpError = fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
 		}
+
+		if setUpError != nil {
+			setUpError = fmt.Errorf("[Setup] %s", setUpError)
+			return setUpError
+		}
+
 		return nil
 	},
 }

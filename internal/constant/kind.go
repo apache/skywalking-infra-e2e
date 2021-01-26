@@ -26,6 +26,11 @@ const (
 	KindClusterDefaultName = "kind"
 	E2EDefaultFile         = "e2e.yaml"
 	K8sClusterConfigFile   = "e2e-k8s.config"
-	WaitForPodReady        = "pod/ready"
 	DefaultWaitTimeout     = 600 * time.Second
+	AWeekWaitTimeout       = 7 * 24 * 60 * 60 * time.Second
+)
+
+var (
+	True  = true
+	False = false
 )

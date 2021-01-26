@@ -42,6 +42,7 @@ type Run struct {
 
 type Wait struct {
 	Namespace     string `yaml:"namespace"`
+	Resource      string `yaml:"resource"`
 	LabelSelector string `yaml:"label-selector"`
 	For           string `yaml:"for"`
 }

@@ -9,7 +9,9 @@ require (
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.0
 	k8s.io/apimachinery v0.19.0
+	k8s.io/cli-runtime v0.19.0
 	k8s.io/client-go v0.19.0
+	k8s.io/kubectl v0.19.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	sigs.k8s.io/kind v0.9.0
 )

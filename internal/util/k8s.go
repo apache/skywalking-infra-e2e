@@ -45,8 +45,8 @@ import (
 )
 
 // ConnectToK8sCluster gets clientSet and dynamic client from k8s config file.
-func ConnectToK8sCluster(k8sConfigFile string) (c *kubernetes.Clientset, dc dynamic.Interface, err error) {
-	config, err := clientcmd.BuildConfigFromFlags("", k8sConfigFile)
+func ConnectToK8sCluster(kubeConfigPath string) (c *kubernetes.Clientset, dc dynamic.Interface, err error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	if err != nil {
 		return nil, nil, err
 	}

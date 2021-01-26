@@ -20,8 +20,13 @@ package setup
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"time"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	ctlwait "k8s.io/kubectl/pkg/cmd/wait"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -43,7 +48,7 @@ import (
 
 var (
 	kindConfigFile string
-	k8sConfigFile  string
+	kubeConfigPath string
 )
 
 // KindSetup sets up environment according to e2e.yaml.
@@ -75,9 +80,9 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
-	c, dc, err := util.ConnectToK8sCluster(k8sConfigFile)
+	c, dc, err := util.ConnectToK8sCluster(kubeConfigPath)
 	if err != nil {
-		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", k8sConfigFile)
+		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", kubeConfigPath)
 		return err
 	}
 
@@ -97,9 +102,9 @@ func KindSetupInCommand() error {
 		return err
 	}
 
-	c, dc, err := util.ConnectToK8sCluster(k8sConfigFile)
+	c, dc, err := util.ConnectToK8sCluster(kubeConfigPath)
 	if err != nil {
-		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", k8sConfigFile)
+		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", kubeConfigPath)
 		return err
 	}
 
@@ -123,8 +128,8 @@ func KindSetupInCommand() error {
 
 func createKindCluster() error {
 	// the config file name of the k8s cluster that kind create
-	k8sConfigFile = constant.K8sClusterConfigFile
-	args := []string{"create", "cluster", "--config", kindConfigFile, "--kubeconfig", k8sConfigFile}
+	kubeConfigPath = constant.K8sClusterConfigFile
+	args := []string{"create", "cluster", "--config", kindConfigFile, "--kubeconfig", kubeConfigPath}
 
 	logger.Log.Info("creating kind cluster...")
 	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
@@ -139,22 +144,17 @@ func createKindCluster() error {
 func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manifests []config.Manifest, timeout time.Duration) error {
 	waitSet := util.NewWaitSet(timeout)
 
+	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
+	if err != nil {
+		return err
+	}
+
 	for idx := range manifests {
 		manifest := manifests[idx]
 		waits := manifest.Waits
-		files, err := util.GetManifests(manifest.Path)
+		err := createByManifest(c, dc, manifest)
 		if err != nil {
-			logger.Log.Error("get manifests from command line argument failed")
 			return err
-		}
-
-		for _, f := range files {
-			logger.Log.Infof("creating manifest %s", f)
-			err = util.OperateManifest(c, dc, f, apiv1.Create)
-			if err != nil {
-				logger.Log.Errorf("create manifest %s failed", f)
-				return err
-			}
 		}
 
 		if waits == nil {
@@ -163,14 +163,42 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 		}
 
 		for _, wait := range waits {
-			switch wait.For {
-			case constant.WaitForPodReady:
-				logger.Log.Debugf("waiting manifest [%s] according to wait strategies: %+v", manifest.Path, wait)
-				waitSet.WaitGroup.Add(1)
-				go waitForPodsReady(c, waitSet, wait.Namespace, wait.LabelSelector)
-			default:
-				return fmt.Errorf("no such wait strategy: %s", wait.For)
+			if strings.Contains(wait.Resource, "/") && wait.LabelSelector != "" {
+				return fmt.Errorf("when passing resource.group/resource.name in Resource, the labelSelector can not be set at the same time")
 			}
+
+			logger.Log.Infof("waiting for %+v", wait)
+
+			restClientGetter := util.NewSimpleRESTClientGetter(wait.Namespace, string(kubeConfigYaml))
+			silenceOutput, _ := os.Open(os.DevNull)
+			ioStreams := genericclioptions.IOStreams{In: os.Stdin, Out: silenceOutput, ErrOut: os.Stderr}
+			waitFlags := ctlwait.NewWaitFlags(restClientGetter, ioStreams)
+			// global timeout is set in e2e.yaml
+			waitFlags.Timeout = constant.AWeekWaitTimeout
+			waitFlags.ForCondition = wait.For
+
+			var args []string
+			// resource.group/resource.name OR resource.group
+			if wait.Resource != "" {
+				args = append(args, wait.Resource)
+			} else {
+				return fmt.Errorf("resource must be provided in wait block")
+			}
+
+			if wait.LabelSelector != "" {
+				waitFlags.ResourceBuilderFlags.LabelSelector = &wait.LabelSelector
+			} else if !strings.Contains(wait.Resource, "/") {
+				// if labelSelector is nil and resource only provide resource.group, check all resources.
+				waitFlags.ResourceBuilderFlags.All = &constant.True
+			}
+
+			options, err := waitFlags.ToOptions(args)
+			if err != nil {
+				return err
+			}
+
+			waitSet.WaitGroup.Add(1)
+			go concurrentlyWait(wait, options, waitSet)
 		}
 	}
 
@@ -190,4 +218,33 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 	}
 
 	return nil
+}
+
+func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
+	files, err := util.GetManifests(manifest.Path)
+	if err != nil {
+		logger.Log.Error("get manifests from command line argument failed")
+		return err
+	}
+
+	for _, f := range files {
+		logger.Log.Infof("creating manifest %s", f)
+		err = util.OperateManifest(c, dc, f, apiv1.Create)
+		if err != nil {
+			logger.Log.Errorf("create manifest %s failed", f)
+			return err
+		}
+	}
+	return nil
+}
+
+func concurrentlyWait(wait config.Wait, options *ctlwait.WaitOptions, waitSet *util.WaitSet) {
+	defer waitSet.WaitGroup.Done()
+
+	err := options.RunWait()
+	if err != nil {
+		err = fmt.Errorf("wait strategy :%+v, err: %s", wait, err)
+		waitSet.ErrChan <- err
+	}
+	logger.Log.Infof("wait %+v condition met", wait)
 }
