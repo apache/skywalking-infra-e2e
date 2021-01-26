@@ -222,7 +222,9 @@ The text of each license is the standard Apache 2.0 license.
     yaml v2.3.0: https://github.com/go-yaml/yaml Apache 2.0
     api v0.19.0: https://github.com/kubernetes/api Apache 2.0
     apimachinery v0.19.0: https://github.com/kubernetes/apimachinery Apache 2.0
+    cli-runtime v0.19.0: https://github.com/kubernetes/cli-runtime Apache 2.0
     client-go v0.19.0 https://github.com/kubernetes/client-go Apache 2.0
+    kubectl v0.19.0: https://github.com/kubernetes/kubectl Apache 2.0
     utils v0.0.0-20201110183641-67b214c5f920: https://github.com/kubernetes/utils Apache 2.0
 
 ========================================================================
