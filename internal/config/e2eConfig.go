@@ -18,6 +18,7 @@
 
 package config
 
+// E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
 	Setup Setup `yaml:"setup"`
 }
@@ -26,8 +27,9 @@ type Setup struct {
 	Env       string     `yaml:"env"`
 	File      string     `yaml:"file"`
 	Manifests []Manifest `yaml:"manifests"`
-	Run       []Run      `yaml:"run"`
-	Timeout   int        `yaml:"timeout"`
+	// Run is not supported yet
+	Run     []Run `yaml:"run"`
+	Timeout int   `yaml:"timeout"`
 }
 
 type Manifest struct {

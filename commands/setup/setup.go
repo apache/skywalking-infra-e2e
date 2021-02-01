@@ -19,9 +19,6 @@ package setup
 
 import (
 	"fmt"
-	"io/ioutil"
-
-	"gopkg.in/yaml.v2"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 
@@ -77,22 +74,15 @@ var Setup = &cobra.Command{
 }
 
 func setupAccordingE2E() error {
-	// setup according e2e.yaml
-	e2eFile := constant.E2EDefaultFile
-	logger.Log.Infof("reading e2e config file:%s", e2eFile)
-	data, err := ioutil.ReadFile(e2eFile)
+	err := config.ReadGlobalConfigFile(constant.E2EDefaultFile)
 	if err != nil {
 		return err
 	}
 
-	e2eConfig := config.E2EConfig{}
-	err = yaml.Unmarshal(data, &e2eConfig)
-	if err != nil {
-		return err
-	}
+	e2eConfig := config.GlobalConfig.E2EConfig
 
 	if e2eConfig.Setup.Env == constant.Kind {
-		err = setup.KindSetup(&e2eConfig)
+		err := setup.KindSetup(&e2eConfig)
 		return err
 	} else if e2eConfig.Setup.Env == constant.Compose {
 		logger.Log.Info("env for docker-compose not implemented")
