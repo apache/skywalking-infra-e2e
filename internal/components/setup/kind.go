@@ -46,25 +46,15 @@ import (
 )
 
 var (
-	kindConfigFile string
+	kindConfigPath string
 	kubeConfigPath string
 )
 
 // KindSetup sets up environment according to e2e.yaml.
 func KindSetup(e2eConfig *config.E2EConfig) error {
-	kindConfigFile = e2eConfig.Setup.File
+	kindConfigPath = e2eConfig.Setup.File
 
-	timeout := e2eConfig.Setup.Timeout
-	var waitTimeout time.Duration
-	if timeout == 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
-	}
-
-	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
-
-	if kindConfigFile == "" {
+	if kindConfigPath == "" {
 		return fmt.Errorf("no kind config file was provided")
 	}
 
@@ -75,7 +65,17 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return nil
 	}
 
-	if err := createKindCluster(); err != nil {
+	timeout := e2eConfig.Setup.Timeout
+	var waitTimeout time.Duration
+	if timeout <= 0 {
+		waitTimeout = constant.DefaultWaitTimeout
+	} else {
+		waitTimeout = time.Duration(timeout) * time.Second
+	}
+
+	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
+
+	if err := createKindCluster(kindConfigPath); err != nil {
 		return err
 	}
 
@@ -92,10 +92,10 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	return nil
 }
 
-func createKindCluster() error {
+func createKindCluster(kindConfigPath string) error {
 	// the config file name of the k8s cluster that kind create
 	kubeConfigPath = constant.K8sClusterConfigFile
-	args := []string{"create", "cluster", "--config", kindConfigFile, "--kubeconfig", kubeConfigPath}
+	args := []string{"create", "cluster", "--config", kindConfigPath, "--kubeconfig", kubeConfigPath}
 
 	logger.Log.Info("creating kind cluster...")
 	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
@@ -123,7 +123,8 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 			return err
 		}
 
-		if waits == nil {
+		// len() for nil slices is defined as zero
+		if len(waits) == 0 {
 			logger.Log.Info("no wait-for strategy is provided")
 			continue
 		}
@@ -133,14 +134,12 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 				return fmt.Errorf("when passing resource.group/resource.name in Resource, the labelSelector can not be set at the same time")
 			}
 
-			logger.Log.Infof("waiting for %+v", wait)
-
 			restClientGetter := util.NewSimpleRESTClientGetter(wait.Namespace, string(kubeConfigYaml))
 			silenceOutput, _ := os.Open(os.DevNull)
 			ioStreams := genericclioptions.IOStreams{In: os.Stdin, Out: silenceOutput, ErrOut: os.Stderr}
 			waitFlags := ctlwait.NewWaitFlags(restClientGetter, ioStreams)
 			// global timeout is set in e2e.yaml
-			waitFlags.Timeout = constant.AWeekWaitTimeout
+			waitFlags.Timeout = constant.SingleDefaultWaitTimeout
 			waitFlags.ForCondition = wait.For
 
 			var args []string
@@ -163,6 +162,7 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 				return err
 			}
 
+			logger.Log.Infof("waiting for %+v", wait)
 			waitSet.WaitGroup.Add(1)
 			go concurrentlyWait(wait, options, waitSet)
 		}

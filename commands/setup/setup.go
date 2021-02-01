@@ -53,7 +53,8 @@ func setupAccordingE2E() error {
 			return err
 		}
 	} else if e2eConfig.Setup.Env == constant.Compose {
-		logger.Log.Info("env for docker-compose not implemented")
+		logger.Log.Warn("env for docker-compose not implemented")
+		return nil
 	} else {
 		return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
 	}

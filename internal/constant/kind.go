@@ -21,13 +21,13 @@ package constant
 import "time"
 
 const (
-	Kind                   = "kind"
-	KindCommand            = "kind"
-	KindClusterDefaultName = "kind"
-	E2EDefaultFile         = "e2e.yaml"
-	K8sClusterConfigFile   = "e2e-k8s.config"
-	DefaultWaitTimeout     = 600 * time.Second
-	AWeekWaitTimeout       = 7 * 24 * 60 * 60 * time.Second
+	Kind                     = "kind"
+	KindCommand              = "kind"
+	KindClusterDefaultName   = "kind"
+	E2EDefaultFile           = "e2e.yaml"
+	K8sClusterConfigFile     = "e2e-k8s.config"
+	DefaultWaitTimeout       = 600 * time.Second
+	SingleDefaultWaitTimeout = 30 * 60 * time.Second
 )
 
 var (

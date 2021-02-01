@@ -44,22 +44,22 @@ func ReadGlobalConfigFile(configFilePath string) error {
 	}
 
 	e2eFile := configFilePath
-	if util.PathExist(e2eFile) {
-		// other command should check if global config is ready.
-		data, err := ioutil.ReadFile(e2eFile)
-		if err != nil {
-			return fmt.Errorf("read e2e config file %s error: %s", e2eFile, err)
-		}
-		e2eConfigObject := E2EConfig{}
-		err = yaml.Unmarshal(data, &e2eConfigObject)
-		if err != nil {
-			return fmt.Errorf("unmarshal e2e config file %s error: %s", e2eFile, err)
-		}
-		GlobalConfig.E2EConfig = e2eConfigObject
-		GlobalConfig.Ready = true
-	} else {
+
+	if !util.PathExist(e2eFile) {
 		return fmt.Errorf("e2e config file %s not exist", e2eFile)
 	}
+
+	data, err := ioutil.ReadFile(e2eFile)
+	if err != nil {
+		return fmt.Errorf("read e2e config file %s error: %s", e2eFile, err)
+	}
+	e2eConfigObject := E2EConfig{}
+	err = yaml.Unmarshal(data, &e2eConfigObject)
+	if err != nil {
+		return fmt.Errorf("unmarshal e2e config file %s error: %s", e2eFile, err)
+	}
+	GlobalConfig.E2EConfig = e2eConfigObject
+	GlobalConfig.Ready = true
 
 	if !GlobalConfig.Ready {
 		return fmt.Errorf("e2e config read failed")
