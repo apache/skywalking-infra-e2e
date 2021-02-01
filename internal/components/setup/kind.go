@@ -42,7 +42,6 @@ import (
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
@@ -90,39 +89,6 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// KindSetupInCommand hasn't completed yet.
-func KindSetupInCommand() error {
-	kindConfigFile = flags.File
-	manifests := flags.Manifests
-
-	if err := createKindCluster(); err != nil {
-		return err
-	}
-
-	c, dc, err := util.ConnectToK8sCluster(kubeConfigPath)
-	if err != nil {
-		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", kubeConfigPath)
-		return err
-	}
-
-	files, err := util.GetManifests(manifests)
-	if err != nil {
-		logger.Log.Error("get manifests from command line argument failed")
-		return err
-	}
-
-	for _, f := range files {
-		logger.Log.Infof("creating manifest %s", f)
-		err = util.OperateManifest(c, dc, f, apiv1.Create)
-		if err != nil {
-			logger.Log.Errorf("create manifest %s in k8s cluster failed", f)
-			return err
-		}
-	}
-
 	return nil
 }
 

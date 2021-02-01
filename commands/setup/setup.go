@@ -29,62 +29,29 @@ import (
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-	"github.com/apache/skywalking-infra-e2e/internal/util"
-
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
-
-func init() {
-	Setup.Flags().StringVar(&flags.Env, "env", "", "specify test environment")
-	Setup.Flags().StringVar(&flags.File, "file", "", "specify configuration file")
-	Setup.Flags().StringVar(&flags.Manifests, "manifests", "", "specify the resources files/directories to apply")
-	Setup.Flags().StringVar(&flags.WaitFor, "wait-for", "", "specify the wait-for strategy")
-}
 
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var setUpError error
-		if flags.Env == constant.Compose {
-			if util.Which(constant.ComposeCommand) != nil {
-				setUpError = fmt.Errorf("command %s not found in the PATH", constant.ComposeCommand)
-			}
-			logger.Log.Info("env for docker-compose not implemented")
-		} else if flags.Env == constant.Kind {
-			if err := setup.KindSetupInCommand(); err != nil {
-				setUpError = err
-			}
-		} else if flags.Env == "" {
-			// setup according e2e.yaml
-			err := setupAccordingE2E()
-			if err != nil {
-				setUpError = err
-			}
-		} else {
-			setUpError = fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", flags.Env)
+		err := setupAccordingE2E()
+		if err != nil {
+			err = fmt.Errorf("[Setup] %s", err)
+			return err
 		}
-
-		if setUpError != nil {
-			setUpError = fmt.Errorf("[Setup] %s", setUpError)
-			return setUpError
-		}
-
 		return nil
 	},
 }
 
 func setupAccordingE2E() error {
-	err := config.ReadGlobalConfigFile(constant.E2EDefaultFile)
-	if err != nil {
-		return err
-	}
-
 	e2eConfig := config.GlobalConfig.E2EConfig
 
 	if e2eConfig.Setup.Env == constant.Kind {
 		err := setup.KindSetup(&e2eConfig)
-		return err
+		if err != nil {
+			return err
+		}
 	} else if e2eConfig.Setup.Env == constant.Compose {
 		logger.Log.Info("env for docker-compose not implemented")
 	} else {

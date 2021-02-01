@@ -17,8 +17,3 @@
 //
 
 package flags
-
-var Env string
-var File string
-var Manifests string
-var WaitFor string

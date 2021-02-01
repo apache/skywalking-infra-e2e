@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/apache/skywalking-infra-e2e/internal/config"
+
 	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
@@ -29,23 +31,17 @@ import (
 	"strings"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-)
-
-var (
-	kindConfigFile string
-	k8sConfigFile  string
 )
 
 type KindClusterNameConfig struct {
 	Name string
 }
 
-func KindCleanupInCommand() error {
-	kindConfigFile = flags.File
+func KindCleanUp(e2eConfig *config.E2EConfig) error {
+	kindConfigFilePath := e2eConfig.Setup.File
 
-	k8sConfigFile = constant.K8sClusterConfigFile
+	k8sConfigFile := constant.K8sClusterConfigFile
 
 	logger.Log.Infof("deleting k8s cluster config file:%s", k8sConfigFile)
 	err := os.Remove(k8sConfigFile)
@@ -55,7 +51,7 @@ func KindCleanupInCommand() error {
 	}
 
 	logger.Log.Info("deleting kind cluster...")
-	if err := cleanKindCluster(); err != nil {
+	if err := cleanKindCluster(kindConfigFilePath); err != nil {
 		logger.Log.Error("delete kind cluster failed")
 		return err
 	}
@@ -64,8 +60,8 @@ func KindCleanupInCommand() error {
 	return nil
 }
 
-func getKindClusterName() (name string, err error) {
-	data, err := ioutil.ReadFile(kindConfigFile)
+func getKindClusterName(kindConfigFilePath string) (name string, err error) {
+	data, err := ioutil.ReadFile(kindConfigFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -83,8 +79,8 @@ func getKindClusterName() (name string, err error) {
 	return nameConfig.Name, nil
 }
 
-func cleanKindCluster() error {
-	clusterName, err := getKindClusterName()
+func cleanKindCluster(kindConfigFilePath string) error {
+	clusterName, err := getKindClusterName(kindConfigFilePath)
 	if err != nil {
 		return err
 	}
