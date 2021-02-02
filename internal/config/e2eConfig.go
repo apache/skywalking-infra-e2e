@@ -16,25 +16,35 @@
 // under the License.
 //
 
-package util
+package config
 
-import (
-	"os"
-	"os/exec"
-)
-
-// Which checks if binary is present in PATH.
-func Which(binary string) error {
-	_, err := exec.LookPath(binary)
-
-	return err
+// E2EConfig corresponds to configuration file e2e.yaml.
+type E2EConfig struct {
+	Setup Setup `yaml:"setup"`
 }
 
-// PathExist checks if a file/directory is exist.
-func PathExist(_path string) bool {
-	_, err := os.Stat(_path)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
+type Setup struct {
+	Env       string     `yaml:"env"`
+	File      string     `yaml:"file"`
+	Manifests []Manifest `yaml:"manifests"`
+	// Run is not supported yet
+	Run     []Run `yaml:"run"`
+	Timeout int   `yaml:"timeout"`
+}
+
+type Manifest struct {
+	Path  string `yaml:"path"`
+	Waits []Wait `yaml:"wait"`
+}
+
+type Run struct {
+	Command string `yaml:"command"`
+	Waits   []Wait `yaml:"wait"`
+}
+
+type Wait struct {
+	Namespace     string `yaml:"namespace"`
+	Resource      string `yaml:"resource"`
+	LabelSelector string `yaml:"label-selector"`
+	For           string `yaml:"for"`
 }

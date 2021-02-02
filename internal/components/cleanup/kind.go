@@ -20,6 +20,9 @@ package cleanup
 
 import (
 	"io/ioutil"
+	"os"
+
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 
 	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
@@ -28,29 +31,36 @@ import (
 	"strings"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-)
-
-var (
-	kindConfigFile string
 )
 
 type KindClusterNameConfig struct {
 	Name string
 }
 
-func KindCleanupInCommand() error {
-	kindConfigFile = flags.File
+func KindCleanUp(e2eConfig *config.E2EConfig) error {
+	kindConfigFilePath := e2eConfig.Setup.File
 
-	if err := cleanKindCluster(); err != nil {
+	logger.Log.Info("deleting kind cluster...")
+	if err := cleanKindCluster(kindConfigFilePath); err != nil {
+		logger.Log.Error("delete kind cluster failed")
 		return err
 	}
+	logger.Log.Info("delete kind cluster succeeded")
+
+	k8sConfigFile := constant.K8sClusterConfigFile
+	logger.Log.Infof("deleting k8s cluster config file:%s", k8sConfigFile)
+	err := os.Remove(k8sConfigFile)
+	if err != nil {
+		logger.Log.Errorf("delete k8s cluster config file failed")
+		return err
+	}
+
 	return nil
 }
 
-func getKindClusterName() (name string, err error) {
-	data, err := ioutil.ReadFile(kindConfigFile)
+func getKindClusterName(kindConfigFilePath string) (name string, err error) {
+	data, err := ioutil.ReadFile(kindConfigFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -68,20 +78,18 @@ func getKindClusterName() (name string, err error) {
 	return nameConfig.Name, nil
 }
 
-func cleanKindCluster() error {
-	clusterName, err := getKindClusterName()
+func cleanKindCluster(kindConfigFilePath string) error {
+	clusterName, err := getKindClusterName(kindConfigFilePath)
 	if err != nil {
 		return err
 	}
 
 	args := []string{"delete", "cluster", "--name", clusterName}
 
-	logger.Log.Info("deleting kind cluster...")
 	logger.Log.Debugf("cluster delete commands: %s %s", constant.KindCommand, strings.Join(args, " "))
 	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
 		return err
 	}
-	logger.Log.Info("delete kind cluster succeeded")
 
 	return nil
 }

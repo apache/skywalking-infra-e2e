@@ -16,7 +16,26 @@
 // under the License.
 //
 
-package flags
+package util
 
-var Env string
-var File string
+import (
+	"sync"
+	"time"
+)
+
+type WaitSet struct {
+	WaitGroup  sync.WaitGroup
+	ErrChan    chan error
+	FinishChan chan bool
+	Timeout    time.Duration
+}
+
+func NewWaitSet(timeout time.Duration) *WaitSet {
+	waitSet := WaitSet{
+		WaitGroup:  sync.WaitGroup{},
+		ErrChan:    make(chan error, 1),
+		FinishChan: make(chan bool, 1),
+		Timeout:    timeout,
+	}
+	return &waitSet
+}

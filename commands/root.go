@@ -18,13 +18,16 @@
 package commands
 
 import (
+	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/run"
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
-
-	"github.com/spf13/cobra"
 )
 
 // Root represents the base command when called without any subcommands
@@ -34,6 +37,13 @@ var Root = &cobra.Command{
 	Version:       version,
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := config.ReadGlobalConfigFile(constant.E2EDefaultFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
