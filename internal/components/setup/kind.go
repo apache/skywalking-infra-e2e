@@ -94,7 +94,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 
 func createKindCluster(kindConfigPath string) error {
 	// the config file name of the k8s cluster that kind create
-	kubeConfigPath = constant.K8sClusterConfigFile
+	kubeConfigPath = constant.K8sClusterConfigFilePath
 	args := []string{"create", "cluster", "--config", kindConfigPath, "--kubeconfig", kubeConfigPath}
 
 	logger.Log.Info("creating kind cluster...")
