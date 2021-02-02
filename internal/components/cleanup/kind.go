@@ -48,9 +48,9 @@ func KindCleanUp(e2eConfig *config.E2EConfig) error {
 	}
 	logger.Log.Info("delete kind cluster succeeded")
 
-	k8sConfigFile := constant.K8sClusterConfigFile
-	logger.Log.Infof("deleting k8s cluster config file:%s", k8sConfigFile)
-	err := os.Remove(k8sConfigFile)
+	kubeConfigPath := constant.K8sClusterConfigFilePath
+	logger.Log.Infof("deleting k8s cluster config file:%s", kubeConfigPath)
+	err := os.Remove(kubeConfigPath)
 	if err != nil {
 		logger.Log.Errorf("delete k8s cluster config file failed")
 		return err
