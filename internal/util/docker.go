@@ -27,7 +27,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-// CheckDockerDaemon checks if docker daemon is running
+// CheckDockerDaemon checks if docker daemon is running.
 func CheckDockerDaemon() error {
 	logger.Log.Debug("checking docker daemon")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
