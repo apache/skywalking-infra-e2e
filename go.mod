@@ -3,7 +3,15 @@ module github.com/apache/skywalking-infra-e2e
 go 1.13
 
 require (
+	github.com/Microsoft/go-winio v0.4.16 // indirect
+	github.com/containerd/containerd v1.4.3 // indirect
+	github.com/docker/docker v20.10.3+incompatible
+	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/docker/go-units v0.4.0 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	gopkg.in/yaml.v2 v2.3.0
