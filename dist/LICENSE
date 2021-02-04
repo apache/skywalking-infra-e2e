@@ -251,4 +251,4 @@ The following components are provided under the BSD 3-Clause license. See projec
 The text of each license is also included at licenses/LICENSE-[project].txt.
 
     mergo v0.3.11: https://github.com/imdario/mergo BSD-3-Clause
-	gorilla/mux v1.8.0: https://github.com/gorilla/mux BSD-3-Clause
+    gorilla/mux v1.8.0: https://github.com/gorilla/mux BSD-3-Clause
