@@ -36,7 +36,7 @@ ARCH = amd64
 RELEASE_BIN = skywalking-$(PROJECT)-$(VERSION)-bin
 RELEASE_SRC = skywalking-$(PROJECT)-$(VERSION)-src
 
-all: clean lint license test build
+all: clean lint test build
 
 .PHONY: lint
 lint:
@@ -68,7 +68,7 @@ clean:
 	-rm -rf "$(RELEASE_SRC)"*
 
 .PHONY: verify
-verify: clean license lint test
+verify: clean lint test
 
 release-src: clean
 	-mkdir $(RELEASE_SRC)

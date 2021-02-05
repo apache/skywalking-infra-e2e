@@ -18,6 +18,8 @@
 
 run:
   tests: false
+  skip-dirs:
+    - third-party
 
 linters-settings:
   govet:
