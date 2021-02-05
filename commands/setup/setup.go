@@ -21,19 +21,30 @@ package setup
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
-
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/spf13/cobra"
-
-	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		err := util.CheckDockerDaemon()
+		if err != nil {
+			return err
+		}
+
+		err = config.ReadGlobalConfigFile(constant.E2EDefaultFile)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := setupAccordingE2E()
 		if err != nil {
