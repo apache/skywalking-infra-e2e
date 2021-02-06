@@ -20,7 +20,8 @@ package config
 
 // E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
-	Setup Setup `yaml:"setup"`
+	Setup  Setup        `yaml:"setup"`
+	Verify []VerifyCase `yaml:"verify"`
 }
 
 type Setup struct {
@@ -47,4 +48,10 @@ type Wait struct {
 	Resource      string `yaml:"resource"`
 	LabelSelector string `yaml:"label-selector"`
 	For           string `yaml:"for"`
+}
+
+type VerifyCase struct {
+	Query    string `yaml:"query"`
+	Actual   string `yaml:"actual"`
+	Expected string `yaml:"expected"`
 }

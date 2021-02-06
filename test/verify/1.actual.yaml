@@ -1,0 +1,24 @@
+nodes:
+  - id: VXNlcg==.0
+    name: User
+    type: USER
+    isReal: false
+  - id: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1
+    name: Your_ApplicationName
+    type: Tomcat
+    isReal: true
+  - id: bG9jYWxob3N0Oi0x.0
+    name: localhost:-1
+    type: H2
+    isReal: false
+calls:
+  - id: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1-bG9jYWxob3N0Oi0x.0
+    source: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1
+    detectPoints:
+      - CLIENT
+    target: bG9jYWxob3N0Oi0x.0
+  - id: VXNlcg==.0-WW91cl9BcHBsaWNhdGlvbk5hbWU=.1
+    source: VXNlcg==.0
+    detectPoints:
+      - SERVER
+    target: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1

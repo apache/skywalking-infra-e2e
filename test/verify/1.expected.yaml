@@ -1,0 +1,24 @@
+nodes:
+  - id: {{ b64enc "User" }}.0
+    name: User
+    type: USER
+    isReal: false
+  - id: {{ b64enc "Your_ApplicationName" }}.1
+    name: Your_ApplicationName
+    type: Tomcat
+    isReal: true
+  - id: {{ $h2ID := (index .nodes 2).id }}{{ notEmpty $h2ID }}
+    name: localhost:-1
+    type: H2
+    isReal: false
+calls:
+  - id: {{ notEmpty (index .calls 0).id }}
+    source: {{ b64enc "Your_ApplicationName" }}.1
+    target: {{ $h2ID }}
+    detectPoints:
+      - CLIENT
+  - id: {{ b64enc "User" }}.0-{{ b64enc "Your_ApplicationName" }}.1
+    source: {{ b64enc "User" }}.0
+    target: {{ b64enc "Your_ApplicationName" }}.1
+    detectPoints:
+      - SERVER
