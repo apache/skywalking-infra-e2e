@@ -81,9 +81,8 @@ func verify(actualData, expectedTemplate string) error {
 		diff := cmp.Diff(expected, actual)
 		fmt.Println(diff)
 		return &MismatchError{}
-	} else {
-		logger.Log.Info("the actual data matches the expected data")
 	}
 
+	logger.Log.Info("the actual data matches the expected data")
 	return nil
 }

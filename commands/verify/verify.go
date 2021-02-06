@@ -19,6 +19,7 @@ package verify
 
 import (
 	"fmt"
+
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
 
 	"github.com/spf13/cobra"
