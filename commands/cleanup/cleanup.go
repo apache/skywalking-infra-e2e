@@ -20,35 +20,41 @@ package cleanup
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/config"
+
 	"github.com/apache/skywalking-infra-e2e/internal/components/cleanup"
 
 	"github.com/spf13/cobra"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
-
-func init() {
-	Cleanup.Flags().StringVar(&flags.Env, "env", "kind", "specify test environment")
-	Cleanup.Flags().StringVar(&flags.File, "file", "kind.yaml", "specify configuration file")
-}
 
 var Cleanup = &cobra.Command{
 	Use:   "cleanup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flags.Env == constant.Compose {
-			logger.Log.Info("env for docker-compose not implemented")
-		} else if flags.Env == constant.Kind {
-			if err := cleanup.KindCleanupInCommand(); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", flags.Env)
+		err := cleanupAccordingE2E()
+		if err != nil {
+			err = fmt.Errorf("[Cleanup] %s", err)
+			return err
 		}
-
 		return nil
 	},
+}
+
+func cleanupAccordingE2E() error {
+	e2eConfig := config.GlobalConfig.E2EConfig
+	if e2eConfig.Setup.Env == constant.Kind {
+		err := cleanup.KindCleanUp(&e2eConfig)
+		if err != nil {
+			return err
+		}
+	} else if e2eConfig.Setup.Env == constant.Compose {
+		logger.Log.Info("env for docker-compose not implemented")
+	} else {
+		return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
+	}
+
+	return nil
 }

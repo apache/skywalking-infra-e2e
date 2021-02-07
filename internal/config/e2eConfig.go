@@ -16,26 +16,35 @@
 // under the License.
 //
 
-package constant
+package config
 
-import (
-	"os"
-	"path"
-	"time"
-)
+// E2EConfig corresponds to configuration file e2e.yaml.
+type E2EConfig struct {
+	Setup Setup `yaml:"setup"`
+}
 
-const (
-	Kind                     = "kind"
-	KindCommand              = "kind"
-	KindClusterDefaultName   = "kind"
-	E2EDefaultFile           = "e2e.yaml"
-	K8sClusterConfigFileName = "e2e-k8s.config"
-	DefaultWaitTimeout       = 600 * time.Second
-	SingleDefaultWaitTimeout = 30 * 60 * time.Second
-)
+type Setup struct {
+	Env       string     `yaml:"env"`
+	File      string     `yaml:"file"`
+	Manifests []Manifest `yaml:"manifests"`
+	// Run is not supported yet
+	Run     []Run `yaml:"run"`
+	Timeout int   `yaml:"timeout"`
+}
 
-var (
-	True                     = true
-	False                    = false
-	K8sClusterConfigFilePath = path.Join(os.TempDir(), K8sClusterConfigFileName)
-)
+type Manifest struct {
+	Path  string `yaml:"path"`
+	Waits []Wait `yaml:"wait"`
+}
+
+type Run struct {
+	Command string `yaml:"command"`
+	Waits   []Wait `yaml:"wait"`
+}
+
+type Wait struct {
+	Namespace     string `yaml:"namespace"`
+	Resource      string `yaml:"resource"`
+	LabelSelector string `yaml:"label-selector"`
+	For           string `yaml:"for"`
+}

@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Check License
-        uses: apache/skywalking-eyes@d7cc2d55e706869d52400f6bac146977439b2744
+        uses: apache/skywalking-eyes@ec88b7d850018c8983f87729ea88549e100c5c82
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

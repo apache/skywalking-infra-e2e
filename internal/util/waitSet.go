@@ -18,11 +18,24 @@
 
 package util
 
-import "os/exec"
+import (
+	"sync"
+	"time"
+)
 
-// Which checks if binary is present in PATH.
-func Which(binary string) error {
-	_, err := exec.LookPath(binary)
+type WaitSet struct {
+	WaitGroup  sync.WaitGroup
+	ErrChan    chan error
+	FinishChan chan bool
+	Timeout    time.Duration
+}
 
-	return err
+func NewWaitSet(timeout time.Duration) *WaitSet {
+	waitSet := WaitSet{
+		WaitGroup:  sync.WaitGroup{},
+		ErrChan:    make(chan error, 1),
+		FinishChan: make(chan bool, 1),
+		Timeout:    timeout,
+	}
+	return &waitSet
 }

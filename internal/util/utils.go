@@ -16,7 +16,25 @@
 // under the License.
 //
 
-package flags
+package util
 
-var Env string
-var File string
+import (
+	"os"
+	"os/exec"
+)
+
+// Which checks if binary is present in PATH.
+func Which(binary string) error {
+	_, err := exec.LookPath(binary)
+
+	return err
+}
+
+// PathExist checks if a file/directory is exist.
+func PathExist(_path string) bool {
+	_, err := os.Stat(_path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
