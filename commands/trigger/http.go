@@ -38,7 +38,12 @@ func NewHTTPAction() Action {
 		method: strings.ToUpper(flags.HTTPMethod),
 	}
 	h.times = flags.Times
-	h.interval = ParseInterval(flags.Interval)
+	interval, err := time.ParseDuration(flags.Interval)
+	if err != nil {
+		h.interval = time.Second
+	} else {
+		h.interval = interval
+	}
 
 	return h
 }
