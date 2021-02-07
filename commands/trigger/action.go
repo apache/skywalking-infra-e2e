@@ -16,10 +16,45 @@
 // under the License.
 //
 
-package flags
+package trigger
 
-var Interval string
-var Times int
-var Action string
-var HttpUrl string
-var HttpMethod string
+import (
+	"strconv"
+	"time"
+)
+
+type Action interface {
+	Do() error
+}
+
+type action struct {
+	interval time.Duration
+	times    int
+}
+
+func ParseInterval(s string) time.Duration {
+
+	if len(s) >= 1 {
+		var base time.Duration
+		switch s[len(s)-1:] {
+		case "s":
+			base = time.Second
+		case "m":
+			base = time.Minute
+		case "h":
+			base = time.Hour
+		case "d":
+			base = time.Hour * 24
+		default:
+			base = time.Second
+		}
+
+		i, e := strconv.Atoi(s[:len(s)-1])
+		if e != nil {
+			return time.Second
+		}
+
+		return time.Duration(i) * base
+	}
+	return time.Second
+}
