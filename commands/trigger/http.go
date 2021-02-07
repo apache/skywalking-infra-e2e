@@ -27,29 +27,23 @@ import (
 )
 
 type httpAction struct {
-	action
-	url    string
-	method string
+	interval string
+	times    int
+	url      string
+	method   string
 }
 
 func NewHTTPAction() Action {
-	h := &httpAction{
-		url:    flags.URL,
-		method: strings.ToUpper(flags.HTTPMethod),
+	return &httpAction{
+		interval: flags.Interval,
+		times:    flags.Times,
+		url:      flags.URL,
+		method:   strings.ToUpper(flags.Method),
 	}
-	h.times = flags.Times
-	interval, err := time.ParseDuration(flags.Interval)
-	if err != nil {
-		h.interval = time.Second
-	} else {
-		h.interval = interval
-	}
-
-	return h
 }
 
 func (h *httpAction) Do() error {
-	t := time.NewTicker(h.interval)
+	t := time.NewTicker(time.Second)
 	c := 1
 	client := &http.Client{}
 	request, err := http.NewRequest(h.method, h.url, nil)

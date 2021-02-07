@@ -18,15 +18,6 @@
 
 package trigger
 
-import (
-	"time"
-)
-
 type Action interface {
 	Do() error
-}
-
-type action struct {
-	interval time.Duration
-	times    int
 }

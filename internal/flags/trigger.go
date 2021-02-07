@@ -18,8 +18,10 @@
 
 package flags
 
-var Interval string
-var Times int
-var Action string
-var URL string
-var HTTPMethod string
+var (
+	Interval string
+	Times    int
+	Action   string
+	URL      string
+	Method   string
+)
