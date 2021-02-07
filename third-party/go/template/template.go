@@ -5,7 +5,7 @@
 package template
 
 import (
-	"github.com/apache/skywalking-infra-e2e/third-party/template/parse"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
 	"reflect"
 	"sync"
 )

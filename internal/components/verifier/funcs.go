@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/apache/skywalking-infra-e2e/third-party/template"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template"
 )
 
 // funcMap produces the custom function map.

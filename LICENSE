@@ -243,4 +243,4 @@ BSD licenses
 The following components are provided under a BSD license. See project link for details.
 The text of each license is also included at licenses/LICENSE-[project].txt.
 
-   third-party/template files from golang/go: https://github.com/golang/go/tree/master/src/text/template  BSD
+   third-party/go files from golang/go: https://github.com/golang/go/tree/master/src  BSD-3-Clause

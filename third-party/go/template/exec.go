@@ -7,7 +7,7 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/skywalking-infra-e2e/third-party/internal/fmtsort"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
 	"github.com/apache/skywalking-infra-e2e/third-party/template/parse"
 	"gopkg.in/yaml.v3"
 	"io"

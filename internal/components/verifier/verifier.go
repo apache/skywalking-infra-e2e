@@ -23,7 +23,7 @@ import (
 
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
-	"github.com/apache/skywalking-infra-e2e/third-party/template"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template"
 
 	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"
