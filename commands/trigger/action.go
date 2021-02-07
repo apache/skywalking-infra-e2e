@@ -33,7 +33,6 @@ type action struct {
 }
 
 func ParseInterval(s string) time.Duration {
-
 	if len(s) >= 1 {
 		var base time.Duration
 		switch s[len(s)-1:] {
