@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,49 +14,33 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+//
 
-package setup
+package util
 
 import (
-	"fmt"
+	"context"
+	"time"
 
-	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/docker/docker/client"
 
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
-
-	"github.com/spf13/cobra"
-
-	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-var Setup = &cobra.Command{
-	Use:   "setup",
-	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := setupAccordingE2E()
-		if err != nil {
-			err = fmt.Errorf("[Setup] %s", err)
-			return err
-		}
-		return nil
-	},
-}
+// CheckDockerDaemon checks if docker daemon is running.
+func CheckDockerDaemon() error {
+	logger.Log.Debug("checking docker daemon")
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-func setupAccordingE2E() error {
-	e2eConfig := config.GlobalConfig.E2EConfig
-
-	if e2eConfig.Setup.Env == constant.Kind {
-		err := setup.KindSetup(&e2eConfig)
-		if err != nil {
-			return err
-		}
-	} else if e2eConfig.Setup.Env == constant.Compose {
-		logger.Log.Warn("env for docker-compose not implemented")
-		return nil
-	} else {
-		return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
+		_, err = cli.Ping(ctx)
 	}
 
+	if err != nil {
+		return err
+	}
+	logger.Log.Debug("docker daemon is running normally")
 	return nil
 }
