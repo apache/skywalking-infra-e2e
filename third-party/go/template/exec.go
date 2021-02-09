@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
-	"github.com/apache/skywalking-infra-e2e/third-party/template/parse"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
 	"gopkg.in/yaml.v3"
 	"io"
 	"reflect"
