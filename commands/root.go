@@ -18,8 +18,6 @@
 package commands
 
 import (
-	"github.com/apache/skywalking-infra-e2e/internal/config"
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/spf13/cobra"
 
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
@@ -27,6 +25,8 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
+	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 )
 
 // Root represents the base command when called without any subcommands
