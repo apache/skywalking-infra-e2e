@@ -19,15 +19,33 @@ package trigger
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/flags"
 )
+
+func init() {
+	Trigger.Flags().StringVar(&flags.Interval, "interval", "3s", "trigger the action every N seconds")
+	Trigger.Flags().IntVar(&flags.Times, "times", 0, "how many times to trigger the action, 0=infinite")
+	Trigger.Flags().StringVar(&flags.Action, "action", "", "the action of the trigger")
+	Trigger.Flags().StringVar(&flags.URL, "url", "", "the url of the http action")
+	Trigger.Flags().StringVar(&flags.Method, "method", "get", "the method of the http action")
+}
 
 var Trigger = &cobra.Command{
 	Use:   "trigger",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Not implemented.")
-		return nil
+		var action Action
+		if strings.EqualFold(flags.Action, constant.ActionHTTP) {
+			action = NewHTTPAction()
+		}
+		if action == nil {
+			return fmt.Errorf("no such action for args")
+		}
+		return action.Do()
 	},
 }
