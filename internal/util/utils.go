@@ -19,6 +19,8 @@
 package util
 
 import (
+	"errors"
+	"io/ioutil"
 	"os"
 	"os/exec"
 )
@@ -37,4 +39,16 @@ func PathExist(_path string) bool {
 		return false
 	}
 	return true
+}
+
+// ReadFileContent reads the file content.
+func ReadFileContent(filename string) (string, error) {
+	if PathExist(filename) {
+		content, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
+	}
+	return "", errors.New("the file does not exist")
 }

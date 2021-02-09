@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,18 +14,36 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package verify
 
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
+
 	"github.com/spf13/cobra"
 )
 
+var (
+	query    string
+	actual   string
+	expected string
+)
+
+func init() {
+	Verify.Flags().StringVarP(&query, "query", "q", "", "the query to get the actual data, the result of the query should in YAML format")
+	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
+	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
+}
+
 var Verify = &cobra.Command{
 	Use:   "verify",
-	Short: "",
+	Short: "verify if the actual data match the expected data",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if actual != "" && expected != "" {
+			return verifier.VerifyDataFile(actual, expected)
+		}
 		fmt.Println("Not implemented.")
 		return nil
 	},
