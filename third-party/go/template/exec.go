@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"runtime"
 	"strings"
 
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
 	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
 
@@ -407,7 +407,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 	val, _ := indirect(s.evalPipeline(dot, r.Pipe))
 	// mark top of stack before any variables in the body are pushed.
 	mark := s.mark()
-	oneIteration := func(index, elem reflect.Value) interface{} {
+	oneIteration := func(index, elem reflect.Value) []interface{} {
 		var b bytes.Buffer
 		ob := s.wr
 		s.wr = &b
@@ -425,8 +425,11 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 
 		s.wr = ob
 
-		var re interface{}
-		yaml.Unmarshal(b.Bytes(), &re)
+		// the contents inside `contains` must be an array
+		var re []interface{}
+		if err := yaml.Unmarshal(b.Bytes(), &re); err != nil {
+			logger.Log.Errorf("failed to unmarshal index: %v", index)
+		}
 		return re
 	}
 	switch val.Kind() {
@@ -434,27 +437,30 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		if val.Len() == 0 {
 			break
 		}
-		//match := false
-		sss := make([]interface{}, val.Len())
+		match := make(map[int]int) // the matched pair of indices <actual index>:<expected index>
+		actualSize := 0
+		output := make([]interface{}, val.Len())
 		for i := 0; i < val.Len(); i++ {
-			actual := oneIteration(reflect.ValueOf(i), val.Index(i))
-			sss[i] = actual
-			value, _ := printableValue(val.Index(i))
-			io.WriteString(os.Stdout, fmt.Sprintln(actual))
-			io.WriteString(os.Stdout, fmt.Sprintln(value))
-			//if fmt.Sprint(value) == fmt.Sprint(actual) {
-			//	match = true
-			//	break
-			//}
+			actualArr := oneIteration(reflect.ValueOf(i), val.Index(i))
+			actualSize = len(actualArr)
+			for j, actual := range actualArr {
+				value, _ := printableValue(val.Index(i))
+				if fmt.Sprint(value) == fmt.Sprint(actual) {
+					match[j] = i
+					output[i] = value // if rule matches
+				} else {
+					output[i] = actual
+				}
+			}
 		}
-		//var marshal []byte
-		//if match {
-		//	value, _ := printableValue(val)
-		//	marshal, _ = yaml.Marshal(value)
-		//} else {
-		//	marshal, _ = yaml.Marshal(sss)
-		//}
-		//s.wr.Write(append([]byte("\n"), marshal...))
+		var marshal []byte
+		if len(match) == actualSize {
+			value, _ := printableValue(val)
+			marshal, _ = yaml.Marshal(value)
+		} else {
+			marshal, _ = yaml.Marshal(output)
+		}
+		s.wr.Write(append([]byte("\n"), marshal...))
 		return
 	case reflect.Map:
 		if val.Len() == 0 {

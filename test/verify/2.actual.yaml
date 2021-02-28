@@ -7,4 +7,4 @@ metrics:
     value: 0
   - name: system::load balancer2
     id: c3lzdGVtOjpsb2FkIGJhbGFuY2VyMg==.1
-    value: 0
+    value: 1
