@@ -1,0 +1,10 @@
+metrics:
+  - name: business-zone::projectA
+    id: YnVzaW5lc3Mtem9uZTo6cHJvamVjdEE=.1
+    value: 1
+  - name: system::load balancer1
+    id: c3lzdGVtOjpsb2FkIGJhbGFuY2VyMQ==.1
+    value: 0
+  - name: system::load balancer2
+    id: c3lzdGVtOjpsb2FkIGJhbGFuY2VyMg==.1
+    value: 0

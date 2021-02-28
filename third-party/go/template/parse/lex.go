@@ -59,32 +59,32 @@ const (
 	itemText       // plain text
 	itemVariable   // variable starting with '$', such as '$' or  '$1' or '$hello'
 	// Keywords appear after all the rest.
-	itemKeyword     // used only to delimit the keywords
-	itemBlock       // block keyword
-	itemDot         // the cursor, spelled '.'
-	itemDefine      // define keyword
-	itemElse        // else keyword
-	itemEnd         // end keyword
-	itemIf          // if keyword
-	itemNil         // the untyped nil constant, easiest to treat as a keyword
-	itemRange       // range keyword
-	itemTemplate    // template keyword
-	itemWith        // with keyword
-	itemAtLeastOnce // atLeastOnce keyword
+	itemKeyword  // used only to delimit the keywords
+	itemBlock    // block keyword
+	itemDot      // the cursor, spelled '.'
+	itemDefine   // define keyword
+	itemElse     // else keyword
+	itemEnd      // end keyword
+	itemIf       // if keyword
+	itemNil      // the untyped nil constant, easiest to treat as a keyword
+	itemRange    // range keyword
+	itemTemplate // template keyword
+	itemWith     // with keyword
+	itemContains // contains keyword
 )
 
 var key = map[string]itemType{
-	".":           itemDot,
-	"block":       itemBlock,
-	"define":      itemDefine,
-	"else":        itemElse,
-	"end":         itemEnd,
-	"if":          itemIf,
-	"range":       itemRange,
-	"nil":         itemNil,
-	"template":    itemTemplate,
-	"with":        itemWith,
-	"atLeastOnce": itemAtLeastOnce,
+	".":        itemDot,
+	"block":    itemBlock,
+	"define":   itemDefine,
+	"else":     itemElse,
+	"end":      itemEnd,
+	"if":       itemIf,
+	"range":    itemRange,
+	"nil":      itemNil,
+	"template": itemTemplate,
+	"with":     itemWith,
+	"contains": itemContains,
 }
 
 const eof = -1

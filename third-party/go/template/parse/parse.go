@@ -365,8 +365,8 @@ func (t *Tree) action() (n Node) {
 		return t.templateControl()
 	case itemWith:
 		return t.withControl()
-	case itemAtLeastOnce:
-		return t.atLeastOnceControl()
+	case itemContains:
+		return t.containsControl()
 	}
 	t.backup()
 	token := t.peek()
@@ -506,11 +506,11 @@ func (t *Tree) withControl() Node {
 	return t.newWith(t.parseControl(false, "with"))
 }
 
-// AtLeastOnce:
-//	{{atLeastOnce number}} itemList {{end}}
+// Contains:
+//	{{contains number}} itemList {{end}}
 // If keyword is past.
-func (t *Tree) atLeastOnceControl() Node {
-	return t.newAtLeastOnce(t.parseControl(false, "atLeastOnce"))
+func (t *Tree) containsControl() Node {
+	return t.newContains(t.parseControl(false, "contains"))
 }
 
 // End:

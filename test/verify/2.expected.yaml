@@ -1,0 +1,5 @@
+metrics:
+{{- contains .metrics }}
+  - name: {{ notEmpty .name }}
+    value: {{ gt .value 0 }}
+{{- end }}

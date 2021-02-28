@@ -7,13 +7,16 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
-	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
-	"gopkg.in/yaml.v3"
 	"io"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
+
+	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
+
+	"gopkg.in/yaml.v2"
 )
 
 // maxExecDepth specifies the maximum stack depth of templates within
@@ -274,8 +277,8 @@ func (s *state) walk(dot reflect.Value, node parse.Node) {
 		}
 	case *parse.WithNode:
 		s.walkIfOrWith(parse.NodeWith, dot, node.Pipe, node.List, node.ElseList)
-	case *parse.AtLeastOnceNode:
-		s.walkAtLeastOnce(dot, node)
+	case *parse.ContainsNode:
+		s.walkContains(dot, node)
 	default:
 		s.errorf("unknown node: %s", node)
 	}
@@ -398,7 +401,7 @@ func (s *state) walkRange(dot reflect.Value, r *parse.RangeNode) {
 	}
 }
 
-func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
+func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 	s.at(r)
 	defer s.pop(s.mark())
 	val, _ := indirect(s.evalPipeline(dot, r.Pipe))
@@ -431,25 +434,27 @@ func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
 		if val.Len() == 0 {
 			break
 		}
-		match := false
+		//match := false
 		sss := make([]interface{}, val.Len())
 		for i := 0; i < val.Len(); i++ {
 			actual := oneIteration(reflect.ValueOf(i), val.Index(i))
 			sss[i] = actual
 			value, _ := printableValue(val.Index(i))
-			if fmt.Sprint(value) == fmt.Sprint(actual) {
-				match = true
-				break
-			}
+			io.WriteString(os.Stdout, fmt.Sprintln(actual))
+			io.WriteString(os.Stdout, fmt.Sprintln(value))
+			//if fmt.Sprint(value) == fmt.Sprint(actual) {
+			//	match = true
+			//	break
+			//}
 		}
-		var marshal []byte
-		if match {
-			value, _ := printableValue(val)
-			marshal, _ = yaml.Marshal(value)
-		} else {
-			marshal, _ = yaml.Marshal(sss)
-		}
-		s.wr.Write(append([]byte("\n"), marshal...))
+		//var marshal []byte
+		//if match {
+		//	value, _ := printableValue(val)
+		//	marshal, _ = yaml.Marshal(value)
+		//} else {
+		//	marshal, _ = yaml.Marshal(sss)
+		//}
+		//s.wr.Write(append([]byte("\n"), marshal...))
 		return
 	case reflect.Map:
 		if val.Len() == 0 {
@@ -479,10 +484,7 @@ func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
 	case reflect.Invalid:
 		break // An invalid value is likely a nil map, etc. and acts like an empty map.
 	default:
-		s.errorf("range can't iterate over %v", val)
-	}
-	if r.ElseList != nil {
-		s.walk(dot, r.ElseList)
+		s.errorf("contains can't iterate over %v", val)
 	}
 }
 

@@ -50,27 +50,27 @@ func (t NodeType) Type() NodeType {
 }
 
 const (
-	NodeText        NodeType = iota // Plain text.
-	NodeAction                      // A non-control action such as a field evaluation.
-	NodeBool                        // A boolean constant.
-	NodeChain                       // A sequence of field accesses.
-	NodeCommand                     // An element of a pipeline.
-	NodeDot                         // The cursor, dot.
-	nodeElse                        // An else action. Not added to tree.
-	nodeEnd                         // An end action. Not added to tree.
-	NodeField                       // A field or method name.
-	NodeIdentifier                  // An identifier; always a function name.
-	NodeIf                          // An if action.
-	NodeList                        // A list of Nodes.
-	NodeNil                         // An untyped nil constant.
-	NodeNumber                      // A numerical constant.
-	NodePipe                        // A pipeline of commands.
-	NodeRange                       // A range action.
-	NodeString                      // A string constant.
-	NodeTemplate                    // A template invocation action.
-	NodeVariable                    // A $ variable.
-	NodeWith                        // A with action.
-	NodeAtLeastOnce                 // An atLeastOnce action.
+	NodeText       NodeType = iota // Plain text.
+	NodeAction                     // A non-control action such as a field evaluation.
+	NodeBool                       // A boolean constant.
+	NodeChain                      // A sequence of field accesses.
+	NodeCommand                    // An element of a pipeline.
+	NodeDot                        // The cursor, dot.
+	nodeElse                       // An else action. Not added to tree.
+	nodeEnd                        // An end action. Not added to tree.
+	NodeField                      // A field or method name.
+	NodeIdentifier                 // An identifier; always a function name.
+	NodeIf                         // An if action.
+	NodeList                       // A list of Nodes.
+	NodeNil                        // An untyped nil constant.
+	NodeNumber                     // A numerical constant.
+	NodePipe                       // A pipeline of commands.
+	NodeRange                      // A range action.
+	NodeString                     // A string constant.
+	NodeTemplate                   // A template invocation action.
+	NodeVariable                   // A $ variable.
+	NodeWith                       // A with action.
+	NodeContains                   // A contains action.
 )
 
 // Nodes.
@@ -829,8 +829,8 @@ func (b *BranchNode) writeTo(sb *strings.Builder) {
 		name = "range"
 	case NodeWith:
 		name = "with"
-	case NodeAtLeastOnce:
-		name = "atLeastOnce"
+	case NodeContains:
+		name = "contains"
 	default:
 		panic("unknown branch type")
 	}
@@ -859,8 +859,8 @@ func (b *BranchNode) Copy() Node {
 		return b.tr.newRange(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
 	case NodeWith:
 		return b.tr.newWith(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
-	case NodeAtLeastOnce:
-		return b.tr.newAtLeastOnce(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
+	case NodeContains:
+		return b.tr.newContains(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
 	default:
 		panic("unknown branch type")
 	}
@@ -905,17 +905,17 @@ func (w *WithNode) Copy() Node {
 	return w.tr.newWith(w.Pos, w.Line, w.Pipe.CopyPipe(), w.List.CopyList(), w.ElseList.CopyList())
 }
 
-// AtLeastOnce represents a {{atLeastOnce}} action and its commands.
-type AtLeastOnceNode struct {
+// Contains represents a {{contains}} action and its commands.
+type ContainsNode struct {
 	BranchNode
 }
 
-func (t *Tree) newAtLeastOnce(pos Pos, line int, pipe *PipeNode, list *ListNode, elseList *ListNode) *AtLeastOnceNode {
-	return &AtLeastOnceNode{BranchNode{tr: t, NodeType: NodeAtLeastOnce, Pos: pos, Line: line, Pipe: pipe, List: list}}
+func (t *Tree) newContains(pos Pos, line int, pipe *PipeNode, list *ListNode, elseList *ListNode) *ContainsNode {
+	return &ContainsNode{BranchNode{tr: t, NodeType: NodeContains, Pos: pos, Line: line, Pipe: pipe, List: list}}
 }
 
-func (w *AtLeastOnceNode) Copy() Node {
-	return w.tr.newAtLeastOnce(w.Pos, w.Line, w.Pipe.CopyPipe(), w.List.CopyList(), w.ElseList.CopyList())
+func (w *ContainsNode) Copy() Node {
+	return w.tr.newContains(w.Pos, w.Line, w.Pipe.CopyPipe(), w.List.CopyList(), w.ElseList.CopyList())
 }
 
 // TemplateNode represents a {{template}} action.
