@@ -7,13 +7,16 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
-	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
-	"gopkg.in/yaml.v3"
 	"io"
 	"reflect"
 	"runtime"
 	"strings"
+
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/internal/fmtsort"
+	"github.com/apache/skywalking-infra-e2e/third-party/go/template/parse"
+
+	"gopkg.in/yaml.v2"
 )
 
 // maxExecDepth specifies the maximum stack depth of templates within
@@ -274,8 +277,8 @@ func (s *state) walk(dot reflect.Value, node parse.Node) {
 		}
 	case *parse.WithNode:
 		s.walkIfOrWith(parse.NodeWith, dot, node.Pipe, node.List, node.ElseList)
-	case *parse.AtLeastOnceNode:
-		s.walkAtLeastOnce(dot, node)
+	case *parse.ContainsNode:
+		s.walkContains(dot, node)
 	default:
 		s.errorf("unknown node: %s", node)
 	}
@@ -398,13 +401,13 @@ func (s *state) walkRange(dot reflect.Value, r *parse.RangeNode) {
 	}
 }
 
-func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
+func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 	s.at(r)
 	defer s.pop(s.mark())
 	val, _ := indirect(s.evalPipeline(dot, r.Pipe))
 	// mark top of stack before any variables in the body are pushed.
 	mark := s.mark()
-	oneIteration := func(index, elem reflect.Value) interface{} {
+	oneIteration := func(index, elem reflect.Value) []interface{} {
 		var b bytes.Buffer
 		ob := s.wr
 		s.wr = &b
@@ -422,8 +425,11 @@ func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
 
 		s.wr = ob
 
-		var re interface{}
-		yaml.Unmarshal(b.Bytes(), &re)
+		// the contents inside `contains` must be an array
+		var re []interface{}
+		if err := yaml.Unmarshal(b.Bytes(), &re); err != nil {
+			logger.Log.Errorf("failed to unmarshal index: %v", index)
+		}
 		return re
 	}
 	switch val.Kind() {
@@ -431,23 +437,31 @@ func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
 		if val.Len() == 0 {
 			break
 		}
-		match := false
-		sss := make([]interface{}, val.Len())
+		expectedSize := 0
+		// matched stores the matched pair of indices <expected index>: <actual index>
+		matched := make(map[int]int)
+		output := make([]interface{}, val.Len())
 		for i := 0; i < val.Len(); i++ {
-			actual := oneIteration(reflect.ValueOf(i), val.Index(i))
-			sss[i] = actual
-			value, _ := printableValue(val.Index(i))
-			if fmt.Sprint(value) == fmt.Sprint(actual) {
-				match = true
-				break
+			expectedArr := oneIteration(reflect.ValueOf(i), val.Index(i))
+			// expectedSize is the number of elements that the actual array should contain.
+			expectedSize = len(expectedArr)
+			actual, _ := printableValue(val.Index(i))
+			for j, expected := range expectedArr {
+				if fmt.Sprint(actual) == fmt.Sprint(expected) {
+					matched[j] = i
+					output[i] = actual
+				} else {
+					output[i] = expected
+				}
 			}
 		}
+
 		var marshal []byte
-		if match {
+		if len(matched) == expectedSize {
 			value, _ := printableValue(val)
 			marshal, _ = yaml.Marshal(value)
 		} else {
-			marshal, _ = yaml.Marshal(sss)
+			marshal, _ = yaml.Marshal(output)
 		}
 		s.wr.Write(append([]byte("\n"), marshal...))
 		return
@@ -479,10 +493,7 @@ func (s *state) walkAtLeastOnce(dot reflect.Value, r *parse.AtLeastOnceNode) {
 	case reflect.Invalid:
 		break // An invalid value is likely a nil map, etc. and acts like an empty map.
 	default:
-		s.errorf("range can't iterate over %v", val)
-	}
-	if r.ElseList != nil {
-		s.walk(dot, r.ElseList)
+		s.errorf("contains can't iterate over %v", val)
 	}
 }
 
