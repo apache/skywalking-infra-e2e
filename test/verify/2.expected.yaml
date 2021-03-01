@@ -5,5 +5,5 @@ metrics:
     value: {{ gt .value 0 }}
   - name: {{ notEmpty .name }}
     id: {{ notEmpty .id }}
-    value: {{ gt .value 2 }}
+    value: {{ gt .value 1 }}
 {{- end }}

@@ -437,24 +437,27 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		if val.Len() == 0 {
 			break
 		}
-		match := make(map[int]int) // the matched pair of indices <actual index>:<expected index>
-		actualSize := 0
+		expectedSize := 0
+		// matched stores the matched pair of indices <expected index>: <actual index>
+		matched := make(map[int]int)
 		output := make([]interface{}, val.Len())
 		for i := 0; i < val.Len(); i++ {
-			actualArr := oneIteration(reflect.ValueOf(i), val.Index(i))
-			actualSize = len(actualArr)
-			for j, actual := range actualArr {
-				value, _ := printableValue(val.Index(i))
-				if fmt.Sprint(value) == fmt.Sprint(actual) {
-					match[j] = i
-					output[i] = value // if rule matches
-				} else {
+			expectedArr := oneIteration(reflect.ValueOf(i), val.Index(i))
+			// expectedSize is the number of elements that the actual array should contain.
+			expectedSize = len(expectedArr)
+			actual, _ := printableValue(val.Index(i))
+			for j, expected := range expectedArr {
+				if fmt.Sprint(actual) == fmt.Sprint(expected) {
+					matched[j] = i
 					output[i] = actual
+				} else {
+					output[i] = expected
 				}
 			}
 		}
+
 		var marshal []byte
-		if len(match) == actualSize {
+		if len(matched) == expectedSize {
 			value, _ := printableValue(val)
 			marshal, _ = yaml.Marshal(value)
 		} else {
