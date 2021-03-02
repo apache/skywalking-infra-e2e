@@ -20,6 +20,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
@@ -57,4 +58,5 @@ func ReadGlobalConfigFile(configFilePath string) {
 
 	GlobalConfig.E2EConfig = e2eConfigObject
 	GlobalConfig.Error = nil
+	logger.Log.Info("load the e2e config successfully")
 }

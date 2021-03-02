@@ -19,6 +19,7 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -51,4 +52,21 @@ func ReadFileContent(filename string) (string, error) {
 		return string(content), nil
 	}
 	return "", errors.New("the file does not exist")
+}
+
+// ExecuteCommand executes the given command and returns the result.
+// TODO: consider security issues.
+func ExecuteCommand(cmd string) (string, error) {
+	command := exec.Command(cmd)
+	outinfo := bytes.Buffer{}
+	command.Stdout = &outinfo
+
+	if err := command.Start(); err != nil {
+		return "", err
+	}
+	if err := command.Wait(); err != nil {
+		return "", err
+	} else {
+		return outinfo.String(), nil
+	}
 }
