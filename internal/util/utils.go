@@ -55,9 +55,8 @@ func ReadFileContent(filename string) (string, error) {
 }
 
 // ExecuteCommand executes the given command and returns the result.
-// TODO: consider security issues.
 func ExecuteCommand(cmd string) (string, error) {
-	command := exec.Command(cmd)
+	command := exec.Command("bash", "-c", cmd)
 	outinfo := bytes.Buffer{}
 	command.Stdout = &outinfo
 

@@ -18,6 +18,7 @@
 package verify
 
 import (
+	"fmt"
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
@@ -53,26 +54,36 @@ var Verify = &cobra.Command{
 func verifySingleCase(expectedFile, actualFile, query string) error {
 	expectedData, err := util.ReadFileContent(expectedFile)
 	if err != nil {
-		logger.Log.Error("failed to read the expected data file")
-		return err
+		return fmt.Errorf("failed to read the expected data file: %v", err)
 	}
 
+	var actualData, sourceName string
 	if actualFile != "" {
-		if err = verifier.VerifyDataFile(actualFile, expectedData); err != nil {
-			logger.Log.Warnf("failed to verify the output: %s\n", actualFile)
-		} else {
-			logger.Log.Infof("verified the output: %s\n", actualFile)
+		sourceName = actualFile
+		actualData, err = util.ReadFileContent(actualFile)
+		if err != nil {
+			return fmt.Errorf("failed to read the actual data file: %v", err)
 		}
 	} else if query != "" {
-		if err = verifier.VerifyQuery(query, expectedData); err != nil {
-			logger.Log.Warnf("failed to verify the output: %s\n", query)
-		} else {
-			logger.Log.Infof("verified the output: %s\n", query)
+		sourceName = query
+		actualData, err = util.ExecuteCommand(query)
+		if err != nil {
+			return fmt.Errorf("failed to execute the query: %v", err)
 		}
+	}
+
+	if err = verifier.Verify(actualData, expectedData); err != nil {
+		logger.Log.Warnf("failed to verify the output: %s\n", sourceName)
+		if me, ok := err.(*verifier.MismatchError); ok {
+			fmt.Println(me.Error())
+		}
+	} else {
+		logger.Log.Infof("verified the output: %s\n", sourceName)
 	}
 	return nil
 }
 
+// verifyAccordingConfig reads cases from the config file and verifies them.
 func verifyAccordingConfig() error {
 	if config.GlobalConfig.Error != nil {
 		return config.GlobalConfig.Error
@@ -82,7 +93,9 @@ func verifyAccordingConfig() error {
 
 	for _, v := range e2eConfig.Verify {
 		if v.Expected != "" {
-			verifySingleCase(v.Expected, v.Actual, v.Query)
+			if err := verifySingleCase(v.Expected, v.Actual, v.Query); err != nil {
+				logger.Log.Errorf("%v", err)
+			}
 		} else {
 			logger.Log.Error("the expected data file is not specified")
 		}

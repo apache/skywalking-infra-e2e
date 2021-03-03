@@ -21,14 +21,13 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/apache/skywalking-infra-e2e/internal/util"
 	"github.com/apache/skywalking-infra-e2e/third-party/go/template"
 
 	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"
 )
 
-// MismatchError is the error type returned by the verify functions.
+// MismatchError is the error type returned by the Verify functions.
 // It contains the diff content.
 type MismatchError struct {
 	Err  error
@@ -44,30 +43,8 @@ func (e *MismatchError) Error() string {
 	return e.diff
 }
 
-// VerifyDataFile reads the actual data from the file and verifies.
-func VerifyDataFile(actualFile, expectedData string) error {
-	actualData, err := util.ReadFileContent(actualFile)
-	if err != nil {
-		return fmt.Errorf("failed to read the actual data file: %v", err)
-	}
-
-	return verify(actualData, expectedData)
-}
-
-// VerifyQuery gets the actual data from the query and then verifies.
-func VerifyQuery(query, expectedData string) error {
-	queryResult, err := util.ExecuteCommand(query)
-	if err != nil {
-		return fmt.Errorf("failed to execute the query: %v", err)
-	}
-
-	// TODO: ensure that the query result has the same format as expected data
-
-	return verify(queryResult, expectedData)
-}
-
-// verify checks if the actual data match the expected template.
-func verify(actualData, expectedTemplate string) error {
+// Verify checks if the actual data match the expected template.
+func Verify(actualData, expectedTemplate string) error {
 	var actual interface{}
 	if err := yaml.Unmarshal([]byte(actualData), &actual); err != nil {
 		return fmt.Errorf("failed to unmarshal actual data: %v", err)
