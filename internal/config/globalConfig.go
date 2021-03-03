@@ -20,12 +20,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"io/ioutil"
 
-	"gopkg.in/yaml.v2"
-
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
+
+	"gopkg.in/yaml.v2"
 )
 
 // GlobalE2EConfig store E2EConfig which can be used globally.

@@ -65,7 +65,6 @@ func ExecuteCommand(cmd string) (string, error) {
 	}
 	if err := command.Wait(); err != nil {
 		return "", err
-	} else {
-		return outinfo.String(), nil
 	}
+	return outinfo.String(), nil
 }
