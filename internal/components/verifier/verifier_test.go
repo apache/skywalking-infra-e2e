@@ -142,8 +142,8 @@ metrics:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := verify(tt.args.actualData, tt.args.expectedTemplate); (err != nil) != tt.wantErr {
-				t.Errorf("verify() error = %v, wantErr %v", err, tt.wantErr)
+			if err := Verify(tt.args.actualData, tt.args.expectedTemplate); (err != nil) != tt.wantErr {
+				t.Errorf("Verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
