@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This file is used to show how to write configuration files and can be used to test.
+
 setup:
   env: kind
   file: kind.yaml
@@ -32,3 +34,13 @@ setup:
           resource: pod
           for: condition=Ready
   timeout: 600
+
+verify:
+  - actual: ../../test/verify/1.actual.yaml
+    expected: ../../test/verify/1.expected.yaml
+  - actual: ../../test/verify/2.actual.yaml
+    expected: ../../test/verify/2.expected.yaml
+  - actual: ../../test/verify/1.actual.yaml
+    expected: ../../test/verify/2.expected.yaml
+  - query: swctl --display yaml service ls
+    expected: ../../test/verify/3.expected.yaml

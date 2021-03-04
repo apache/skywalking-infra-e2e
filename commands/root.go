@@ -29,6 +29,8 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 )
 
+var cfg string
+
 // Root represents the base command when called without any subcommands
 var Root = &cobra.Command{
 	Use:           "e2e command [flags]",
@@ -37,7 +39,7 @@ var Root = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		config.ReadGlobalConfigFile(constant.E2EDefaultFile)
+		config.ReadGlobalConfigFile(cfg)
 	},
 }
 
@@ -49,6 +51,8 @@ func Execute() error {
 	Root.AddCommand(trigger.Trigger)
 	Root.AddCommand(verify.Verify)
 	Root.AddCommand(cleanup.Cleanup)
+
+	Root.PersistentFlags().StringVarP(&cfg, "config", "c", constant.E2EDefaultFile, "the config file")
 
 	return Root.Execute()
 }
