@@ -52,7 +52,7 @@ var (
 
 // KindSetup sets up environment according to e2e.yaml.
 func KindSetup(e2eConfig *config.E2EConfig) error {
-	kindConfigPath = e2eConfig.Setup.File
+	kindConfigPath = e2eConfig.Setup.GetFile()
 
 	if kindConfigPath == "" {
 		return fmt.Errorf("no kind config file was provided")
@@ -187,7 +187,7 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 }
 
 func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
-	files, err := util.GetManifests(manifest.Path)
+	files, err := util.GetManifests(manifest.GetPath())
 	if err != nil {
 		logger.Log.Error("get manifests from command line argument failed")
 		return err

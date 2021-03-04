@@ -93,8 +93,8 @@ func verifyAccordingConfig() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 
 	for _, v := range e2eConfig.Verify {
-		if v.Expected != "" {
-			if err := verifySingleCase(v.Expected, v.Actual, v.Query); err != nil {
+		if v.GetExpected() != "" {
+			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err != nil {
 				logger.Log.Errorf("%v", err)
 			}
 		} else {

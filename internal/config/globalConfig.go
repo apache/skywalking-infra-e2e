@@ -21,6 +21,8 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"path"
+	"path/filepath"
 
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
@@ -35,28 +37,46 @@ type GlobalE2EConfig struct {
 }
 
 var GlobalConfig GlobalE2EConfig
+var CfgFile string
 
-func ReadGlobalConfigFile(configFilePath string) {
-	e2eFile := configFilePath
-
-	if !util.PathExist(e2eFile) {
-		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", e2eFile)
+func ReadGlobalConfigFile() {
+	if !util.PathExist(CfgFile) {
+		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", CfgFile)
 		return
 	}
 
-	data, err := ioutil.ReadFile(e2eFile)
+	data, err := ioutil.ReadFile(CfgFile)
 	if err != nil {
-		GlobalConfig.Error = fmt.Errorf("read e2e config file %s error: %s", e2eFile, err)
+		GlobalConfig.Error = fmt.Errorf("read e2e config file %s error: %s", CfgFile, err)
 		return
 	}
 
 	e2eConfigObject := E2EConfig{}
 	if err := yaml.Unmarshal(data, &e2eConfigObject); err != nil {
-		GlobalConfig.Error = fmt.Errorf("unmarshal e2e config file %s error: %s", e2eFile, err)
+		GlobalConfig.Error = fmt.Errorf("unmarshal e2e config file %s error: %s", CfgFile, err)
 		return
 	}
 
 	GlobalConfig.E2EConfig = e2eConfigObject
 	GlobalConfig.Error = nil
 	logger.Log.Info("load the e2e config successfully")
+}
+
+// ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
+func ResolveAbs(p string) string {
+	if p == "" {
+		return p
+	}
+
+	if path.IsAbs(p) {
+		return p
+	}
+
+	abs, err := filepath.Abs(CfgFile)
+	if err != nil {
+		logger.Log.Warnf("failed to resolve the absolute file path of %v\n", CfgFile)
+		return p
+	}
+
+	return filepath.Join(filepath.Dir(abs), p)
 }

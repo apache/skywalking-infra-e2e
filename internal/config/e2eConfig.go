@@ -33,9 +33,17 @@ type Setup struct {
 	Timeout int   `yaml:"timeout"`
 }
 
+func (s *Setup) GetFile() string {
+	return ResolveAbs(s.File)
+}
+
 type Manifest struct {
 	Path  string `yaml:"path"`
 	Waits []Wait `yaml:"wait"`
+}
+
+func (m Manifest) GetPath() string {
+	return ResolveAbs(m.Path)
 }
 
 type Run struct {
@@ -54,4 +62,14 @@ type VerifyCase struct {
 	Query    string `yaml:"query"`
 	Actual   string `yaml:"actual"`
 	Expected string `yaml:"expected"`
+}
+
+// GetActual resolves the absolute file path of the actual data file.
+func (v *VerifyCase) GetActual() string {
+	return ResolveAbs(v.Actual)
+}
+
+// GetExpected resolves the absolute file path of the expected data file.
+func (v *VerifyCase) GetExpected() string {
+	return ResolveAbs(v.Expected)
 }
