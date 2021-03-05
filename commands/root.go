@@ -18,8 +18,9 @@
 package commands
 
 import (
-	"github.com/apache/skywalking-infra-e2e/internal/util"
 	"github.com/spf13/cobra"
+
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/run"

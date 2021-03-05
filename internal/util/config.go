@@ -19,9 +19,10 @@
 package util
 
 import (
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"path"
 	"path/filepath"
+
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
 var CfgFile string
