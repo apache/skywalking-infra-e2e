@@ -18,6 +18,7 @@
 package commands
 
 import (
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 	"github.com/spf13/cobra"
 
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
@@ -50,7 +51,7 @@ func Execute() error {
 	Root.AddCommand(verify.Verify)
 	Root.AddCommand(cleanup.Cleanup)
 
-	Root.PersistentFlags().StringVarP(&config.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
+	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
 
 	return Root.Execute()
 }

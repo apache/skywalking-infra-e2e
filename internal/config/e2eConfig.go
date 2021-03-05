@@ -18,6 +18,8 @@
 
 package config
 
+import "github.com/apache/skywalking-infra-e2e/internal/util"
+
 // E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
 	Setup  Setup        `yaml:"setup"`
@@ -34,7 +36,7 @@ type Setup struct {
 }
 
 func (s *Setup) GetFile() string {
-	return ResolveAbs(s.File)
+	return util.ResolveAbs(s.File)
 }
 
 type Manifest struct {
@@ -43,7 +45,7 @@ type Manifest struct {
 }
 
 func (m Manifest) GetPath() string {
-	return ResolveAbs(m.Path)
+	return m.Path
 }
 
 type Run struct {
@@ -66,10 +68,10 @@ type VerifyCase struct {
 
 // GetActual resolves the absolute file path of the actual data file.
 func (v *VerifyCase) GetActual() string {
-	return ResolveAbs(v.Actual)
+	return util.ResolveAbs(v.Actual)
 }
 
 // GetExpected resolves the absolute file path of the expected data file.
 func (v *VerifyCase) GetExpected() string {
-	return ResolveAbs(v.Expected)
+	return util.ResolveAbs(v.Expected)
 }

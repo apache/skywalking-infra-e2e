@@ -189,7 +189,7 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
 	files, err := util.GetManifests(manifest.GetPath())
 	if err != nil {
-		logger.Log.Error("get manifests from command line argument failed")
+		logger.Log.Error("get manifests failed")
 		return err
 	}
 
