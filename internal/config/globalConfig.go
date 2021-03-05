@@ -36,23 +36,21 @@ type GlobalE2EConfig struct {
 
 var GlobalConfig GlobalE2EConfig
 
-func ReadGlobalConfigFile(configFilePath string) {
-	e2eFile := configFilePath
-
-	if !util.PathExist(e2eFile) {
-		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", e2eFile)
+func ReadGlobalConfigFile() {
+	if !util.PathExist(util.CfgFile) {
+		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", util.CfgFile)
 		return
 	}
 
-	data, err := ioutil.ReadFile(e2eFile)
+	data, err := ioutil.ReadFile(util.CfgFile)
 	if err != nil {
-		GlobalConfig.Error = fmt.Errorf("read e2e config file %s error: %s", e2eFile, err)
+		GlobalConfig.Error = fmt.Errorf("read e2e config file %s error: %s", util.CfgFile, err)
 		return
 	}
 
 	e2eConfigObject := E2EConfig{}
 	if err := yaml.Unmarshal(data, &e2eConfigObject); err != nil {
-		GlobalConfig.Error = fmt.Errorf("unmarshal e2e config file %s error: %s", e2eFile, err)
+		GlobalConfig.Error = fmt.Errorf("unmarshal e2e config file %s error: %s", util.CfgFile, err)
 		return
 	}
 

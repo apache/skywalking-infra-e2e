@@ -24,7 +24,7 @@ setup:
         - namespace: default
           resource: pod/busybox1 
           for: condition=Ready
-    - path: manifests
+    - path: manifests,manifests2
       wait:
         - namespace: default
           resource: pod

@@ -39,9 +39,9 @@ type KindClusterNameConfig struct {
 }
 
 func KindCleanUp(e2eConfig *config.E2EConfig) error {
-	kindConfigFilePath := e2eConfig.Setup.File
+	kindConfigFilePath := e2eConfig.Setup.GetFile()
 
-	logger.Log.Info("deleting kind cluster...")
+	logger.Log.Infof("deleting kind cluster...\n")
 	if err := cleanKindCluster(kindConfigFilePath); err != nil {
 		logger.Log.Error("delete kind cluster failed")
 		return err
@@ -52,8 +52,7 @@ func KindCleanUp(e2eConfig *config.E2EConfig) error {
 	logger.Log.Infof("deleting k8s cluster config file:%s", kubeConfigPath)
 	err := os.Remove(kubeConfigPath)
 	if err != nil {
-		logger.Log.Errorf("delete k8s cluster config file failed")
-		return err
+		logger.Log.Infoln("delete k8s cluster config file failed")
 	}
 
 	return nil

@@ -25,7 +25,6 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/spf13/cobra"
 )
@@ -33,12 +32,6 @@ import (
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := util.CheckDockerDaemon(); err != nil {
-			return err
-		}
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := setupAccordingE2E(); err != nil {
 			return fmt.Errorf("[Setup] %s", err)

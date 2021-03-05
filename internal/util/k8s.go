@@ -71,6 +71,7 @@ func GetManifests(manifests string) (files []string, err error) {
 	files = strings.Split(manifests, ",")
 	// file or directory
 	for _, f := range files {
+		f = ResolveAbs(f)
 		fi, err := os.Stat(f)
 		if err != nil {
 			return nil, err
@@ -78,12 +79,13 @@ func GetManifests(manifests string) (files []string, err error) {
 
 		switch mode := fi.Mode(); {
 		case mode.IsDir():
-			err := filepath.Walk(fi.Name(), func(path string, info os.FileInfo, err error) error {
+			err := filepath.Walk(f, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
-				filename := info.Name()
-				if strings.HasSuffix(filename, ".yml") || strings.HasSuffix(filename, ".yaml") {
+
+				if strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") {
+					path = ResolveAbs(path)
 					s = append(s, path)
 				}
 				return nil
@@ -94,6 +96,7 @@ func GetManifests(manifests string) (files []string, err error) {
 		case mode.IsRegular():
 			filename := fi.Name()
 			if strings.HasSuffix(filename, ".yml") || strings.HasSuffix(filename, ".yaml") {
+				filename = ResolveAbs(filename)
 				s = append(s, filename)
 			}
 		}

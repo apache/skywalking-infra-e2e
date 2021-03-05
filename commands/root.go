@@ -20,6 +20,8 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/apache/skywalking-infra-e2e/internal/util"
+
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/run"
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
@@ -29,8 +31,6 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 )
 
-var cfg string
-
 // Root represents the base command when called without any subcommands
 var Root = &cobra.Command{
 	Use:           "e2e command [flags]",
@@ -39,7 +39,7 @@ var Root = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		config.ReadGlobalConfigFile(cfg)
+		config.ReadGlobalConfigFile()
 	},
 }
 
@@ -52,7 +52,7 @@ func Execute() error {
 	Root.AddCommand(verify.Verify)
 	Root.AddCommand(cleanup.Cleanup)
 
-	Root.PersistentFlags().StringVarP(&cfg, "config", "c", constant.E2EDefaultFile, "the config file")
+	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
 
 	return Root.Execute()
 }
