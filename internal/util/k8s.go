@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 	apiv1 "k8s.io/api/admission/v1"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -71,6 +72,7 @@ func GetManifests(manifests string) (files []string, err error) {
 	files = strings.Split(manifests, ",")
 	// file or directory
 	for _, f := range files {
+		f = config.ResolveAbs(f)
 		fi, err := os.Stat(f)
 		if err != nil {
 			return nil, err
