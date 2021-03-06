@@ -21,6 +21,8 @@ package setup
 import (
 	"fmt"
 
+	"github.com/apache/skywalking-infra-e2e/internal/util"
+
 	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
@@ -33,6 +35,10 @@ var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := util.CheckDockerDaemon(); err != nil {
+			return err
+		}
+
 		if err := setupAccordingE2E(); err != nil {
 			return fmt.Errorf("[Setup] %s", err)
 		}
