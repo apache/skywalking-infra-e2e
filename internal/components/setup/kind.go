@@ -65,16 +65,6 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return nil
 	}
 
-	timeout := e2eConfig.Setup.Timeout
-	var waitTimeout time.Duration
-	if timeout <= 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
-	}
-
-	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
-
 	if err := createKindCluster(kindConfigPath); err != nil {
 		return err
 	}
@@ -85,9 +75,36 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
+	timeout := e2eConfig.Setup.Timeout
+	var waitTimeout time.Duration
+	if timeout <= 0 {
+		waitTimeout = constant.DefaultWaitTimeout
+	} else {
+		waitTimeout = time.Duration(timeout) * time.Second
+	}
+
+	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
+
+	// record time now
+	timeNow := time.Now()
+
 	err = createManifestsAndWait(c, dc, manifests, waitTimeout)
 	if err != nil {
 		return err
+	}
+
+	// calculates new timeout. manifests and run of setup uses the same countdown.
+	runWaitTimeout := NewTimeout(timeNow, waitTimeout)
+	if runWaitTimeout <= 0 {
+		return fmt.Errorf("kind setup timeout")
+	}
+
+	if len(e2eConfig.Setup.Runs) > 0 {
+		logger.Log.Debugf("executing commands...")
+		err := RunCommandsAndWait(e2eConfig.Setup.Runs, runWaitTimeout)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -129,42 +146,22 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 			continue
 		}
 
-		for _, wait := range waits {
-			if strings.Contains(wait.Resource, "/") && wait.LabelSelector != "" {
-				return fmt.Errorf("when passing resource.group/resource.name in Resource, the labelSelector can not be set at the same time")
-			}
+		for idx := range waits {
+			wait := waits[idx]
+			logger.Log.Infof("waiting for %+v", wait)
 
-			restClientGetter := util.NewSimpleRESTClientGetter(wait.Namespace, string(kubeConfigYaml))
-			silenceOutput, _ := os.Open(os.DevNull)
-			ioStreams := genericclioptions.IOStreams{In: os.Stdin, Out: silenceOutput, ErrOut: os.Stderr}
-			waitFlags := ctlwait.NewWaitFlags(restClientGetter, ioStreams)
-			// global timeout is set in e2e.yaml
-			waitFlags.Timeout = constant.SingleDefaultWaitTimeout
-			waitFlags.ForCondition = wait.For
+			if wait.Type == constant.KubeWaitType {
+				options, err := getWaitOptions(kubeConfigYaml, &wait)
+				if err != nil {
+					return err
+				}
 
-			var args []string
-			// resource.group/resource.name OR resource.group
-			if wait.Resource != "" {
-				args = append(args, wait.Resource)
+				waitSet.WaitGroup.Add(1)
+				go concurrentlyWait(&wait, options, waitSet)
 			} else {
-				return fmt.Errorf("resource must be provided in wait block")
-			}
-
-			if wait.LabelSelector != "" {
-				waitFlags.ResourceBuilderFlags.LabelSelector = &wait.LabelSelector
-			} else if !strings.Contains(wait.Resource, "/") {
-				// if labelSelector is nil and resource only provide resource.group, check all resources.
-				waitFlags.ResourceBuilderFlags.All = &constant.True
-			}
-
-			options, err := waitFlags.ToOptions(args)
-			if err != nil {
+				err := fmt.Errorf("wait type %s not implement yet", wait.Type)
 				return err
 			}
-
-			logger.Log.Infof("waiting for %+v", wait)
-			waitSet.WaitGroup.Add(1)
-			go concurrentlyWait(wait, options, waitSet)
 		}
 	}
 
@@ -186,6 +183,41 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 	return nil
 }
 
+func getWaitOptions(kubeConfigYaml []byte, wait *config.Wait) (options *ctlwait.WaitOptions, err error) {
+	if strings.Contains(wait.Resource, "/") && wait.LabelSelector != "" {
+		return nil, fmt.Errorf("when passing resource.group/resource.name in Resource, the labelSelector can not be set at the same time")
+	}
+
+	restClientGetter := util.NewSimpleRESTClientGetter(wait.Namespace, string(kubeConfigYaml))
+	silenceOutput, _ := os.Open(os.DevNull)
+	ioStreams := genericclioptions.IOStreams{In: os.Stdin, Out: silenceOutput, ErrOut: os.Stderr}
+	waitFlags := ctlwait.NewWaitFlags(restClientGetter, ioStreams)
+	// global timeout is set in e2e.yaml
+	waitFlags.Timeout = constant.SingleDefaultWaitTimeout
+	waitFlags.ForCondition = wait.For
+
+	var args []string
+	// resource.group/resource.name OR resource.group
+	if wait.Resource != "" {
+		args = append(args, wait.Resource)
+	} else {
+		return nil, fmt.Errorf("resource must be provided in wait block")
+	}
+
+	if wait.LabelSelector != "" {
+		waitFlags.ResourceBuilderFlags.LabelSelector = &wait.LabelSelector
+	} else if !strings.Contains(wait.Resource, "/") {
+		// if labelSelector is nil and resource only provide resource.group, check all resources.
+		waitFlags.ResourceBuilderFlags.All = &constant.True
+	}
+
+	options, err = waitFlags.ToOptions(args)
+	if err != nil {
+		return nil, err
+	}
+	return options, nil
+}
+
 func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
 	files, err := util.GetManifests(manifest.GetPath())
 	if err != nil {
@@ -204,13 +236,14 @@ func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest co
 	return nil
 }
 
-func concurrentlyWait(wait config.Wait, options *ctlwait.WaitOptions, waitSet *util.WaitSet) {
+func concurrentlyWait(wait *config.Wait, options *ctlwait.WaitOptions, waitSet *util.WaitSet) {
 	defer waitSet.WaitGroup.Done()
 
 	err := options.RunWait()
 	if err != nil {
 		err = fmt.Errorf("wait strategy :%+v, err: %s", wait, err)
 		waitSet.ErrChan <- err
+		return
 	}
 	logger.Log.Infof("wait %+v condition met", wait)
 }

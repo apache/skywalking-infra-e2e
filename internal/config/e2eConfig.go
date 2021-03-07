@@ -30,9 +30,8 @@ type Setup struct {
 	Env       string     `yaml:"env"`
 	File      string     `yaml:"file"`
 	Manifests []Manifest `yaml:"manifests"`
-	// Run is not supported yet
-	Run     []Run `yaml:"run"`
-	Timeout int   `yaml:"timeout"`
+	Runs      []Run      `yaml:"runs"`
+	Timeout   int        `yaml:"timeout"`
 }
 
 func (s *Setup) GetFile() string {
@@ -53,7 +52,12 @@ type Run struct {
 	Waits   []Wait `yaml:"wait"`
 }
 
+func (r Run) GetRunCommand() string {
+	return r.Command
+}
+
 type Wait struct {
+	Type          string `yaml:"type"`
 	Namespace     string `yaml:"namespace"`
 	Resource      string `yaml:"resource"`
 	LabelSelector string `yaml:"label-selector"`
