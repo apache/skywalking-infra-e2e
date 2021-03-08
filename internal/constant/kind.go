@@ -28,7 +28,6 @@ const (
 	Kind                     = "kind"
 	KindCommand              = "kind"
 	KindClusterDefaultName   = "kind"
-	KubeWaitType             = "kube"
 	E2EDefaultFile           = "e2e.yaml"
 	K8sClusterConfigFileName = "e2e-k8s.config"
 	DefaultWaitTimeout       = 600 * time.Second
