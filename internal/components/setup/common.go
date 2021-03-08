@@ -106,7 +106,6 @@ func executeCommandsAndWait(commands []string, waits []config.Wait, waitSet *uti
 			return
 		}
 		logger.Log.Infof("wait %+v condition met", wait)
-
 	}
 }
 
