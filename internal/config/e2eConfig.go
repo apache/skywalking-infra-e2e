@@ -57,7 +57,6 @@ func (r Run) GetRunCommand() string {
 }
 
 type Wait struct {
-	Type          string `yaml:"type"`
 	Namespace     string `yaml:"namespace"`
 	Resource      string `yaml:"resource"`
 	LabelSelector string `yaml:"label-selector"`

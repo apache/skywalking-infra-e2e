@@ -21,19 +21,16 @@ setup:
   manifests:
     - path: busybox1.yaml
       wait: 
-        - type: kube # wait type may not only kube. it can be `log` or `http` or else.
-          namespace: default
+        - namespace: default
           resource: pod/busybox1 
           for: condition=Ready
     - path: manifests,manifests2
       wait:
-        - type: kube
-          namespace: default
+        - namespace: default
           resource: pod
           label-selector: app=busybox2
           for: condition=Ready
-        - type: kube
-          namespace: default
+        - namespace: default
           resource: pod
           for: condition=Ready
   runs: # commands are serial within one code block and parallel between code blocks
@@ -41,16 +38,14 @@ setup:
         cp $TMPDIR/e2e-k8s.config ~/.kube/config
         kubectl create deployment nginx1 --image=nginx
       wait:
-        - type: kube
-          namespace: default
+        - namespace: default
           resource: deployment/nginx1
           for: condition=Available
     - command: |
         cp $TMPDIR/e2e-k8s.config ~/.kube/config
         kubectl create deployment nginx2 --image=nginx
       wait:
-        - type: kube
-          namespace: default
+        - namespace: default
           resource: deployment/nginx2
           for: condition=Available
   timeout: 600

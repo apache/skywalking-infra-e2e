@@ -150,18 +150,13 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 			wait := waits[idx]
 			logger.Log.Infof("waiting for %+v", wait)
 
-			if wait.Type == constant.KubeWaitType {
-				options, err := getWaitOptions(kubeConfigYaml, &wait)
-				if err != nil {
-					return err
-				}
-
-				waitSet.WaitGroup.Add(1)
-				go concurrentlyWait(&wait, options, waitSet)
-			} else {
-				err := fmt.Errorf("wait type %s not implement yet", wait.Type)
+			options, err := getWaitOptions(kubeConfigYaml, &wait)
+			if err != nil {
 				return err
 			}
+
+			waitSet.WaitGroup.Add(1)
+			go concurrentlyWait(&wait, options, waitSet)
 		}
 	}
 

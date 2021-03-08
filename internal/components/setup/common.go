@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
-
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
@@ -89,30 +87,26 @@ func executeCommandsAndWait(commands []string, waits []config.Wait, waitSet *uti
 		wait := waits[idx]
 		logger.Log.Infof("waiting for %+v", wait)
 
-		if wait.Type == constant.KubeWaitType {
-			kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
-			if err != nil {
-				err = fmt.Errorf("read kube config failed: %s", err)
-				waitSet.ErrChan <- err
-			}
-
-			options, err := getWaitOptions(kubeConfigYaml, &wait)
-			if err != nil {
-				err = fmt.Errorf("commands: [%s] get wait options error: %s", commands, err)
-				waitSet.ErrChan <- err
-			}
-
-			err = options.RunWait()
-			if err != nil {
-				err = fmt.Errorf("commands: [%s] waits error: %s", commands, err)
-				waitSet.ErrChan <- err
-				return
-			}
-			logger.Log.Infof("wait %+v condition met", wait)
-		} else {
-			err := fmt.Errorf("wait type %s not implement yet", wait.Type)
+		kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
+		if err != nil {
+			err = fmt.Errorf("read kube config failed: %s", err)
 			waitSet.ErrChan <- err
 		}
+
+		options, err := getWaitOptions(kubeConfigYaml, &wait)
+		if err != nil {
+			err = fmt.Errorf("commands: [%s] get wait options error: %s", commands, err)
+			waitSet.ErrChan <- err
+		}
+
+		err = options.RunWait()
+		if err != nil {
+			err = fmt.Errorf("commands: [%s] waits error: %s", commands, err)
+			waitSet.ErrChan <- err
+			return
+		}
+		logger.Log.Infof("wait %+v condition met", wait)
+
 	}
 }
 
