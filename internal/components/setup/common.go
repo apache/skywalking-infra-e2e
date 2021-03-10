@@ -40,7 +40,7 @@ func RunCommandsAndWait(runs []config.Run, timeout time.Duration) error {
 			continue
 		}
 
-		commands := strings.Split(command, "\n")
+		commands := parseRunCommand(command)
 
 		waitSet.WaitGroup.Add(1)
 		go executeCommandsAndWait(commands, run.Waits, waitSet)
@@ -62,6 +62,13 @@ func RunCommandsAndWait(runs []config.Run, timeout time.Duration) error {
 	}
 
 	return nil
+}
+
+// parseRunCommand parses command lines to individual commands.
+func parseRunCommand(command string) (commands []string) {
+	replacedCommand := strings.ReplaceAll(command, "\\\n", " ")
+	commands = strings.Split(replacedCommand, "\n")
+	return commands
 }
 
 func executeCommandsAndWait(commands []string, waits []config.Wait, waitSet *util.WaitSet) {

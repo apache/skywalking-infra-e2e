@@ -43,7 +43,8 @@ setup:
           for: condition=Available
     - command: |
         cp $TMPDIR/e2e-k8s.config ~/.kube/config
-        kubectl create deployment nginx2 --image=nginx
+        kubectl create deployment nginx2 \
+                                  --image=nginx
       wait:
         - namespace: default
           resource: deployment/nginx2

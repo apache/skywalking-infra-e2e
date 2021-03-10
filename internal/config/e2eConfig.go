@@ -52,10 +52,6 @@ type Run struct {
 	Waits   []Wait `yaml:"wait"`
 }
 
-func (r Run) GetRunCommand() string {
-	return r.Command
-}
-
 type Wait struct {
 	Namespace     string `yaml:"namespace"`
 	Resource      string `yaml:"resource"`
