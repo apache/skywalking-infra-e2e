@@ -30,9 +30,8 @@ type Setup struct {
 	Env       string     `yaml:"env"`
 	File      string     `yaml:"file"`
 	Manifests []Manifest `yaml:"manifests"`
-	// Run is not supported yet
-	Run     []Run `yaml:"run"`
-	Timeout int   `yaml:"timeout"`
+	Runs      []Run      `yaml:"runs"`
+	Timeout   int        `yaml:"timeout"`
 }
 
 func (s *Setup) GetFile() string {

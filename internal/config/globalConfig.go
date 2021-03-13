@@ -28,7 +28,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// GlobalE2EConfig store E2EConfig which can be used globally.
+// GlobalE2EConfig stores E2EConfig which can be used globally.
 type GlobalE2EConfig struct {
 	Error     error
 	E2EConfig E2EConfig
