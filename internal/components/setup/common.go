@@ -21,7 +21,6 @@ package setup
 import (
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -35,12 +34,10 @@ func RunCommandsAndWait(runs []config.Run, timeout time.Duration) error {
 
 	for idx := range runs {
 		run := runs[idx]
-		command := run.Command
-		if len(command) < 1 {
+		commands := run.Command
+		if len(commands) < 1 {
 			continue
 		}
-
-		commands := parseRunCommand(command)
 
 		waitSet.WaitGroup.Add(1)
 		go executeCommandsAndWait(commands, run.Waits, waitSet)
@@ -64,30 +61,17 @@ func RunCommandsAndWait(runs []config.Run, timeout time.Duration) error {
 	return nil
 }
 
-// parseRunCommand parses command lines to individual commands.
-func parseRunCommand(command string) (commands []string) {
-	replacedCommand := strings.ReplaceAll(command, "\\\n", " ")
-	commands = strings.Split(replacedCommand, "\n")
-	return commands
-}
-
-func executeCommandsAndWait(commands []string, waits []config.Wait, waitSet *util.WaitSet) {
+func executeCommandsAndWait(commands string, waits []config.Wait, waitSet *util.WaitSet) {
 	defer waitSet.WaitGroup.Done()
 
 	// executes commands
-	for _, command := range commands {
-		if len(command) < 1 {
-			continue
-		}
-
-		logger.Log.Infof("executing command %s", command)
-		result, err := util.ExecuteCommand(command)
-		if err != nil {
-			err = fmt.Errorf("command: [%s] runs error: %s", command, err)
-			waitSet.ErrChan <- err
-		}
-		logger.Log.Infof("executed command %s, result: %s", command, result)
+	logger.Log.Infof("executing commands [%s]", commands)
+	result, err := util.ExecuteCommand(commands)
+	if err != nil {
+		err = fmt.Errorf("commands: [%s] runs error: %s", commands, err)
+		waitSet.ErrChan <- err
 	}
+	logger.Log.Infof("executed commands [%s], result: %s", commands, result)
 
 	// waits for conditions meet
 	for idx := range waits {
