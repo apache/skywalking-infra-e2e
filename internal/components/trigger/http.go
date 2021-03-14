@@ -41,7 +41,7 @@ func NewHTTPAction(intervalStr string, times int, url, method string) Action {
 	}
 
 	if interval <= 0 {
-		logger.Log.Errorf("interval [%s] is not positive")
+		logger.Log.Errorf("interval [%s] is not positive", interval)
 		return nil
 	}
 
