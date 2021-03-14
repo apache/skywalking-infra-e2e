@@ -18,11 +18,11 @@
 package trigger
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
@@ -33,16 +33,23 @@ type httpAction struct {
 	method   string
 }
 
-func NewHTTPAction() Action {
-	interval, err := time.ParseDuration(flags.Interval)
+func NewHTTPAction(intervalStr string, times int, url, method string) Action {
+	interval, err := time.ParseDuration(intervalStr)
 	if err != nil {
-		interval = time.Second
+		logger.Log.Errorf("interval [%s] parse error: %s.", intervalStr, err)
+		return nil
 	}
+
+	if interval <= 0 {
+		logger.Log.Errorf("interval [%s] is not positive")
+		return nil
+	}
+
 	return &httpAction{
 		interval: interval,
-		times:    flags.Times,
-		url:      flags.URL,
-		method:   strings.ToUpper(flags.Method),
+		times:    times,
+		url:      url,
+		method:   strings.ToUpper(method),
 	}
 }
 
@@ -56,7 +63,11 @@ func (h *httpAction) Do() error {
 		return err
 	}
 
+	logger.Log.Infof("Trigger will request URL %s %d times, %s seconds apart each time.", h.url, h.times, h.interval)
+
 	for range t.C {
+		logger.Log.Debugf("request URL %s the %d time.", h.url, c)
+
 		response, err := client.Do(request)
 		if err != nil {
 			logger.Log.Errorf("do request error %v", err)
@@ -65,10 +76,14 @@ func (h *httpAction) Do() error {
 		response.Body.Close()
 
 		logger.Log.Infof("do request %v response http code %v", h.url, response.StatusCode)
+		if response.StatusCode == http.StatusOK {
+			logger.Log.Debugf("do http action %+v success.", *h)
+			break
+		}
 
 		if h.times > 0 {
 			if h.times <= c {
-				break
+				return fmt.Errorf("do request %d times, but still failed", c)
 			}
 			c++
 		}

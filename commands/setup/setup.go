@@ -39,14 +39,14 @@ var Setup = &cobra.Command{
 			return err
 		}
 
-		if err := setupAccordingE2E(); err != nil {
+		if err := DoSetupAccordingE2E(); err != nil {
 			return fmt.Errorf("[Setup] %s", err)
 		}
 		return nil
 	},
 }
 
-func setupAccordingE2E() error {
+func DoSetupAccordingE2E() error {
 	if config.GlobalConfig.Error != nil {
 		return config.GlobalConfig.Error
 	}

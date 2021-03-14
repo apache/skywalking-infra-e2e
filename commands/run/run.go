@@ -18,7 +18,9 @@
 package run
 
 import (
-	"fmt"
+	"github.com/apache/skywalking-infra-e2e/commands/setup"
+	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -27,7 +29,30 @@ var Run = &cobra.Command{
 	Use:   "run",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Not implemented.")
+		err := runAccordingE2E()
+		if err != nil {
+			return err
+		}
+
 		return nil
 	},
+}
+
+func runAccordingE2E() error {
+	if config.GlobalConfig.Error != nil {
+		return config.GlobalConfig.Error
+	}
+
+	// setup part
+	err := setup.DoSetupAccordingE2E()
+	if err != nil {
+		return err
+	}
+	logger.Log.Infof("setup part finished successfully")
+
+	// trigger part
+
+	// verify part
+
+	return nil
 }
