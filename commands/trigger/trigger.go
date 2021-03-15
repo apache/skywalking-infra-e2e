@@ -19,33 +19,49 @@ package trigger
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"github.com/apache/skywalking-infra-e2e/internal/flags"
-)
+	"github.com/apache/skywalking-infra-e2e/internal/components/trigger"
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 
-func init() {
-	Trigger.Flags().StringVar(&flags.Interval, "interval", "3s", "trigger the action every N seconds")
-	Trigger.Flags().IntVar(&flags.Times, "times", 0, "how many times to trigger the action, 0=infinite")
-	Trigger.Flags().StringVar(&flags.Action, "action", "", "the action of the trigger")
-	Trigger.Flags().StringVar(&flags.URL, "url", "", "the url of the http action")
-	Trigger.Flags().StringVar(&flags.Method, "method", "get", "the method of the http action")
-}
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+)
 
 var Trigger = &cobra.Command{
 	Use:   "trigger",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var action Action
-		if strings.EqualFold(flags.Action, constant.ActionHTTP) {
-			action = NewHTTPAction()
+		if err := DoActionAccordingE2E(); err != nil {
+			return fmt.Errorf("[Trigger] %s", err)
 		}
-		if action == nil {
-			return fmt.Errorf("no such action for args")
-		}
-		return action.Do()
+
+		return nil
 	},
+}
+
+func DoActionAccordingE2E() error {
+	if config.GlobalConfig.Error != nil {
+		return config.GlobalConfig.Error
+	}
+
+	e2eConfig := config.GlobalConfig.E2EConfig
+	if e2eConfig.Trigger.Action == constant.ActionHTTP {
+		action := trigger.NewHTTPAction(e2eConfig.Trigger.Interval,
+			e2eConfig.Trigger.Times,
+			e2eConfig.Trigger.URL,
+			e2eConfig.Trigger.Method)
+		if action == nil {
+			return fmt.Errorf("trigger [%+v] parse error", e2eConfig.Trigger)
+		}
+
+		err := action.Do()
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("no such action for trigger: %s", e2eConfig.Trigger.Action)
+	}
+
+	return nil
 }
