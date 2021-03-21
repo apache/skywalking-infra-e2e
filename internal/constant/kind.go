@@ -32,6 +32,8 @@ const (
 	K8sClusterConfigFileName = "e2e-k8s.config"
 	DefaultWaitTimeout       = 600 * time.Second
 	SingleDefaultWaitTimeout = 30 * 60 * time.Second
+	StepTypeManifest         = "manifest"
+	StepTypeCommand          = "command"
 )
 
 var (

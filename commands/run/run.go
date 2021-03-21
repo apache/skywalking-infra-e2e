@@ -18,7 +18,10 @@
 package run
 
 import (
+	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
+	"github.com/apache/skywalking-infra-e2e/commands/trigger"
+	"github.com/apache/skywalking-infra-e2e/commands/verify"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
@@ -51,8 +54,27 @@ func runAccordingE2E() error {
 	logger.Log.Infof("setup part finished successfully")
 
 	// trigger part
+	err = trigger.DoActionAccordingE2E()
+	if err != nil {
+		return err
+	}
+	logger.Log.Infof("trigger part finished successfully")
 
 	// verify part
+	err = verify.DoVerifyAccordingConfig()
+	if err != nil {
+		return err
+	}
+	logger.Log.Infof("verify part finished successfully")
+
+	// cleanup part
+	defer func() {
+		err = cleanup.DoCleanupAccordingE2E()
+		if err != nil {
+			logger.Log.Errorf("cleanup part error: %s", err)
+		}
+		logger.Log.Infof("cleanup part finished successfully")
+	}()
 
 	return nil
 }

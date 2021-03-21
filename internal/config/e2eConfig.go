@@ -28,11 +28,17 @@ type E2EConfig struct {
 }
 
 type Setup struct {
-	Env       string     `yaml:"env"`
-	File      string     `yaml:"file"`
-	Manifests []Manifest `yaml:"manifests"`
-	Runs      []Run      `yaml:"runs"`
-	Timeout   int        `yaml:"timeout"`
+	Env     string `yaml:"env"`
+	File    string `yaml:"file"`
+	Steps   []Step `yaml:"steps"`
+	Timeout int    `yaml:"timeout"`
+}
+
+type Step struct {
+	Type    string `yaml:"type"`
+	Path    string `yaml:"path"`
+	Command string `yaml:"command"`
+	Waits   []Wait `yaml:"wait"`
 }
 
 func (s *Setup) GetFile() string {
@@ -42,10 +48,6 @@ func (s *Setup) GetFile() string {
 type Manifest struct {
 	Path  string `yaml:"path"`
 	Waits []Wait `yaml:"wait"`
-}
-
-func (m Manifest) GetPath() string {
-	return m.Path
 }
 
 type Run struct {

@@ -58,10 +58,10 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return fmt.Errorf("no kind config file was provided")
 	}
 
-	manifests := e2eConfig.Setup.Manifests
+	manifests := e2eConfig.Setup.Steps
 	// if no manifests was provided, then no need to create the cluster.
 	if manifests == nil {
-		logger.Log.Info("no manifests is provided")
+		logger.Log.Info("no steps is provided")
 		return nil
 	}
 
@@ -75,6 +75,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
+	// run commands and manifests
 	timeout := e2eConfig.Setup.Timeout
 	var waitTimeout time.Duration
 	if timeout <= 0 {
@@ -82,28 +83,37 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	} else {
 		waitTimeout = time.Duration(timeout) * time.Second
 	}
-
 	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
 
 	// record time now
 	timeNow := time.Now()
 
-	err = createManifestsAndWait(c, dc, manifests, waitTimeout)
-	if err != nil {
-		return err
-	}
+	for _, step := range e2eConfig.Setup.Steps {
+		if step.Type == constant.StepTypeManifest {
+			manifest := config.Manifest{
+				Path:  step.Path,
+				Waits: step.Waits,
+			}
+			err = createManifestAndWait(c, dc, manifest, waitTimeout)
+			if err != nil {
+				return err
+			}
+		} else if step.Type == constant.StepTypeCommand {
+			command := config.Run{
+				Command: step.Command,
+				Waits:   step.Waits,
+			}
 
-	// calculates new timeout. manifests and run of setup uses the same countdown.
-	runWaitTimeout := NewTimeout(timeNow, waitTimeout)
-	if runWaitTimeout <= 0 {
-		return fmt.Errorf("kind setup timeout")
-	}
+			err := RunCommandsAndWait(command, waitTimeout)
+			if err != nil {
+				return err
+			}
+		}
+		waitTimeout = NewTimeout(timeNow, waitTimeout)
+		timeNow = time.Now()
 
-	if len(e2eConfig.Setup.Runs) > 0 {
-		logger.Log.Debugf("executing commands...")
-		err := RunCommandsAndWait(e2eConfig.Setup.Runs, runWaitTimeout)
-		if err != nil {
-			return err
+		if waitTimeout <= 0 {
+			return fmt.Errorf("kind setup timeout")
 		}
 	}
 	return nil
@@ -123,8 +133,8 @@ func createKindCluster(kindConfigPath string) error {
 	return nil
 }
 
-// createManifestsAndWait creates manifests in k8s cluster and concurrent waits according to the manifests' wait conditions.
-func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manifests []config.Manifest, timeout time.Duration) error {
+// createManifestAndWait creates manifests in k8s cluster and concurrent waits according to the manifests' wait conditions.
+func createManifestAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest, timeout time.Duration) error {
 	waitSet := util.NewWaitSet(timeout)
 
 	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
@@ -132,32 +142,29 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 		return err
 	}
 
-	for idx := range manifests {
-		manifest := manifests[idx]
-		waits := manifest.Waits
-		err := createByManifest(c, dc, manifest)
+	waits := manifest.Waits
+	err = createByManifest(c, dc, manifest)
+	if err != nil {
+		return err
+	}
+
+	// len() for nil slices is defined as zero
+	if len(waits) == 0 {
+		logger.Log.Info("no wait-for strategy is provided")
+		return nil
+	}
+
+	for idx := range waits {
+		wait := waits[idx]
+		logger.Log.Infof("waiting for %+v", wait)
+
+		options, err := getWaitOptions(kubeConfigYaml, &wait)
 		if err != nil {
 			return err
 		}
 
-		// len() for nil slices is defined as zero
-		if len(waits) == 0 {
-			logger.Log.Info("no wait-for strategy is provided")
-			continue
-		}
-
-		for idx := range waits {
-			wait := waits[idx]
-			logger.Log.Infof("waiting for %+v", wait)
-
-			options, err := getWaitOptions(kubeConfigYaml, &wait)
-			if err != nil {
-				return err
-			}
-
-			waitSet.WaitGroup.Add(1)
-			go concurrentlyWait(&wait, options, waitSet)
-		}
+		waitSet.WaitGroup.Add(1)
+		go concurrentlyWait(&wait, options, waitSet)
 	}
 
 	go func() {
@@ -167,12 +174,12 @@ func createManifestsAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manif
 
 	select {
 	case <-waitSet.FinishChan:
-		logger.Log.Infof("create and wait for manifests ready success")
+		logger.Log.Infof("create and wait for manifest ready success")
 	case err := <-waitSet.ErrChan:
-		logger.Log.Errorf("failed to wait for manifests to be ready")
+		logger.Log.Errorf("failed to wait for manifest to be ready")
 		return err
 	case <-time.After(waitSet.Timeout):
-		return fmt.Errorf("wait for manifests ready timeout after %d seconds", int(timeout.Seconds()))
+		return fmt.Errorf("wait for manifest ready timeout after %d seconds", int(timeout.Seconds()))
 	}
 
 	return nil
@@ -214,7 +221,7 @@ func getWaitOptions(kubeConfigYaml []byte, wait *config.Wait) (options *ctlwait.
 }
 
 func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
-	files, err := util.GetManifests(manifest.GetPath())
+	files, err := util.GetManifests(manifest.Path)
 	if err != nil {
 		logger.Log.Error("get manifests failed")
 		return err
