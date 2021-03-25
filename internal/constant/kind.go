@@ -38,7 +38,7 @@ const (
 
 func init() {
 	tmpDirEnv := os.Getenv("TMPDIR")
-	// TMPDIR maybe "", try to set tmpdir here, so that use can use TMPDIR to get kubeconfig.
+	// TMPDIR maybe "", try to set tmpdir here, so that user can get kubeconfig from TMPDIR.
 	if tmpDirEnv == "" {
 		err := os.Setenv("TMPDIR", "/tmp")
 		if err != nil {
