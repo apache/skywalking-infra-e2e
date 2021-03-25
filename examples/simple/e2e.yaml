@@ -18,38 +18,33 @@
 setup:
   env: kind
   file: kind.yaml
-  manifests:
-    - path: busybox1.yaml
-      wait: 
-        - namespace: default
-          resource: pod/busybox1 
-          for: condition=Ready
-    - path: manifests,manifests2
+  steps:
+    - command: |
+        if test -d "$TMPDIR"; then
+            :
+        else
+            TMPDIR=/tmp
+        fi
+
+        cp $TMPDIR/e2e-k8s.config ~/.kube/config
+        export ISTIO_VERSION=1.9.1
+        istioctl version || (curl -L https://istio.io/downloadIstio | sh - && sudo mv $PWD/istio-$ISTIO_VERSION/bin/istioctl /usr/local/bin/)
+        istioctl install -y --set profile=demo \
+            --set meshConfig.defaultConfig.envoyMetricsService.address=skywalking-oap.istio-system:11800 \
+            --set values.telemetry.v2.enabled=false
+        kubectl label namespace default istio-injection=enabled
+    - path: busybox1.yaml,manifests
       wait:
         - namespace: default
           resource: pod
-          label-selector: app=busybox2
           for: condition=Ready
-        - namespace: default
-          resource: pod
-          for: condition=Ready
-  runs: # commands are serial within one code block and parallel between code blocks
-    - command: | # it can be a shell script or anything executable
-        cp $TMPDIR/e2e-k8s.config ~/.kube/config
+    - command: |
         kubectl create deployment nginx1 --image=nginx
       wait:
         - namespace: default
           resource: deployment/nginx1
           for: condition=Available
-    - command: |
-        cp $TMPDIR/e2e-k8s.config ~/.kube/config
-        kubectl create deployment nginx2 \
-                                  --image=nginx
-      wait:
-        - namespace: default
-          resource: deployment/nginx2
-          for: condition=Available
-  timeout: 600
+  timeout: 1200
 
 trigger:
   action: http

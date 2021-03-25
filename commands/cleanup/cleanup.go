@@ -34,7 +34,7 @@ var Cleanup = &cobra.Command{
 	Use:   "cleanup",
 	Short: "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cleanupAccordingE2E()
+		err := DoCleanupAccordingE2E()
 		if err != nil {
 			err = fmt.Errorf("[Cleanup] %s", err)
 			return err
@@ -43,7 +43,7 @@ var Cleanup = &cobra.Command{
 	},
 }
 
-func cleanupAccordingE2E() error {
+func DoCleanupAccordingE2E() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 	if e2eConfig.Setup.Env == constant.Kind {
 		err := cleanup.KindCleanUp(&e2eConfig)

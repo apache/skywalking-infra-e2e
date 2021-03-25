@@ -32,7 +32,20 @@ const (
 	K8sClusterConfigFileName = "e2e-k8s.config"
 	DefaultWaitTimeout       = 600 * time.Second
 	SingleDefaultWaitTimeout = 30 * 60 * time.Second
+	StepTypeManifest         = "manifest"
+	StepTypeCommand          = "command"
 )
+
+func init() {
+	tmpDirEnv := os.Getenv("TMPDIR")
+	// TMPDIR maybe "", try to set tmpdir here, so that user can get kubeconfig from TMPDIR.
+	if tmpDirEnv == "" {
+		err := os.Setenv("TMPDIR", "/tmp")
+		if err != nil {
+			panic(err)
+		}
+	}
+}
 
 var (
 	True                     = true

@@ -29,19 +29,16 @@ import (
 )
 
 // RunCommandsAndWait Concurrently run commands and wait for conditions.
-func RunCommandsAndWait(runs []config.Run, timeout time.Duration) error {
+func RunCommandsAndWait(run config.Run, timeout time.Duration) error {
 	waitSet := util.NewWaitSet(timeout)
 
-	for idx := range runs {
-		run := runs[idx]
-		commands := run.Command
-		if len(commands) < 1 {
-			continue
-		}
-
-		waitSet.WaitGroup.Add(1)
-		go executeCommandsAndWait(commands, run.Waits, waitSet)
+	commands := run.Command
+	if len(commands) < 1 {
+		return nil
 	}
+
+	waitSet.WaitGroup.Add(1)
+	go executeCommandsAndWait(commands, run.Waits, waitSet)
 
 	go func() {
 		waitSet.WaitGroup.Wait()

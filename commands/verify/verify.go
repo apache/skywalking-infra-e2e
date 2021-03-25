@@ -48,7 +48,7 @@ var Verify = &cobra.Command{
 			return verifySingleCase(expected, actual, query)
 		}
 		// If there is no given flags.
-		return verifyAccordingConfig()
+		return DoVerifyAccordingConfig()
 	},
 }
 
@@ -84,8 +84,8 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
-// verifyAccordingConfig reads cases from the config file and verifies them.
-func verifyAccordingConfig() error {
+// DoVerifyAccordingConfig reads cases from the config file and verifies them.
+func DoVerifyAccordingConfig() error {
 	if config.GlobalConfig.Error != nil {
 		return config.GlobalConfig.Error
 	}
