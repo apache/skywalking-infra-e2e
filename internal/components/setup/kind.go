@@ -89,7 +89,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	timeNow := time.Now()
 
 	for _, step := range e2eConfig.Setup.Steps {
-		if step.Type == constant.StepTypeManifest {
+		if step.Path != "" && step.Command == "" {
 			manifest := config.Manifest{
 				Path:  step.Path,
 				Waits: step.Waits,
@@ -98,7 +98,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 			if err != nil {
 				return err
 			}
-		} else if step.Type == constant.StepTypeCommand {
+		} else if step.Command != "" && step.Path == "" {
 			command := config.Run{
 				Command: step.Command,
 				Waits:   step.Waits,
@@ -108,7 +108,10 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			return fmt.Errorf("step parameter error, one Path or one Command should be specified, but got %+v", step)
 		}
+
 		waitTimeout = NewTimeout(timeNow, waitTimeout)
 		timeNow = time.Now()
 

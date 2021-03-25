@@ -19,8 +19,7 @@ setup:
   env: kind
   file: kind.yaml
   steps:
-    - type: command
-      command: |
+    - command: |
         if test -d "$TMPDIR"; then
             :
         else
@@ -34,14 +33,12 @@ setup:
             --set meshConfig.defaultConfig.envoyMetricsService.address=skywalking-oap.istio-system:11800 \
             --set values.telemetry.v2.enabled=false
         kubectl label namespace default istio-injection=enabled
-    - type: manifest
-      path: busybox1.yaml,manifests
+    - path: busybox1.yaml,manifests
       wait:
         - namespace: default
           resource: pod
           for: condition=Ready
-    - type: command
-      command: |
+    - command: |
         kubectl create deployment nginx1 --image=nginx
       wait:
         - namespace: default

@@ -35,7 +35,6 @@ type Setup struct {
 }
 
 type Step struct {
-	Type    string `yaml:"type"`
 	Path    string `yaml:"path"`
 	Command string `yaml:"command"`
 	Waits   []Wait `yaml:"wait"`

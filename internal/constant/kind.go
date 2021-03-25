@@ -36,6 +36,17 @@ const (
 	StepTypeCommand          = "command"
 )
 
+func init() {
+	tmpDirEnv := os.Getenv("TMPDIR")
+	// TMPDIR maybe "", try to set tmpdir here, so that use can use TMPDIR to get kubeconfig.
+	if tmpDirEnv == "" {
+		err := os.Setenv("TMPDIR", "/tmp")
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 var (
 	True                     = true
 	False                    = false

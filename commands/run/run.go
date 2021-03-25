@@ -53,6 +53,15 @@ func runAccordingE2E() error {
 	}
 	logger.Log.Infof("setup part finished successfully")
 
+	// cleanup part
+	defer func() {
+		err = cleanup.DoCleanupAccordingE2E()
+		if err != nil {
+			logger.Log.Errorf("cleanup part error: %s", err)
+		}
+		logger.Log.Infof("cleanup part finished successfully")
+	}()
+
 	// trigger part
 	err = trigger.DoActionAccordingE2E()
 	if err != nil {
@@ -66,15 +75,6 @@ func runAccordingE2E() error {
 		return err
 	}
 	logger.Log.Infof("verify part finished successfully")
-
-	// cleanup part
-	defer func() {
-		err = cleanup.DoCleanupAccordingE2E()
-		if err != nil {
-			logger.Log.Errorf("cleanup part error: %s", err)
-		}
-		logger.Log.Infof("cleanup part finished successfully")
-	}()
 
 	return nil
 }
