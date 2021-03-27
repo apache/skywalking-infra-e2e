@@ -45,6 +45,7 @@ var Cleanup = &cobra.Command{
 
 func DoCleanupAccordingE2E() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
+
 	if e2eConfig.Setup.Env == constant.Kind {
 		err := cleanup.KindCleanUp(&e2eConfig)
 		if err != nil {

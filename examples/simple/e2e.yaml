@@ -20,12 +20,7 @@ setup:
   file: kind.yaml
   steps:
     - command: |
-        if test -d "$TMPDIR"; then
-            :
-        else
-            TMPDIR=/tmp
-        fi
-
+        # kind k8s cluster is in $TMPDIR
         cp $TMPDIR/e2e-k8s.config ~/.kube/config
         export ISTIO_VERSION=1.9.1
         istioctl version || (curl -L https://istio.io/downloadIstio | sh - && sudo mv $PWD/istio-$ISTIO_VERSION/bin/istioctl /usr/local/bin/)
@@ -45,6 +40,10 @@ setup:
           resource: deployment/nginx1
           for: condition=Available
   timeout: 1200
+
+cleanup:
+  # always never success failure
+  on: always
 
 trigger:
   action: http

@@ -23,6 +23,7 @@ import "github.com/apache/skywalking-infra-e2e/internal/util"
 // E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
 	Setup   Setup        `yaml:"setup"`
+	Cleanup Cleanup      `yaml:"cleanup"`
 	Trigger Trigger      `yaml:"trigger"`
 	Verify  []VerifyCase `yaml:"verify"`
 }
@@ -32,6 +33,10 @@ type Setup struct {
 	File    string `yaml:"file"`
 	Steps   []Step `yaml:"steps"`
 	Timeout int    `yaml:"timeout"`
+}
+
+type Cleanup struct {
+	On string `yaml:"on"`
 }
 
 type Step struct {

@@ -23,6 +23,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
 	"github.com/spf13/cobra"
@@ -55,6 +56,28 @@ func runAccordingE2E() error {
 
 	// cleanup part
 	defer func() {
+		clean := true
+
+		switch config.GlobalConfig.E2EConfig.Cleanup.On {
+		case constant.CleanUpNever:
+			clean = false
+		case constant.CleanUpOnSuccess:
+			// failed
+			if err != nil {
+				clean = false
+			}
+		case constant.CleanUpOnFailure:
+			// success
+			if err == nil {
+				clean = false
+			}
+		}
+
+		if !clean {
+			logger.Log.Infof("cleanup passed according to config")
+			return
+		}
+
 		err = cleanup.DoCleanupAccordingE2E()
 		if err != nil {
 			logger.Log.Errorf("cleanup part error: %s", err)

@@ -58,9 +58,9 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return fmt.Errorf("no kind config file was provided")
 	}
 
-	manifests := e2eConfig.Setup.Steps
-	// if no manifests was provided, then no need to create the cluster.
-	if manifests == nil {
+	steps := e2eConfig.Setup.Steps
+	// if no steps was provided, then no need to create the cluster.
+	if steps == nil {
 		logger.Log.Info("no steps is provided")
 		return nil
 	}
