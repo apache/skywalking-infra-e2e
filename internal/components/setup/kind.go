@@ -89,6 +89,8 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	timeNow := time.Now()
 
 	for _, step := range e2eConfig.Setup.Steps {
+		logger.Log.Infof("processing setup step [%s]", step.Name)
+
 		if step.Path != "" && step.Command == "" {
 			manifest := config.Manifest{
 				Path:  step.Path,

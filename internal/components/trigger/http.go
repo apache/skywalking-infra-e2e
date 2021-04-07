@@ -20,6 +20,7 @@ package trigger
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -44,6 +45,9 @@ func NewHTTPAction(intervalStr string, times int, url, method string) Action {
 		logger.Log.Errorf("interval [%s] is not positive", interval)
 		return nil
 	}
+
+	// there can be env variables in url, say, "http://${GATEWAY_HOST}:${GATEWAY_PORT}/test"
+	url = os.ExpandEnv(url)
 
 	return &httpAction{
 		interval: interval,
