@@ -19,7 +19,8 @@ setup:
   env: kind
   file: kind.yaml
   steps:
-    - command: |
+    - name: install istio
+      command: |
         # kind k8s cluster is in $TMPDIR
         cp $TMPDIR/e2e-k8s.config ~/.kube/config
         export ISTIO_VERSION=1.9.1
@@ -28,12 +29,14 @@ setup:
             --set meshConfig.defaultConfig.envoyMetricsService.address=skywalking-oap.istio-system:11800 \
             --set values.telemetry.v2.enabled=false
         kubectl label namespace default istio-injection=enabled
-    - path: busybox1.yaml,manifests
+    - name: setup manifests
+      path: busybox1.yaml,manifests
       wait:
         - namespace: default
           resource: pod
           for: condition=Ready
-    - command: |
+    - name: setup nginx deployment
+      command: |
         kubectl create deployment nginx1 --image=nginx
       wait:
         - namespace: default

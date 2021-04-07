@@ -40,6 +40,7 @@ type Cleanup struct {
 }
 
 type Step struct {
+	Name    string `yaml:"name"`
 	Path    string `yaml:"path"`
 	Command string `yaml:"command"`
 	Waits   []Wait `yaml:"wait"`
