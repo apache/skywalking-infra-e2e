@@ -242,6 +242,7 @@ The text of each license is also included at licenses/LICENSE-[project].txt.
     logrus 1.7.0: https://github.com/sirupsen/logrus MIT
     go-winio v0.4.16: https://github.com/Microsoft/go-winio MIT
     aec v1.0.0: https://github.com/morikuni/aec MIT
+    testcontainers-go v0.11.0: https://github.com/testcontainers/testcontainers-go MIT
 
 ========================================================================
 BSD licenses

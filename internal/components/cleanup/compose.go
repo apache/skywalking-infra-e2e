@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,48 +14,33 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+//
+
 package cleanup
 
 import (
-	"fmt"
-
+	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
-	"github.com/apache/skywalking-infra-e2e/internal/components/cleanup"
+	"github.com/testcontainers/testcontainers-go"
 
-	"github.com/spf13/cobra"
-
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"fmt"
 )
 
-var Cleanup = &cobra.Command{
-	Use:   "cleanup",
-	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		err := DoCleanupAccordingE2E()
-		if err != nil {
-			err = fmt.Errorf("[Cleanup] %s", err)
-			return err
-		}
-		return nil
-	},
-}
+func ComposeCleanUp(conf *config.E2EConfig) error {
+	composeFilePath := conf.Setup.GetFile()
+	logger.Log.Infof("deleting docker compose cluster...\n")
 
-func DoCleanupAccordingE2E() error {
-	e2eConfig := config.GlobalConfig.E2EConfig
-
-	if e2eConfig.Setup.Env == constant.Kind {
-		err := cleanup.KindCleanUp(&e2eConfig)
-		if err != nil {
-			return err
-		}
-	} else if e2eConfig.Setup.Env == constant.Compose {
-		err := cleanup.ComposeCleanUp(&e2eConfig)
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
+	if composeFilePath == "" {
+		return fmt.Errorf("no compose config file was provided")
+	}
+	composeFilePaths := []string{composeFilePath}
+	identifier := setup.GetIdentity()
+	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
+	down := compose.Down()
+	if down.Error != nil {
+		return down.Error
 	}
 
 	return nil
