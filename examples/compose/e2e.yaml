@@ -28,7 +28,7 @@ trigger:
   action: http
   interval: 3s
   times: 5
-  url: http://${e2e_host_and_port_ui_8080}/
+  url: http://127.0.0.1:${ui_8080}/
   method: GET
 
 verify:

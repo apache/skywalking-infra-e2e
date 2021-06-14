@@ -104,11 +104,12 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 				}
 
 				// expose env config to env
-				envKey := fmt.Sprintf("e2e_host_and_port_%s_%d", service, containerPort.PrivatePort)
-				envValue := fmt.Sprintf("127.0.0.1:%d", containerPort.PublicPort)
+				// format: <service_name>_<port>
+				envKey := fmt.Sprintf("%s_%d", service, containerPort.PrivatePort)
+				envValue := fmt.Sprintf("%d", containerPort.PublicPort)
 				err = os.Setenv(envKey, envValue)
 				if err != nil {
-					return fmt.Errorf("could not setting env for %s:%d, %v", service, portList[inx], err)
+					return fmt.Errorf("could not set env for %s:%d, %v", service, portList[inx], err)
 				}
 				logger.Log.Infof("expose env : %s : %s", envKey, envValue)
 			}
