@@ -21,6 +21,7 @@ package setup
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -102,4 +103,12 @@ func NewTimeout(timeBefore time.Time, timeout time.Duration) time.Duration {
 	elapsed := time.Since(timeBefore)
 	newTimeout := timeout - elapsed
 	return newTimeout
+}
+
+func GetIdentity() string {
+	runID := os.Getenv("GITHUB_RUN_ID")
+	if runID == "" {
+		return "skywalking_e2e"
+	}
+	return runID
 }

@@ -21,12 +21,10 @@ package setup
 import (
 	"fmt"
 
-	"github.com/apache/skywalking-infra-e2e/internal/util"
-
 	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/spf13/cobra"
 )
@@ -59,7 +57,10 @@ func DoSetupAccordingE2E() error {
 			return err
 		}
 	} else if e2eConfig.Setup.Env == constant.Compose {
-		logger.Log.Warn("env for docker-compose not implemented")
+		err := setup.ComposeSetup(&e2eConfig)
+		if err != nil {
+			return err
+		}
 		return nil
 	} else {
 		return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
