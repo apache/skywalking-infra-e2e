@@ -30,11 +30,8 @@ runs:
         mkdir -p /tmp/skywalking-infra-e2e/bin
     - shell: bash
       run: |
-        cd /tmp/skywalking-infra-e2e
-        git clone https://github.com/apache/skywalking-infra-e2e.git
-        git -C skywalking-infra-e2e reset --hard ca9512838da5d66e6c4da9da6d95eace0457191d
-        cd skywalking-infra-e2e
-        go mod download && make linux && mv bin/linux/e2e ../bin/e2e
+        cd "$GITHUB_ACTION_PATH"
+        go mod download && make linux && mv bin/linux/e2e /tmp/skywalking-infra-e2e/bin/e2e
     - shell: bash
       run: |
         cd /tmp/skywalking-infra-e2e
