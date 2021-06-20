@@ -27,24 +27,22 @@ runs:
   steps:
     - shell: bash
       run: |
-        mkdir -p /home/skywalking-infra-e2e/bin
+        mkdir -p /tmp/skywalking-infra-e2e/bin
     - shell: bash
       run: |
-        cd /home/skywalking-infra-e2e
+        cd /tmp/skywalking-infra-e2e
         git clone https://github.com/apache/skywalking-infra-e2e.git
         git -C skywalking-infra-e2e reset --hard 4fb6aef3f84b8d19bc38c75e4e4489d7ce1d8d71
         cd skywalking-infra-e2e
         go mod download && make linux && mv bin/linux/e2e ../bin/e2e
     - shell: bash
       run: |
-        cd /home/skywalking-infra-e2e
+        cd /tmp/skywalking-infra-e2e
         git clone https://github.com/apache/skywalking-cli.git
         git -C skywalking-cli reset --hard 21ba64dd2ddfd6cfeca14801e7c3888f1befc3ca
         cd skywalking-cli
         make build && mv bin/swctl-*-linux-amd64 ../bin/swctl
     - shell: bash
       run: |
-        pwd=`pwd`
-        export PATH="$PATH:/home/skywalking-infra-e2e/bin"
-        cd $pwd
+        export PATH="$PATH:/tmp/skywalking-infra-e2e/bin"
         e2e run -c "${{ inputs.e2e-file }}"
