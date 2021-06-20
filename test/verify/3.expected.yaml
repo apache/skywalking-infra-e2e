@@ -15,8 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-{{- contains . }}
-- id: {{ notEmpty .id }}
-  name: {{ notEmpty .name }}
+{{if . }}
+- id: { { notEmpty .id } }
+  name: { { notEmpty .name } }
   group: ""
-{{- end }}
+{{else}}
+[]
+{{end}}

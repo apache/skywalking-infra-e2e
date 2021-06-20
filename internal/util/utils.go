@@ -61,10 +61,10 @@ func ExecuteCommand(cmd string) (string, error) {
 	command.Stdout = &outinfo
 
 	if err := command.Start(); err != nil {
-		return "", err
+		return outinfo.String(), err
 	}
 	if err := command.Wait(); err != nil {
-		return "", err
+		return outinfo.String(), err
 	}
 	return outinfo.String(), nil
 }

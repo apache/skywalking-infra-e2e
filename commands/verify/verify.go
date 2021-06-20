@@ -69,18 +69,17 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 		sourceName = query
 		actualData, err = util.ExecuteCommand(query)
 		if err != nil {
-			return fmt.Errorf("failed to execute the query: %v", err)
+			return fmt.Errorf("failed to execute the query: %s, output: %s, error: %v", query, actualData, err)
 		}
 	}
 
 	if err = verifier.Verify(actualData, expectedData); err != nil {
-		logger.Log.Warnf("failed to verify the output: %s\n", sourceName)
 		if me, ok := err.(*verifier.MismatchError); ok {
-			fmt.Println(me.Error())
+			return fmt.Errorf("failed to verify the output: %s, error: %v", sourceName, me.Error())
 		}
-	} else {
-		logger.Log.Infof("verified the output: %s\n", sourceName)
+		return fmt.Errorf("failed to verify the output: %s", sourceName)
 	}
+	logger.Log.Infof("verified the output: %s\n", sourceName)
 	return nil
 }
 
@@ -95,7 +94,7 @@ func DoVerifyAccordingConfig() error {
 	for _, v := range e2eConfig.Verify {
 		if v.GetExpected() != "" {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err != nil {
-				logger.Log.Errorf("%v", err)
+				return err
 			}
 		} else {
 			logger.Log.Error("the expected data file is not specified")
