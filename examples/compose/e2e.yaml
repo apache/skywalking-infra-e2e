@@ -36,5 +36,5 @@ verify:
     expected: ../../test/verify/1.expected.yaml
   - actual: ../../test/verify/2.actual.yaml
     expected: ../../test/verify/2.expected.yaml
-  - query: swctl --display yaml --base-url=http://${e2e_host_and_port_oap_12800}/graphql service ls
+  - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
     expected: ../../test/verify/3.expected.yaml

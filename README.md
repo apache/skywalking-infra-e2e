@@ -10,6 +10,17 @@ SkyWalking Infra E2E is the next generation End-to-End Testing framework that ai
 
 - **[The design doc](https://skywalking.apache.org/blog/e2e-design/).**
 
+## GitHub Actions
+
+To use skywalking-infra-e2e in GitHub Actions, add a step in your GitHub workflow.
+
+```xml
+- name: Run E2E Test
+  uses: apache/skywalking-infra-e2e@main      # always prefer to use a revision instead of `main`.
+  with:
+    e2e-file: e2e.yaml                        # need to run E2E file path
+```
+
 ## License
 
 [Apache License 2.0](https://github.com/apache/skywalking-infra-e2e/blob/master/LICENSE)
