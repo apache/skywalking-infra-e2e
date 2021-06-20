@@ -16,8 +16,8 @@
 # under the License.
 
 {{if . }}
-- id: { { notEmpty .id } }
-  name: { { notEmpty .name } }
+- id: {{ notEmpty .id }}
+  name: {{ notEmpty .name }}
   group: ""
 {{else}}
 []
