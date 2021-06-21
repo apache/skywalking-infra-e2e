@@ -32,9 +32,16 @@ trigger:
   method: GET
 
 verify:
-  - actual: ../../test/verify/1.actual.yaml
-    expected: ../../test/verify/1.expected.yaml
-  - actual: ../../test/verify/2.actual.yaml
-    expected: ../../test/verify/2.expected.yaml
-  - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
-    expected: ../../test/verify/3.expected.yaml
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two retries, in millisecond.
+    interval: 10000
+  cases:
+    - actual: ../../test/verify/1.actual.yaml
+      expected: ../../test/verify/1.expected.yaml
+    - actual: ../../test/verify/2.actual.yaml
+      expected: ../../test/verify/2.expected.yaml
+    - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
+      expected: ../../test/verify/3.expected.yaml
