@@ -22,10 +22,10 @@ import "github.com/apache/skywalking-infra-e2e/internal/util"
 
 // E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
-	Setup   Setup        `yaml:"setup"`
-	Cleanup Cleanup      `yaml:"cleanup"`
-	Trigger Trigger      `yaml:"trigger"`
-	Verify  []VerifyCase `yaml:"verify"`
+	Setup   Setup   `yaml:"setup"`
+	Cleanup Cleanup `yaml:"cleanup"`
+	Trigger Trigger `yaml:"trigger"`
+	Verify  Verify  `yaml:"verify"`
 }
 
 type Setup struct {
@@ -44,6 +44,11 @@ type Step struct {
 	Path    string `yaml:"path"`
 	Command string `yaml:"command"`
 	Waits   []Wait `yaml:"wait"`
+}
+
+type Verify struct {
+	RetryStrategy VerifyRetryStrategy `yaml:"retry"`
+	Cases         []VerifyCase        `yaml:"cases"`
 }
 
 func (s *Setup) GetFile() string {
@@ -79,6 +84,11 @@ type VerifyCase struct {
 	Query    string `yaml:"query"`
 	Actual   string `yaml:"actual"`
 	Expected string `yaml:"expected"`
+}
+
+type VerifyRetryStrategy struct {
+	Count    int `yaml:"count"`
+	Interval int `yaml:"interval"`
 }
 
 // GetActual resolves the absolute file path of the actual data file.

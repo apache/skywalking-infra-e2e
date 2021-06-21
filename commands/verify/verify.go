@@ -19,6 +19,7 @@ package verify
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -91,14 +92,34 @@ func DoVerifyAccordingConfig() error {
 
 	e2eConfig := config.GlobalConfig.E2EConfig
 
-	for _, v := range e2eConfig.Verify {
-		if v.GetExpected() != "" {
-			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err != nil {
-				return err
+	retryCount := e2eConfig.Verify.RetryStrategy.Count
+	if retryCount <= 0 {
+		retryCount = 1
+	}
+	retryInterval := e2eConfig.Verify.RetryStrategy.Interval
+	if retryInterval < 0 {
+		retryInterval = 1000
+	}
+
+	var err error
+	for current := 1; current <= retryCount; current++ {
+		for _, v := range e2eConfig.Verify.Cases {
+			if v.GetExpected() != "" {
+				if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err != nil {
+					break
+				}
+			} else {
+				return fmt.Errorf("the expected data file is not specified")
 			}
-		} else {
-			logger.Log.Error("the expected data file is not specified")
+		}
+
+		if err != nil && current != retryCount {
+			logger.Log.Warnf("verify case failure, will continue retry, %v", err)
+			time.Sleep(time.Duration(retryInterval) * time.Millisecond)
+		} else if err == nil {
+			return nil
 		}
 	}
-	return nil
+
+	return err
 }
