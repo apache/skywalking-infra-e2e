@@ -130,20 +130,17 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 }
 
 func getExpectPort(portConfig interface{}) (int, error) {
-	switch portConfig.(type) {
+	switch conf := portConfig.(type) {
 	case int:
-		return portConfig.(int), nil
+		return conf, nil
 	case string:
-		portStr := portConfig.(string)
-		portInfo := strings.Split(portStr, ":")
+		portInfo := strings.Split(conf, ":")
 		if len(portInfo) > 1 {
 			return strconv.Atoi(portInfo[1])
-		} else {
-			return strconv.Atoi(portInfo[1])
 		}
-	default:
-		return 0, fmt.Errorf("unknown port infomation: %v", portConfig)
+		return strconv.Atoi(portInfo[0])
 	}
+	return 0, fmt.Errorf("unknown port information: %v", portConfig)
 }
 
 func findContainer(c *client.Client, instanceName string) (*types.Container, error) {
