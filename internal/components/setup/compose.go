@@ -21,11 +21,14 @@ package setup
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"regexp"
-	"syscall"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
@@ -57,13 +60,8 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	}
 	identifier := GetIdentity()
 	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
-	execError := compose.WithCommand([]string{"up", "-d"}).Invoke()
-	if execError.Error != nil {
-		return execError.Error
-	}
 
-	// record time now
-	timeNow := time.Now()
+	// bind wait port
 	timeout := e2eConfig.Setup.Timeout
 	var waitTimeout time.Duration
 	if timeout <= 0 {
@@ -71,16 +69,37 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	} else {
 		waitTimeout = time.Duration(timeout) * time.Second
 	}
-	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
-
-	// find exported port and build env
+	serviceWithPorts := make(map[string][]int)
 	for service, content := range compose.Services {
 		serviceConfig := content.(map[interface{}]interface{})
 		ports := serviceConfig["ports"]
 		if ports == nil {
 			continue
 		}
+		serviceWithPorts[service] = []int{}
+
 		portList := ports.([]interface{})
+		for inx := range portList {
+			exportPort, err := getExpectPort(portList[inx])
+			if err != nil {
+				return err
+			}
+			serviceWithPorts[service] = append(serviceWithPorts[service], exportPort)
+
+			compose.WithExposedService(
+				service,
+				exportPort,
+				wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout))
+		}
+	}
+
+	execError := compose.WithCommand([]string{"up", "-d"}).Invoke()
+	if execError.Error != nil {
+		return execError.Error
+	}
+
+	// find exported port and build env
+	for service, portList := range serviceWithPorts {
 		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identifier, getInstanceName(service)))
 		if err != nil {
 			return err
@@ -89,18 +108,8 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 
 		for inx := range portList {
 			for _, containerPort := range containerPorts {
-				if int(containerPort.PrivatePort) != portList[inx].(int) {
+				if int(containerPort.PrivatePort) != portList[inx] {
 					continue
-				}
-
-				// calculate max wait time
-				waitTimeout = NewTimeout(timeNow, waitTimeout)
-				timeNow = time.Now()
-
-				// wait port and export
-				err := waitTCPPortStarted(context.Background(), cli, container, int(containerPort.PublicPort), int(containerPort.PrivatePort), waitTimeout)
-				if err != nil {
-					return fmt.Errorf("could wait port exported: %s:%d, %v", service, portList[inx], err)
 				}
 
 				// expose env config to env
@@ -112,11 +121,29 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 					return fmt.Errorf("could not set env for %s:%d, %v", service, portList[inx], err)
 				}
 				logger.Log.Infof("expose env : %s : %s", envKey, envValue)
+				break
 			}
 		}
 	}
 
 	return nil
+}
+
+func getExpectPort(portConfig interface{}) (int, error) {
+	switch portConfig.(type) {
+	case int:
+		return portConfig.(int), nil
+	case string:
+		portStr := portConfig.(string)
+		portInfo := strings.Split(portStr, ":")
+		if len(portInfo) > 1 {
+			return strconv.Atoi(portInfo[1])
+		} else {
+			return strconv.Atoi(portInfo[1])
+		}
+	default:
+		return 0, fmt.Errorf("unknown port infomation: %v", portConfig)
+	}
 }
 
 func findContainer(c *client.Client, instanceName string) (*types.Container, error) {
@@ -131,90 +158,6 @@ func findContainer(c *client.Client, instanceName string) (*types.Container, err
 		return nil, fmt.Errorf("could not found container: %s", instanceName)
 	}
 	return &containers[0], nil
-}
-
-func waitTCPPortStarted(ctx context.Context, c *client.Client, container *types.Container, publicPort, interPort int, timeout time.Duration) error {
-	// limit context to startupTimeout
-	ctx, cancelContext := context.WithTimeout(ctx, timeout)
-	defer cancelContext()
-
-	var waitInterval = 100 * time.Millisecond
-
-	// external check
-	dialer := net.Dialer{}
-	address := net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", publicPort))
-	for {
-		conn, err := dialer.DialContext(ctx, "tcp", address)
-		if err != nil {
-			if v, ok := err.(*net.OpError); ok {
-				if v2, ok := (v.Err).(*os.SyscallError); ok {
-					if isConnRefusedErr(v2.Err) {
-						time.Sleep(waitInterval)
-						continue
-					}
-				}
-			}
-			return err
-		}
-		conn.Close()
-		break
-	}
-
-	// internal check
-	command := buildInternalCheckCommand(interPort)
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		response, err := c.ContainerExecCreate(ctx, container.ID, types.ExecConfig{
-			Cmd:          []string{"/bin/sh", "-c", command},
-			AttachStderr: true,
-			AttachStdout: true,
-		})
-		if err != nil {
-			return err
-		}
-
-		err = c.ContainerExecStart(ctx, response.ID, types.ExecStartCheck{
-			Detach: false,
-		})
-		if err != nil {
-			return err
-		}
-
-		var exitCode int
-		for {
-			execResp, err := c.ContainerExecInspect(ctx, response.ID)
-			if err != nil {
-				return err
-			}
-
-			if !execResp.Running {
-				exitCode = execResp.ExitCode
-				break
-			}
-
-			time.Sleep(waitInterval)
-		}
-
-		if exitCode == 0 {
-			return nil
-		}
-	}
-}
-
-func buildInternalCheckCommand(internalPort int) string {
-	command := `(
-					nc -vz -w 1 localhost %d || 
-					cat /proc/net/tcp | awk '{print $2}' | grep -i :%d || 
-					</dev/tcp/localhost/%d
-				)
-				`
-	return "true && " + fmt.Sprintf(command, internalPort, internalPort, internalPort)
-}
-
-func isConnRefusedErr(err error) bool {
-	return err == syscall.ECONNREFUSED
 }
 
 func getInstanceName(serviceName string) string {
