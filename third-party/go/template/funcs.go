@@ -577,7 +577,11 @@ func le(arg1, arg2 reflect.Value) (interface{}, error) {
 	if lessThan || err != nil {
 		return arg1, err
 	}
-	return eq(arg1, arg2)
+	equal, err := eq(arg1, arg2)
+	if equal || err != nil {
+		return arg1, err
+	}
+	return fmt.Sprintf("<wanted le %v, but was %v>", value2string(arg2), value2string(arg1)), nil
 }
 
 // gt evaluates the comparison a > b.
