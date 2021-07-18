@@ -36,7 +36,7 @@ runs:
       run: |
         cd /tmp/skywalking-infra-e2e
         git clone https://github.com/apache/skywalking-cli.git
-        git -C skywalking-cli reset --hard 21ba64dd2ddfd6cfeca14801e7c3888f1befc3ca
+        git -C skywalking-cli reset --hard a9d05e8684098884badcd08ae4ef2cc4516c3c26
         cd skywalking-cli
         make build && mv bin/swctl-*-linux-amd64 ../bin/swctl
     - shell: bash
