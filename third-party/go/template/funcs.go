@@ -517,7 +517,7 @@ func ne(arg1, arg2 reflect.Value) (bool, error) {
 }
 
 // lt evaluates the comparison a < b.
-func lt(arg1, arg2 reflect.Value) (bool, error) {
+func lt2bool(arg1, arg2 reflect.Value) (bool, error) {
 	arg1 = indirectInterface(arg1)
 	k1, err := basicKind(arg1)
 	if err != nil {
@@ -558,37 +558,82 @@ func lt(arg1, arg2 reflect.Value) (bool, error) {
 	return truth, nil
 }
 
-// le evaluates the comparison <= b.
-func le(arg1, arg2 reflect.Value) (bool, error) {
-	// <= is < or ==.
-	lessThan, err := lt(arg1, arg2)
-	if lessThan || err != nil {
-		return lessThan, err
+// lt evaluates the comparison a < b.
+func lt(arg1, arg2 reflect.Value) (interface{}, error) {
+	lessThan, err := lt2bool(arg1, arg2)
+	if err != nil {
+		return nil, err
 	}
-	return eq(arg1, arg2)
+	if lessThan {
+		return arg1, nil
+	}
+	return fmt.Sprintf("<wanted lt %v, but was %v>", value2string(arg2), value2string(arg1)), nil
+}
+
+// le evaluates the comparison <= b.
+func le(arg1, arg2 reflect.Value) (interface{}, error) {
+	// <= is < or ==.
+	lessThan, err := lt2bool(arg1, arg2)
+	if lessThan || err != nil {
+		return arg1, err
+	}
+	equal, err := eq(arg1, arg2)
+	if equal || err != nil {
+		return arg1, err
+	}
+	return fmt.Sprintf("<wanted le %v, but was %v>", value2string(arg2), value2string(arg1)), nil
 }
 
 // gt evaluates the comparison a > b.
 func gt(arg1, arg2 reflect.Value) (interface{}, error) {
 	// > is the inverse of <=.
-	lessOrEqual, err := le(arg1, arg2)
+	less, err := lt2bool(arg1, arg2)
 	if err != nil {
 		return nil, err
 	}
-	if !lessOrEqual {
-		return arg1, nil
+	if !less {
+		equal, err := eq(arg1, arg2)
+		if err != nil {
+			return nil, err
+		}
+		if !equal {
+			return arg1, nil
+		}
 	}
-	return fmt.Sprintf("<wanted gt %v, but was %v>", arg2, arg1), nil
+	return fmt.Sprintf("<wanted gt %v, but was %v>", value2string(arg2), value2string(arg1)), nil
 }
 
 // ge evaluates the comparison a >= b.
-func ge(arg1, arg2 reflect.Value) (bool, error) {
+func ge(arg1, arg2 reflect.Value) (interface{}, error) {
 	// >= is the inverse of <.
-	lessThan, err := lt(arg1, arg2)
+	lessThan, err := lt2bool(arg1, arg2)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return !lessThan, nil
+	if !lessThan {
+		return arg1, nil
+	}
+	return fmt.Sprintf("<wanted ge %v, but was %v>", value2string(arg2), value2string(arg1)), nil
+}
+
+func value2string(value reflect.Value) string {
+	k1, _ := basicKind(value)
+	switch k1 {
+	case boolKind:
+		return fmt.Sprintf("%t", value.Bool())
+	case complexKind:
+		return fmt.Sprintf("%v", value.Complex())
+	case floatKind:
+		return fmt.Sprintf("%f", value.Float())
+	case intKind:
+		return fmt.Sprintf("%d", value.Int())
+	case stringKind:
+		return fmt.Sprintf("%s", value.String())
+	case uintKind:
+		return fmt.Sprintf("%d", value.Uint())
+	default:
+		return value.String()
+	}
 }
 
 // HTML escaping.
