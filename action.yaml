@@ -41,5 +41,12 @@ runs:
         make build && mv bin/swctl-*-linux-amd64 ../bin/swctl
     - shell: bash
       run: |
+        cd /tmp/skywalking-infra-e2e
+        mkdir yq && cd yq
+        wget -O yq.tar.gz https://github.com/mikefarah/yq/archive/v4.11.1.tar.gz
+        tar -zxf yq.tar.gz --strip=1
+        go install && go build -ldflags -s && mv yq ../bin/yq
+    - shell: bash
+      run: |
         export PATH="$PATH:/tmp/skywalking-infra-e2e/bin"
         e2e run -c "${{ inputs.e2e-file }}"
