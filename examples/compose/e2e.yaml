@@ -19,6 +19,18 @@ setup:
   env: compose
   file: docker-compose.yml
   timeout: 1200
+  steps:
+    - name: install yq
+      command: |
+        if ! type "yq" > /dev/null; then
+          mkdir -p /tmp/skywalking-infra-e2e/bin && cd /tmp/skywalking-infra-e2e
+          mkdir yq && cd yq
+          wget -O yq.tar.gz https://github.com/mikefarah/yq/archive/v4.11.1.tar.gz
+          tar -zxf yq.tar.gz --strip=1
+          go install && go build -ldflags -s && mv yq ../bin/yq
+          export PATH="$PATH:/tmp/skywalking-infra-e2e/bin"
+          echo "success to install yq"
+        fi
 
 cleanup:
   # always never success failure

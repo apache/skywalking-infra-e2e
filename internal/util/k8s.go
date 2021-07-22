@@ -44,25 +44,31 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
+// K8sClusterInfo created when connect to cluster
+type K8sClusterInfo struct {
+	Client    *kubernetes.Clientset
+	Interface dynamic.Interface
+}
+
 // ConnectToK8sCluster gets clientSet and dynamic client from k8s config file.
-func ConnectToK8sCluster(kubeConfigPath string) (c *kubernetes.Clientset, dc dynamic.Interface, err error) {
+func ConnectToK8sCluster(kubeConfigPath string) (info *K8sClusterInfo, err error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	c, err = kubernetes.NewForConfig(config)
+	c, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	dc, err = dynamic.NewForConfig(config)
+	dc, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	logger.Log.Info("connect to k8s cluster succeeded")
 
-	return c, dc, nil
+	return &K8sClusterInfo{c, dc}, nil
 }
 
 // GetManifests recursively gets all yml and yaml files from manifests string.

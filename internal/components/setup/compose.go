@@ -62,6 +62,55 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
 
 	// bind wait port
+	serviceWithPorts, err := bindWaitPort(e2eConfig, compose)
+	if err != nil {
+		return fmt.Errorf("bind wait ports error: %v", err)
+	}
+
+	execError := compose.WithCommand([]string{"up", "-d"}).Invoke()
+	if execError.Error != nil {
+		return execError.Error
+	}
+
+	// find exported port and build env
+	for service, portList := range serviceWithPorts {
+		container, err2 := findContainer(cli, fmt.Sprintf("%s_%s", identifier, getInstanceName(service)))
+		if err2 != nil {
+			return err2
+		}
+		containerPorts := container.Ports
+
+		for inx := range portList {
+			for _, containerPort := range containerPorts {
+				if int(containerPort.PrivatePort) != portList[inx] {
+					continue
+				}
+
+				// expose env config to env
+				// format: <service_name>_<port>
+				envKey := fmt.Sprintf("%s_%d", service, containerPort.PrivatePort)
+				envValue := fmt.Sprintf("%d", containerPort.PublicPort)
+				err2 = os.Setenv(envKey, envValue)
+				if err2 != nil {
+					return fmt.Errorf("could not set env for %s:%d, %v", service, portList[inx], err2)
+				}
+				logger.Log.Infof("expose env : %s : %s", envKey, envValue)
+				break
+			}
+		}
+	}
+
+	// run steps
+	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.Timeout, nil)
+	if err != nil {
+		logger.Log.Errorf("execute steps error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) (map[string][]int, error) {
 	timeout := e2eConfig.Setup.Timeout
 	var waitTimeout time.Duration
 	if timeout <= 0 {
@@ -82,7 +131,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		for inx := range portList {
 			exportPort, err := getExpectPort(portList[inx])
 			if err != nil {
-				return err
+				return nil, err
 			}
 			serviceWithPorts[service] = append(serviceWithPorts[service], exportPort)
 
@@ -92,41 +141,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 				wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout))
 		}
 	}
-
-	execError := compose.WithCommand([]string{"up", "-d"}).Invoke()
-	if execError.Error != nil {
-		return execError.Error
-	}
-
-	// find exported port and build env
-	for service, portList := range serviceWithPorts {
-		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identifier, getInstanceName(service)))
-		if err != nil {
-			return err
-		}
-		containerPorts := container.Ports
-
-		for inx := range portList {
-			for _, containerPort := range containerPorts {
-				if int(containerPort.PrivatePort) != portList[inx] {
-					continue
-				}
-
-				// expose env config to env
-				// format: <service_name>_<port>
-				envKey := fmt.Sprintf("%s_%d", service, containerPort.PrivatePort)
-				envValue := fmt.Sprintf("%d", containerPort.PublicPort)
-				err = os.Setenv(envKey, envValue)
-				if err != nil {
-					return fmt.Errorf("could not set env for %s:%d, %v", service, portList[inx], err)
-				}
-				logger.Log.Infof("expose env : %s : %s", envKey, envValue)
-				break
-			}
-		}
-	}
-
-	return nil
+	return serviceWithPorts, nil
 }
 
 func getExpectPort(portConfig interface{}) (int, error) {
