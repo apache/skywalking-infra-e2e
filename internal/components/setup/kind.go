@@ -20,16 +20,13 @@ package setup
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	ctlwait "k8s.io/kubectl/pkg/cmd/wait"
-
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	ctlwait "k8s.io/kubectl/pkg/cmd/wait"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 
@@ -69,58 +66,19 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
-	c, dc, err := util.ConnectToK8sCluster(kubeConfigPath)
+	cluster, err := util.ConnectToK8sCluster(kubeConfigPath)
 	if err != nil {
 		logger.Log.Errorf("connect to k8s cluster failed according to config file: %s", kubeConfigPath)
 		return err
 	}
 
-	// run commands and manifests
-	timeout := e2eConfig.Setup.Timeout
-	var waitTimeout time.Duration
-	if timeout <= 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
+	// run steps
+	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.Timeout, cluster)
+	if err != nil {
+		logger.Log.Errorf("execute steps error: %v", err)
+		return err
 	}
-	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
 
-	// record time now
-	timeNow := time.Now()
-
-	for _, step := range e2eConfig.Setup.Steps {
-		logger.Log.Infof("processing setup step [%s]", step.Name)
-
-		if step.Path != "" && step.Command == "" {
-			manifest := config.Manifest{
-				Path:  step.Path,
-				Waits: step.Waits,
-			}
-			err = createManifestAndWait(c, dc, manifest, waitTimeout)
-			if err != nil {
-				return err
-			}
-		} else if step.Command != "" && step.Path == "" {
-			command := config.Run{
-				Command: step.Command,
-				Waits:   step.Waits,
-			}
-
-			err := RunCommandsAndWait(command, waitTimeout)
-			if err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("step parameter error, one Path or one Command should be specified, but got %+v", step)
-		}
-
-		waitTimeout = NewTimeout(timeNow, waitTimeout)
-		timeNow = time.Now()
-
-		if waitTimeout <= 0 {
-			return fmt.Errorf("kind setup timeout")
-		}
-	}
 	return nil
 }
 
@@ -135,58 +93,6 @@ func createKindCluster(kindConfigPath string) error {
 		return err
 	}
 	logger.Log.Info("create kind cluster succeeded")
-	return nil
-}
-
-// createManifestAndWait creates manifests in k8s cluster and concurrent waits according to the manifests' wait conditions.
-func createManifestAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest, timeout time.Duration) error {
-	waitSet := util.NewWaitSet(timeout)
-
-	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	waits := manifest.Waits
-	err = createByManifest(c, dc, manifest)
-	if err != nil {
-		return err
-	}
-
-	// len() for nil slices is defined as zero
-	if len(waits) == 0 {
-		logger.Log.Info("no wait-for strategy is provided")
-		return nil
-	}
-
-	for idx := range waits {
-		wait := waits[idx]
-		logger.Log.Infof("waiting for %+v", wait)
-
-		options, err := getWaitOptions(kubeConfigYaml, &wait)
-		if err != nil {
-			return err
-		}
-
-		waitSet.WaitGroup.Add(1)
-		go concurrentlyWait(&wait, options, waitSet)
-	}
-
-	go func() {
-		waitSet.WaitGroup.Wait()
-		close(waitSet.FinishChan)
-	}()
-
-	select {
-	case <-waitSet.FinishChan:
-		logger.Log.Infof("create and wait for manifest ready success")
-	case err := <-waitSet.ErrChan:
-		logger.Log.Errorf("failed to wait for manifest to be ready")
-		return err
-	case <-time.After(waitSet.Timeout):
-		return fmt.Errorf("wait for manifest ready timeout after %d seconds", int(timeout.Seconds()))
-	}
-
 	return nil
 }
 
