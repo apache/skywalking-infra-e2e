@@ -78,7 +78,7 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 		if me, ok := err.(*verifier.MismatchError); ok {
 			return fmt.Errorf("failed to verify the output: %s, error: %v", sourceName, me.Error())
 		}
-		return fmt.Errorf("failed to verify the output: %s", sourceName)
+		return fmt.Errorf("failed to verify the output: %s, error: %v", sourceName, err)
 	}
 	logger.Log.Infof("verified the output: %s\n", sourceName)
 	return nil

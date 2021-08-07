@@ -456,6 +456,11 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 			}
 		}
 
+		var addRootIndent = func(b []byte, n int) []byte {
+			prefix := append([]byte("\n"), bytes.Repeat([]byte(" "), n)...)
+			b = append(prefix[1:], b...) // Indent first line
+			return bytes.ReplaceAll(b, []byte("\n"), prefix)
+		}
 		var marshal []byte
 		if len(matched) == expectedSize {
 			value, _ := printableValue(val)
@@ -463,6 +468,9 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		} else {
 			marshal, _ = yaml.Marshal(output)
 		}
+
+		listTokenIndex := strings.Index(strings.TrimPrefix(r.List.Nodes[0].String(), "\n"), "-")
+		marshal = addRootIndent(marshal, listTokenIndex)
 		s.wr.Write(append([]byte("\n"), marshal...))
 		return
 	case reflect.Map:

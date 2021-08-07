@@ -139,6 +139,62 @@ metrics:
 			},
 			wantErr: true,
 		},
+		{
+			name: "multiple level attribute and contains greater and equals 2",
+			args: args{
+				actualData: `
+metrics:
+  key:
+  - name: business-zone::projectA
+    id: YnVzaW5lc3Mtem9uZTo6cHJvamVjdEE=.1
+    value: 1
+  - name: system::load balancer1
+    id: c3lzdGVtOjpsb2FkIGJhbGFuY2VyMQ==.1
+    value: 0
+  - name: system::load balancer2
+    id: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1
+    value: 2
+`,
+				expectedTemplate: `
+metrics:
+  key:
+  {{- contains .metrics.key }}
+    - name: {{ notEmpty .name }}
+      id: {{ notEmpty .id }}
+      value: {{ ge .value 2 }}
+  {{- end }}
+`,
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple level attribute and contains greater 2",
+			args: args{
+				actualData: `
+metrics:
+  key:
+  - name: business-zone::projectA
+    id: YnVzaW5lc3Mtem9uZTo6cHJvamVjdEE=.1
+    value: 1
+  - name: system::load balancer1
+    id: c3lzdGVtOjpsb2FkIGJhbGFuY2VyMQ==.1
+    value: 0
+  - name: system::load balancer2
+    id: WW91cl9BcHBsaWNhdGlvbk5hbWU=.1
+    value: 2
+`,
+				expectedTemplate: `
+metrics:
+  key:
+  {{- contains .metrics.key }}
+    - name: {{ notEmpty .name }}
+      id: {{ notEmpty .id }}
+      value: {{ gt .value 2 }}
+  {{- end }}
+`,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
