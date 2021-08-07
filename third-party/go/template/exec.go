@@ -441,29 +441,52 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		// matched stores the matched pair of indices <expected index>: <actual index>
 		matched := make(map[int]int)
 		output := make([]interface{}, val.Len())
+		// last match with condition index
+		lastMatchInx := make(map[int]int)
 		for i := 0; i < val.Len(); i++ {
 			expectedArr := oneIteration(reflect.ValueOf(i), val.Index(i))
 			// expectedSize is the number of elements that the actual array should contain.
 			expectedSize = len(expectedArr)
 			actual, _ := printableValue(val.Index(i))
 			for j, expected := range expectedArr {
+				lastMatchInx[i] = j
 				if fmt.Sprint(actual) == fmt.Sprint(expected) {
 					matched[j] = i
 					output[i] = actual
+					break
 				} else {
 					output[i] = expected
 				}
 			}
 		}
 
-		var marshal []byte
-		if len(matched) == expectedSize {
-			value, _ := printableValue(val)
-			marshal, _ = yaml.Marshal(value)
-		} else {
-			marshal, _ = yaml.Marshal(output)
+		// split condition array to ListNodes
+		matchParseList := make(map[int]*parse.ListNode)
+		// using first list token index, encase nested list
+		listIndex := strings.Index(strings.TrimPrefix(r.List.Nodes[0].String(), "\n"), "-")
+		for _, node := range r.List.Nodes {
+			if string([]rune(strings.TrimPrefix(node.String(), "\n"))[listIndex]) == "-" {
+				listNode := r.List.CopyList()
+				listNode.Nodes = []parse.Node{}
+				matchParseList[len(matchParseList)] = listNode
+			}
+			curNode := matchParseList[len(matchParseList)-1]
+			curNode.Nodes = append(curNode.Nodes, node)
 		}
-		s.wr.Write(append([]byte("\n"), marshal...))
+
+		var list []interface{}
+		if len(matched) == expectedSize {
+			valList, _ := printableValue(val)
+			list = valList.([]interface{})
+		} else {
+			list = output
+		}
+		// use matches condition to write
+		for inx, d := range list {
+			data := reflect.ValueOf(d)
+			s.walk(data, matchParseList[lastMatchInx[inx]])
+			s.pop(mark)
+		}
 		return
 	case reflect.Map:
 		if val.Len() == 0 {
