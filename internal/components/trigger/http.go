@@ -18,6 +18,7 @@
 package trigger
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -28,10 +29,11 @@ import (
 )
 
 type httpAction struct {
-	interval time.Duration
-	times    int
-	url      string
-	method   string
+	interval      time.Duration
+	times         int
+	url           string
+	method        string
+	executedCount int
 }
 
 func NewHTTPAction(intervalStr string, times int, url, method string) Action {
@@ -50,16 +52,18 @@ func NewHTTPAction(intervalStr string, times int, url, method string) Action {
 	url = os.ExpandEnv(url)
 
 	return &httpAction{
-		interval: interval,
-		times:    times,
-		url:      url,
-		method:   strings.ToUpper(method),
+		interval:      interval,
+		times:         times,
+		url:           url,
+		method:        strings.ToUpper(method),
+		executedCount: 0,
 	}
 }
 
 func (h *httpAction) Do() error {
+	ctx := context.Background()
 	t := time.NewTicker(h.interval)
-	c := 1
+	h.executedCount = 0
 	client := &http.Client{}
 	request, err := http.NewRequest(h.method, h.url, nil)
 	if err != nil {
@@ -69,29 +73,60 @@ func (h *httpAction) Do() error {
 
 	logger.Log.Infof("Trigger will request URL %s %d times, %s seconds apart each time.", h.url, h.times, h.interval)
 
+	// execute until success
 	for range t.C {
-		logger.Log.Debugf("request URL %s the %d time.", h.url, c)
-
-		response, err := client.Do(request)
-		if err != nil {
-			logger.Log.Errorf("do request error %v", err)
-			return err
-		}
-		response.Body.Close()
-
-		logger.Log.Infof("do request %v response http code %v", h.url, response.StatusCode)
-		if response.StatusCode == http.StatusOK {
-			logger.Log.Debugf("do http action %+v success.", *h)
+		err = h.executeOnce(client, request)
+		if err == nil {
 			break
 		}
-
-		if h.times > 0 {
-			if h.times <= c {
-				return fmt.Errorf("do request %d times, but still failed", c)
-			}
-			c++
+		if !h.couldContinue() {
+			logger.Log.Errorf("do request %d times, but still failed", h.times)
+			return err
 		}
 	}
 
+	// background interval trigger
+	go func() {
+		for {
+			select {
+			case <-t.C:
+				err = h.executeOnce(client, request)
+				if !h.couldContinue() {
+					return
+				}
+			case <-ctx.Done():
+				t.Stop()
+				return
+			}
+		}
+	}()
+
 	return nil
+}
+
+// execute http request once time
+func (h *httpAction) executeOnce(client *http.Client, req *http.Request) error {
+	logger.Log.Debugf("request URL %s the %d time.", h.url, h.executedCount)
+	response, err := client.Do(req)
+	h.executedCount++
+	if err != nil {
+		logger.Log.Errorf("do request error %v", err)
+		return err
+	}
+	response.Body.Close()
+
+	logger.Log.Infof("do request %v response http code %v", h.url, response.StatusCode)
+	if response.StatusCode == http.StatusOK {
+		logger.Log.Debugf("do http action %+v success.", *h)
+		return nil
+	}
+	return fmt.Errorf("do request failed, response status code: %d", response.StatusCode)
+}
+
+// verify http action could continue
+func (h *httpAction) couldContinue() bool {
+	if h.times > 0 && h.times <= h.executedCount {
+		return false
+	}
+	return true
 }
