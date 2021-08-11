@@ -47,6 +47,12 @@ func runAccordingE2E() error {
 		return config.GlobalConfig.Error
 	}
 
+	// If cleanup.on == Always and there is error in setup step, we should defer cleanup step right now.
+	cleanupOnCondition := config.GlobalConfig.E2EConfig.Cleanup.On
+	if cleanupOnCondition == constant.CleanUpAlways {
+		defer doCleanup()
+	}
+
 	// setup part
 	err := setup.DoSetupAccordingE2E()
 	if err != nil {
@@ -54,36 +60,19 @@ func runAccordingE2E() error {
 	}
 	logger.Log.Infof("setup part finished successfully")
 
-	// cleanup part
-	defer func() {
-		clean := true
+	if cleanupOnCondition != constant.CleanUpAlways {
+		defer func() {
+			shouldCleanup := (cleanupOnCondition == constant.CleanUpOnSuccess && err == nil) ||
+				(cleanupOnCondition == constant.CleanUpOnFailure && err != nil)
 
-		switch config.GlobalConfig.E2EConfig.Cleanup.On {
-		case constant.CleanUpNever:
-			clean = false
-		case constant.CleanUpOnSuccess:
-			// failed
-			if err != nil {
-				clean = false
+			if !shouldCleanup {
+				logger.Log.Infof("don't cleanup according to config")
+				return
 			}
-		case constant.CleanUpOnFailure:
-			// success
-			if err == nil {
-				clean = false
-			}
-		}
 
-		if !clean {
-			logger.Log.Infof("cleanup passed according to config")
-			return
-		}
-
-		err = cleanup.DoCleanupAccordingE2E()
-		if err != nil {
-			logger.Log.Errorf("cleanup part error: %s", err)
-		}
-		logger.Log.Infof("cleanup part finished successfully")
-	}()
+			doCleanup()
+		}()
+	}
 
 	// trigger part
 	err = trigger.DoActionAccordingE2E()
@@ -100,4 +89,12 @@ func runAccordingE2E() error {
 	logger.Log.Infof("verify part finished successfully")
 
 	return nil
+}
+
+func doCleanup() {
+	if err := cleanup.DoCleanupAccordingE2E(); err != nil {
+		logger.Log.Errorf("cleanup part error: %s", err)
+	} else {
+		logger.Log.Infof("cleanup part finished successfully")
+	}
 }
