@@ -26,13 +26,6 @@ import (
 	"os/exec"
 )
 
-// Which checks if binary is present in PATH.
-func Which(binary string) error {
-	_, err := exec.LookPath(binary)
-
-	return err
-}
-
 // PathExist checks if a file/directory is exist.
 func PathExist(_path string) bool {
 	_, err := os.Stat(_path)
@@ -56,7 +49,7 @@ func ReadFileContent(filename string) (string, error) {
 
 // ExecuteCommand executes the given command and returns the result.
 func ExecuteCommand(cmd string) (string, error) {
-	command := exec.Command("bash", "-c", cmd)
+	command := exec.Command("bash", "-ec", cmd)
 	outinfo := bytes.Buffer{}
 	command.Stdout = &outinfo
 

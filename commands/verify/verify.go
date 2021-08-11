@@ -101,25 +101,21 @@ func DoVerifyAccordingConfig() error {
 		retryInterval = 1000
 	}
 
-	var err error
-	for current := 1; current <= retryCount; current++ {
-		for _, v := range e2eConfig.Verify.Cases {
-			if v.GetExpected() != "" {
-				if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err != nil {
-					break
-				}
-			} else {
-				return fmt.Errorf("the expected data file is not specified")
-			}
+	for idx, v := range e2eConfig.Verify.Cases {
+		if v.GetExpected() == "" {
+			return fmt.Errorf("the expected data file for case[%v] is not specified", idx)
 		}
-
-		if err != nil && current != retryCount {
-			logger.Log.Warnf("verify case failure, will continue retry, %v", err)
-			time.Sleep(time.Duration(retryInterval) * time.Millisecond)
-		} else if err == nil {
-			return nil
+		for current := 1; current <= retryCount; current++ {
+			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+				break
+			} else if current != retryCount {
+				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
+				time.Sleep(time.Duration(retryInterval) * time.Millisecond)
+			} else {
+				return err
+			}
 		}
 	}
 
-	return err
+	return nil
 }
