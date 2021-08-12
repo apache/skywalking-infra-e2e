@@ -18,9 +18,12 @@
 package commands
 
 import (
+	"os"
+
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/apache/skywalking-infra-e2e/internal/util"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/run"
@@ -29,6 +32,11 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
+)
+
+var (
+	verbosity string
 )
 
 // Root represents the base command when called without any subcommands
@@ -38,8 +46,24 @@ var Root = &cobra.Command{
 	Version:       version,
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		config.ReadGlobalConfigFile()
+
+		level, err := logrus.ParseLevel(verbosity)
+		if err != nil {
+			return err
+		}
+		logger.Log.SetLevel(level)
+
+		util.WorkDir = util.ExpandFilePath(util.WorkDir)
+		if _, err := os.Stat(util.WorkDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(util.WorkDir, os.ModePerm); err != nil {
+				logger.Log.Warnf("failed to create working directory %v", util.WorkDir)
+				return err
+			}
+		}
+
+		return nil
 	},
 }
 
@@ -52,6 +76,8 @@ func Execute() error {
 	Root.AddCommand(verify.Verify)
 	Root.AddCommand(cleanup.Cleanup)
 
+	Root.PersistentFlags().StringVarP(&verbosity, "verbosity", "v", logrus.InfoLevel.String(), "log level (debug, info, warn, error, fatal, panic")
+	Root.PersistentFlags().StringVarP(&util.WorkDir, "work-dir", "w", "~/.skywalking-infra-e2e", "the working directory for skywalking-infra-e2e")
 	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
 
 	return Root.Execute()

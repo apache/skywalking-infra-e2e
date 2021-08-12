@@ -86,9 +86,5 @@ func cleanKindCluster(kindConfigFilePath string) error {
 	args := []string{"delete", "cluster", "--name", clusterName}
 
 	logger.Log.Debugf("cluster delete commands: %s %s", constant.KindCommand, strings.Join(args, " "))
-	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
-		return err
-	}
-
-	return nil
+	return kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args)
 }

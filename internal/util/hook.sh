@@ -5,9 +5,9 @@
 # the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -15,39 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
-name: Build
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16
-        id: go
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Check License
-        uses: apache/skywalking-eyes@ec88b7d850018c8983f87729ea88549e100c5c82
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Lint Codes
-        run: make lint
-
-      - name: Test
-        run: make test
-
-      - name: Build
-        run: make build
+function finish {
+  printenv > {{ .EnvFile }}
+}
+trap finish EXIT

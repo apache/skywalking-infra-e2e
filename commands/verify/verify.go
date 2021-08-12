@@ -59,7 +59,7 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 		return fmt.Errorf("failed to read the expected data file: %v", err)
 	}
 
-	var actualData, sourceName string
+	var actualData, sourceName, stderr string
 	if actualFile != "" {
 		sourceName = actualFile
 		actualData, err = util.ReadFileContent(actualFile)
@@ -68,19 +68,19 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 		}
 	} else if query != "" {
 		sourceName = query
-		actualData, err = util.ExecuteCommand(query)
+		actualData, stderr, err = util.ExecuteCommand(query)
 		if err != nil {
-			return fmt.Errorf("failed to execute the query: %s, output: %s, error: %v", query, actualData, err)
+			return fmt.Errorf("failed to execute the query: %s, output: %s, error: %v", query, actualData, stderr)
 		}
 	}
 
 	if err = verifier.Verify(actualData, expectedData); err != nil {
 		if me, ok := err.(*verifier.MismatchError); ok {
-			return fmt.Errorf("failed to verify the output: %s, error: %v", sourceName, me.Error())
+			return fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, me.Error())
 		}
-		return fmt.Errorf("failed to verify the output: %s, error: %v", sourceName, err)
+		return fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, err)
 	}
-	logger.Log.Infof("verified the output: %s\n", sourceName)
+	logger.Log.Infof("verified the output: %s", sourceName)
 	return nil
 }
 

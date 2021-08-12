@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/dynamic"
@@ -170,13 +171,13 @@ func executeCommandsAndWait(commands string, waits []config.Wait, waitSet *util.
 	defer waitSet.WaitGroup.Done()
 
 	// executes commands
-	logger.Log.Infof("executing commands [%s]", commands)
-	result, err := util.ExecuteCommand(commands)
+	logger.Log.Infof("executing commands [%s]", strings.ReplaceAll(commands, "\n", "\\n"))
+	result, stderr, err := util.ExecuteCommand(commands)
 	if err != nil {
-		err = fmt.Errorf("commands: [%s] runs error: %s", commands, err)
+		err = fmt.Errorf("commands: [%s] runs error: %s", strings.ReplaceAll(commands, "\n", "\\n"), stderr)
 		waitSet.ErrChan <- err
 	}
-	logger.Log.Infof("executed commands [%s], result: %s", commands, result)
+	logger.Log.Infof("executed commands [%s], result: %s", strings.ReplaceAll(commands, "\n", "\\n"), result)
 
 	// waits for conditions meet
 	for idx := range waits {

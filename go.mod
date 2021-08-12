@@ -1,6 +1,6 @@
 module github.com/apache/skywalking-infra-e2e
 
-go 1.13
+go 1.16
 
 require (
 	github.com/docker/docker v20.10.7+incompatible
