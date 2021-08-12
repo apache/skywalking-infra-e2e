@@ -113,9 +113,9 @@ func (h *httpAction) executeOnce(client *http.Client, req *http.Request) error {
 		logger.Log.Errorf("do request error %v", err)
 		return err
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 
-	logger.Log.Infof("do request %v response http code %v", h.url, response.StatusCode)
+	logger.Log.Debugf("do request %v response http code %v", h.url, response.StatusCode)
 	if response.StatusCode == http.StatusOK {
 		logger.Log.Debugf("do http action %+v success.", *h)
 		return nil

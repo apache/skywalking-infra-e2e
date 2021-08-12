@@ -15,25 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-package logger
+
+package util
 
 import (
-	"os"
+	"os/user"
+	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-var Log *logrus.Logger
-
-func init() {
-	if Log == nil {
-		Log = logrus.New()
+// UserHomeDir returns the current user's home directory absolute path,
+// which is usually represented as `~` in most shells
+func UserHomeDir() string {
+	if currentUser, err := user.Current(); err != nil {
+		logger.Log.Warnln("Cannot obtain user home directory")
+	} else {
+		return currentUser.HomeDir
 	}
-	Log.Level = logrus.InfoLevel
-	Log.SetOutput(os.Stdout)
-	Log.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp:       true,
-		DisableLevelTruncation: true,
-		ForceColors:            true,
-	})
+	return ""
+}
+
+// ExpandFilePath expands the leading `~` to absolute path
+func ExpandFilePath(path string) string {
+	if strings.HasPrefix(path, "~") {
+		return strings.Replace(path, "~", UserHomeDir(), 1)
+	}
+	return path
 }

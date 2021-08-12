@@ -20,10 +20,16 @@ package util
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
+	"text/template"
+
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
 // PathExist checks if a file/directory is exist.
@@ -48,16 +54,72 @@ func ReadFileContent(filename string) (string, error) {
 }
 
 // ExecuteCommand executes the given command and returns the result.
-func ExecuteCommand(cmd string) (string, error) {
+func ExecuteCommand(cmd string) (stdout, stderr string, err error) {
+	hookScript, err := hookScript()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Propagate the env vars from sub-process back to parent process
+	defer exportEnvVars()
+
+	cmd = hookScript + "\n" + cmd
+
 	command := exec.Command("bash", "-ec", cmd)
-	outinfo := bytes.Buffer{}
-	command.Stdout = &outinfo
+	sout, serr := bytes.Buffer{}, bytes.Buffer{}
+	command.Stdout, command.Stderr = &sout, &serr
 
 	if err := command.Start(); err != nil {
-		return outinfo.String(), err
+		return sout.String(), serr.String(), err
 	}
 	if err := command.Wait(); err != nil {
-		return outinfo.String(), err
+		return sout.String(), serr.String(), err
 	}
-	return outinfo.String(), nil
+	return sout.String(), serr.String(), nil
+}
+
+//go:embed hook.sh
+var hookScriptTemplate string
+
+type HookScriptTemplate struct {
+	EnvFile string
+}
+
+func hookScript() (string, error) {
+	hookScript := bytes.Buffer{}
+
+	parse, err := template.New("hookScriptTemplate").Parse(hookScriptTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	envFile := filepath.Join(WorkDir, ".env")
+	scriptData := HookScriptTemplate{EnvFile: envFile}
+	if err := parse.Execute(&hookScript, scriptData); err != nil {
+		return "", err
+	}
+	return hookScript.String(), nil
+}
+
+func exportEnvVars() {
+	envFile := filepath.Join(WorkDir, ".env")
+	b, err := ioutil.ReadFile(envFile)
+	if err != nil {
+		logger.Log.Warnf("failed to export environment variables, %v", err)
+		return
+	}
+	s := string(b)
+
+	lines := strings.Split(s, "\n")
+	for _, line := range lines {
+		kv := strings.SplitN(line, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		key, val := kv[0], kv[1]
+		// should only export env vars that are not already exist in parent process (Go process)
+		if err := os.Setenv(key, val); err != nil {
+			logger.Log.Warnf("failed to export environment variable %v=%v, %v", key, val, err)
+		}
+	}
 }

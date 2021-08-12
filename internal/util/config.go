@@ -25,7 +25,10 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
-var CfgFile string
+var (
+	CfgFile string
+	WorkDir string
+)
 
 // ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
 func ResolveAbs(p string) string {
