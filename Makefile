@@ -16,11 +16,12 @@
 # under the License.
 #
 
-PROJECT = e2e
+PROJECT := e2e
 VERSION ?= latest
 OUT_DIR = bin
 ARCH := $(shell uname)
 OSNAME := $(if $(findstring Darwin,$(ARCH)),darwin,linux)
+HUB ?= docker.io/apache
 
 GO := GO111MODULE=on go
 GO_PATH = $(shell $(GO) env GOPATH)
@@ -69,6 +70,10 @@ clean:
 
 .PHONY: verify
 verify: clean lint test
+
+.PHONY: docker
+docker:
+	docker build --no-cache . -t $(HUB)/$(PROJECT):$(VERSION)
 
 release-src: clean
 	-mkdir $(RELEASE_SRC)

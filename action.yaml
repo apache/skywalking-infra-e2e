@@ -26,20 +26,9 @@ runs:
   using: "composite"
   steps:
     - shell: bash
-      run: |
-        mkdir -p /tmp/skywalking-infra-e2e/bin
+      run: make -C $GITHUB_ACTION_PATH docker
     - shell: bash
       run: |
-        cd "$GITHUB_ACTION_PATH"
-        go mod download && make linux && mv bin/linux/e2e /tmp/skywalking-infra-e2e/bin/e2e
-    - shell: bash
-      run: |
-        cd /tmp/skywalking-infra-e2e
-        git clone https://github.com/apache/skywalking-cli.git
-        git -C skywalking-cli reset --hard 0494541890cd44a9be23e7fe091f9d0f84986613
-        cd skywalking-cli
-        make build && mv bin/swctl-*-linux-amd64 ../bin/swctl
-    - shell: bash
-      run: |
-        export PATH="$PATH:/tmp/skywalking-infra-e2e/bin"
-        e2e run -c "${{ inputs.e2e-file }}"
+        docker run -v $(pwd):/github/workspace \
+                   -v /var/run/docker.sock:/var/run/docker.sock \
+                   docker.io/apache/e2e:latest run -c "${{ inputs.e2e-file }}"
