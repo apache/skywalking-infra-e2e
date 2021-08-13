@@ -85,13 +85,13 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		containerPorts := container.Ports
 
 		// get real ip address for access and export to env
-		host, err := portList[0].target.Host(context.Background())
-		if err != nil {
-			return err
+		host, err2 := portList[0].target.Host(context.Background())
+		if err2 != nil {
+			return err2
 		}
 		// format: <service_name>_host
-		if err = exportComposeEnv(fmt.Sprintf("%s_host", service), fmt.Sprintf("%s", host), service); err != nil {
-			return err
+		if err2 := exportComposeEnv(fmt.Sprintf("%s_host", service), host, service); err2 != nil {
+			return err2
 		}
 
 		for inx := range portList {
@@ -102,11 +102,11 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 
 				// expose env config to env
 				// format: <service_name>_<port>
-				if err = exportComposeEnv(
+				if err2 := exportComposeEnv(
 					fmt.Sprintf("%s_%d", service, containerPort.PrivatePort),
 					fmt.Sprintf("%d", containerPort.PublicPort),
-					service); err != nil {
-					return err
+					service); err2 != nil {
+					return err2
 				}
 				break
 			}
