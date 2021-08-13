@@ -78,23 +78,36 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		if err2 != nil {
 			return err2
 		}
+		if len(portList) == 0 {
+			continue
+		}
+
 		containerPorts := container.Ports
+
+		// get real ip address for access and export to env
+		host, err := portList[0].target.Host(context.Background())
+		if err != nil {
+			return err
+		}
+		// format: <service_name>_host
+		if err = exportComposeEnv(fmt.Sprintf("%s_host", service), fmt.Sprintf("%s", host), service); err != nil {
+			return err
+		}
 
 		for inx := range portList {
 			for _, containerPort := range containerPorts {
-				if int(containerPort.PrivatePort) != portList[inx] {
+				if int(containerPort.PrivatePort) != portList[inx].expectPort {
 					continue
 				}
 
 				// expose env config to env
 				// format: <service_name>_<port>
-				envKey := fmt.Sprintf("%s_%d", service, containerPort.PrivatePort)
-				envValue := fmt.Sprintf("%d", containerPort.PublicPort)
-				err2 = os.Setenv(envKey, envValue)
-				if err2 != nil {
-					return fmt.Errorf("could not set env for %s:%d, %v", service, portList[inx], err2)
+				if err = exportComposeEnv(
+					fmt.Sprintf("%s_%d", service, containerPort.PrivatePort),
+					fmt.Sprintf("%d", containerPort.PublicPort),
+					service); err != nil {
+					return err
 				}
-				logger.Log.Infof("expose env : %s : %s", envKey, envValue)
 				break
 			}
 		}
@@ -110,7 +123,16 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	return nil
 }
 
-func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) (map[string][]int, error) {
+func exportComposeEnv(key, value, service string) error {
+	err := os.Setenv(key, value)
+	if err != nil {
+		return fmt.Errorf("could not set env for %s, %v", service, err)
+	}
+	logger.Log.Infof("expose env : %s : %s", key, value)
+	return nil
+}
+
+func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) (map[string][]*hostPortCachedStrategy, error) {
 	timeout := e2eConfig.Setup.Timeout
 	var waitTimeout time.Duration
 	if timeout <= 0 {
@@ -118,14 +140,14 @@ func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDock
 	} else {
 		waitTimeout = time.Duration(timeout) * time.Second
 	}
-	serviceWithPorts := make(map[string][]int)
+	serviceWithPorts := make(map[string][]*hostPortCachedStrategy)
 	for service, content := range compose.Services {
 		serviceConfig := content.(map[interface{}]interface{})
 		ports := serviceConfig["ports"]
 		if ports == nil {
 			continue
 		}
-		serviceWithPorts[service] = []int{}
+		serviceWithPorts[service] = []*hostPortCachedStrategy{}
 
 		portList := ports.([]interface{})
 		for inx := range portList {
@@ -133,12 +155,14 @@ func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDock
 			if err != nil {
 				return nil, err
 			}
-			serviceWithPorts[service] = append(serviceWithPorts[service], exportPort)
 
-			compose.WithExposedService(
-				service,
-				exportPort,
-				wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout))
+			strategy := &hostPortCachedStrategy{
+				expectPort:       exportPort,
+				HostPortStrategy: *wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout),
+			}
+			compose.WithExposedService(service, exportPort, strategy)
+
+			serviceWithPorts[service] = append(serviceWithPorts[service], strategy)
 		}
 	}
 	return serviceWithPorts, nil
@@ -181,4 +205,16 @@ func getInstanceName(serviceName string) string {
 		return serviceName + "_1"
 	}
 	return serviceName
+}
+
+// hostPortCachedStrategy cached original target
+type hostPortCachedStrategy struct {
+	wait.HostPortStrategy
+	expectPort int
+	target     wait.StrategyTarget
+}
+
+func (hp *hostPortCachedStrategy) WaitUntilReady(ctx context.Context, target wait.StrategyTarget) error {
+	hp.target = target
+	return hp.HostPortStrategy.WaitUntilReady(ctx, target)
 }
