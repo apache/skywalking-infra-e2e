@@ -56,4 +56,4 @@ COPY --from=docker /usr/local/bin/docker /usr/local/bin/docker
 
 WORKDIR /github/workspace/
 
-ENTRYPOINT ["/bin/e2e"]
+ENTRYPOINT ["e2e"]
