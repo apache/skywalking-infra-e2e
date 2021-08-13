@@ -31,5 +31,5 @@ runs:
       run: |
         docker run -v /github/workspace:/github/workspace \
                    -v /var/run/docker.sock:/var/run/docker.sock \
-                   -w $(pwd)
+                   -w $(pwd) \
                    docker.io/apache/e2e:latest run -c "${{ inputs.e2e-file }}"
