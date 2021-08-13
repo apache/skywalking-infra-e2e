@@ -29,9 +29,6 @@ runs:
       run: make -C $GITHUB_ACTION_PATH docker
     - shell: bash
       run: |
-        ls && pwd;
-        echo $GITHUB_ACTION_PATH;
-        echo $GITHUB_WORKSPACE;
         docker run -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
                    -v /var/run/docker.sock:/var/run/docker.sock \
                    -w $GITHUB_WORKSPACE \
