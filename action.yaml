@@ -29,6 +29,7 @@ runs:
       run: make -C $GITHUB_ACTION_PATH docker
     - shell: bash
       run: |
-        docker run -v $(pwd):/github/workspace \
+        docker run -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
                    -v /var/run/docker.sock:/var/run/docker.sock \
+                   -w $GITHUB_WORKSPACE \
                    docker.io/apache/e2e:latest run -c "${{ inputs.e2e-file }}"
