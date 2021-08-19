@@ -489,10 +489,9 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 				}
 			}
 			return err
-		} else {
-			conn.Close()
-			break
 		}
+		conn.Close()
+		break
 	}
 
 	// internal check
