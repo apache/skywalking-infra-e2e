@@ -53,6 +53,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	if err != nil {
 		return err
 	}
+	dockerProvider := &DockerProvider{client: cli}
 
 	// setup docker compose
 	composeFilePaths := []string{
@@ -85,10 +86,11 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		containerPorts := container.Ports
 
 		// get real ip address for access and export to env
-		host, err2 := portList[0].target.Host(context.Background())
+		host, err2 := dockerProvider.daemonHost(context.Background())
 		if err2 != nil {
 			return err2
 		}
+
 		// format: <service_name>_host
 		if err2 := exportComposeEnv(fmt.Sprintf("%s_host", service), host, service); err2 != nil {
 			return err2
@@ -99,6 +101,20 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 				if int(containerPort.PrivatePort) != portList[inx].expectPort {
 					continue
 				}
+
+				// wait port
+				var waitTimeout time.Duration
+				if e2eConfig.Setup.Timeout <= 0 {
+					waitTimeout = constant.DefaultWaitTimeout
+				} else {
+					waitTimeout = time.Duration(e2eConfig.Setup.Timeout) * time.Second
+				}
+				waitPort := nat.Port(fmt.Sprintf("%d/tcp", portList[inx].expectPort))
+				target := &DockerContainer{
+					ID:         container.ID,
+					WaitingFor: wait.NewHostPortStrategy(waitPort),
+					provider:   dockerProvider}
+				WaitPort(context.Background(), target, waitPort, waitTimeout)
 
 				// expose env config to env
 				// format: <service_name>_<port>
@@ -160,7 +176,8 @@ func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDock
 				expectPort:       exportPort,
 				HostPortStrategy: *wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout),
 			}
-			compose.WithExposedService(service, exportPort, strategy)
+			// temporary don't use testcontainers-go framework wait strategy until fix docker-in-docker bug
+			// compose.WithExposedService(service, exportPort, strategy)
 
 			serviceWithPorts[service] = append(serviceWithPorts[service], strategy)
 		}
