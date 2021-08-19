@@ -1,18 +1,14 @@
 package setup
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,6 +23,7 @@ import (
 const (
 	Bridge        = "bridge"         // Bridge network name (as well as driver)
 	ReaperDefault = "reaper_default" // Default network name when bridge is not available
+	localhost     = "localhost"
 
 	TestcontainerLabel = "org.testcontainers.golang"
 )
@@ -41,8 +38,7 @@ type NetworkRequest struct {
 	Labels         map[string]string
 	Attachable     bool
 
-	SkipReaper  bool   // indicates whether we skip setting up a reaper for this
-	ReaperImage string //alternative reaper registry
+	ReaperImage string // alternative reaper registry
 }
 
 type Log struct {
@@ -65,12 +61,8 @@ type DockerContainer struct {
 	WaitingFor wait.Strategy
 	Image      string
 
-	provider          *DockerProvider
-	terminationSignal chan bool
-	skipReaper        bool
-	consumers         []LogConsumer
-	raw               *types.ContainerJSON
-	stopProducer      chan bool
+	provider  *DockerProvider
+	consumers []LogConsumer
 }
 
 func (c *DockerContainer) GetContainerID() string {
@@ -287,49 +279,11 @@ func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 	return exitCode, nil
 }
 
-func (c *DockerContainer) CopyFileToContainer(ctx context.Context, hostFilePath string, containerFilePath string, fileMode int64) error {
-	fileContent, err := ioutil.ReadFile(hostFilePath)
-	if err != nil {
-		return err
-	}
-
-	buffer := &bytes.Buffer{}
-
-	tw := tar.NewWriter(buffer)
-	defer tw.Close()
-
-	hdr := &tar.Header{
-		Name: filepath.Base(containerFilePath),
-		Mode: fileMode,
-		Size: int64(len(fileContent)),
-	}
-	if err := tw.WriteHeader(hdr); err != nil {
-		return err
-	}
-	if _, err := tw.Write(fileContent); err != nil {
-		return err
-	}
-
-	return c.provider.client.CopyToContainer(ctx, c.ID, filepath.Dir(containerFilePath), buffer, types.CopyToContainerOptions{})
-}
-
 // DockerNetwork represents a network started using Docker
 type DockerNetwork struct {
-	ID                string // Network ID from Docker
-	Driver            string
-	Name              string
-	provider          *DockerProvider
-	terminationSignal chan bool
-}
-
-// Remove is used to remove the network. It is usually triggered by as defer function.
-func (n *DockerNetwork) Remove(ctx context.Context) error {
-	select {
-	// close reaper if it was created
-	case n.terminationSignal <- true:
-	default:
-	}
-	return n.provider.client.NetworkRemove(ctx, n.ID)
+	ID     string // Network ID from Docker
+	Driver string
+	Name   string
 }
 
 // DockerProvider implements the ContainerProvider interface
@@ -337,19 +291,6 @@ type DockerProvider struct {
 	client         *client.Client
 	hostCache      string
 	defaultNetwork string // default container network
-}
-
-// NewDockerProvider creates a Docker provider with the EnvClient
-func NewDockerProvider() (*DockerProvider, error) {
-	client, err := client.NewEnvClient()
-	if err != nil {
-		return nil, err
-	}
-	client.NegotiateAPIVersion(context.Background())
-	p := &DockerProvider{
-		client: client,
-	}
-	return p, nil
 }
 
 // daemonHost gets the host or ip of the Docker daemon where ports are exposed on
@@ -367,14 +308,14 @@ func (p *DockerProvider) daemonHost(ctx context.Context) (string, error) {
 	}
 
 	// infer from Docker host
-	url, err := url.Parse(p.client.DaemonHost())
+	parsedURL, err := url.Parse(p.client.DaemonHost())
 	if err != nil {
 		return "", err
 	}
 
-	switch url.Scheme {
+	switch parsedURL.Scheme {
 	case "http", "https", "tcp":
-		p.hostCache = url.Hostname()
+		p.hostCache = parsedURL.Hostname()
 	case "unix", "npipe":
 		if inAContainer() {
 			ip, err := p.GetGatewayIP(ctx)
@@ -382,15 +323,15 @@ func (p *DockerProvider) daemonHost(ctx context.Context) (string, error) {
 				// fallback to getDefaultGatewayIP
 				ip, err = getDefaultGatewayIP()
 				if err != nil {
-					ip = "localhost"
+					ip = localhost
 				}
 			}
 			p.hostCache = ip
 		} else {
-			p.hostCache = "localhost"
+			p.hostCache = localhost
 		}
 	default:
-		return "", errors.New("Could not determine host through env or docker host")
+		return "", errors.New("could not determine host through env or docker host")
 	}
 
 	return p.hostCache, nil
@@ -430,14 +371,13 @@ func (p *DockerProvider) GetGatewayIP(ctx context.Context) (string, error) {
 		}
 	}
 	if ip == "" {
-		return "", errors.New("Failed to get gateway IP from network settings")
+		return "", errors.New("failed to get gateway IP from network settings")
 	}
 
 	return ip, nil
 }
 
 func inAContainer() bool {
-	// see https://github.com/testcontainers/testcontainers-java/blob/3ad8d80e2484864e554744a4800a81f6b7982168/core/src/main/java/org/testcontainers/dockerclient/DockerClientConfigUtils.java#L15
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		return true
 	}
@@ -445,19 +385,17 @@ func inAContainer() bool {
 }
 
 // deprecated
-// see https://github.com/testcontainers/testcontainers-java/blob/master/core/src/main/java/org/testcontainers/dockerclient/DockerClientConfigUtils.java#L46
 func getDefaultGatewayIP() (string, error) {
-	// see https://github.com/testcontainers/testcontainers-java/blob/3ad8d80e2484864e554744a4800a81f6b7982168/core/src/main/java/org/testcontainers/dockerclient/DockerClientConfigUtils.java#L27
 	cmd := exec.Command("sh", "-c", "ip route|awk '/default/ { print $3 }'")
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", errors.New("Failed to detect docker host")
+		return "", errors.New("failed to detect docker host")
 	}
 	ip := strings.TrimSpace(string(stdout))
-	if len(ip) == 0 {
-		return "", errors.New("Failed to parse default gateway IP")
+	if ip == "" {
+		return "", errors.New("failed to parse default gateway IP")
 	}
-	return string(ip), nil
+	return ip, nil
 }
 
 func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) {
@@ -471,12 +409,12 @@ func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) 
 
 	reaperNetworkExists := false
 
-	for _, net := range networkResources {
-		if net.Name == Bridge {
+	for inx := range networkResources {
+		if networkResources[inx].Name == Bridge {
 			return Bridge, nil
 		}
 
-		if net.Name == reaperNetwork {
+		if networkResources[inx].Name == reaperNetwork {
 			reaperNetworkExists = true
 		}
 	}
@@ -512,29 +450,13 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 
 	var waitInterval = 100 * time.Millisecond
 
-	var port nat.Port
-	port, err = target.MappedPort(ctx, waitPort)
-	var i = 0
-
-	for port == "" {
-		i++
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("%s:%w", ctx.Err(), err)
-		case <-time.After(waitInterval):
-			port, err = target.MappedPort(ctx, waitPort)
-			if err != nil {
-				fmt.Printf("(%d) [%s] %s\n", i, port, err)
-			}
-		}
-	}
+	port, err := findMappedPort(ctx, target, waitPort)
 
 	proto := port.Proto()
 	portNumber := port.Int()
 	portString := strconv.Itoa(portNumber)
 
-	//external check
+	// external check
 	dialer := net.Dialer{}
 	address := net.JoinHostPort(ipAddress, portString)
 	for {
@@ -555,7 +477,7 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 		}
 	}
 
-	//internal check
+	// internal check
 	command := buildInternalCheckCommand(waitPort.Int())
 	for {
 		if ctx.Err() != nil {
@@ -574,6 +496,29 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 	}
 
 	return nil
+}
+
+func findMappedPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port) (nat.Port, error) {
+	var waitInterval = 100 * time.Millisecond
+
+	var port nat.Port
+	port, err := target.MappedPort(ctx, waitPort)
+	var i = 0
+
+	for port == "" {
+		i++
+
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("%s:%w", ctx.Err(), err)
+		case <-time.After(waitInterval):
+			port, err = target.MappedPort(ctx, waitPort)
+			if err != nil {
+				fmt.Printf("(%d) [%s] %s\n", i, port, err)
+			}
+		}
+	}
+	return port, err
 }
 
 func isConnRefusedErr(err error) bool {

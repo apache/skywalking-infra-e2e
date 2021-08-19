@@ -53,7 +53,6 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	if err != nil {
 		return err
 	}
-	dockerProvider := &DockerProvider{client: cli}
 
 	// setup docker compose
 	composeFilePaths := []string{
@@ -74,59 +73,9 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	}
 
 	// find exported port and build env
-	for service, portList := range serviceWithPorts {
-		container, err2 := findContainer(cli, fmt.Sprintf("%s_%s", identifier, getInstanceName(service)))
-		if err2 != nil {
-			return err2
-		}
-		if len(portList) == 0 {
-			continue
-		}
-
-		containerPorts := container.Ports
-
-		// get real ip address for access and export to env
-		host, err2 := dockerProvider.daemonHost(context.Background())
-		if err2 != nil {
-			return err2
-		}
-
-		// format: <service_name>_host
-		if err2 := exportComposeEnv(fmt.Sprintf("%s_host", service), host, service); err2 != nil {
-			return err2
-		}
-
-		for inx := range portList {
-			for _, containerPort := range containerPorts {
-				if int(containerPort.PrivatePort) != portList[inx].expectPort {
-					continue
-				}
-
-				// wait port
-				var waitTimeout time.Duration
-				if e2eConfig.Setup.Timeout <= 0 {
-					waitTimeout = constant.DefaultWaitTimeout
-				} else {
-					waitTimeout = time.Duration(e2eConfig.Setup.Timeout) * time.Second
-				}
-				waitPort := nat.Port(fmt.Sprintf("%d/tcp", portList[inx].expectPort))
-				target := &DockerContainer{
-					ID:         container.ID,
-					WaitingFor: wait.NewHostPortStrategy(waitPort),
-					provider:   dockerProvider}
-				WaitPort(context.Background(), target, waitPort, waitTimeout)
-
-				// expose env config to env
-				// format: <service_name>_<port>
-				if err2 := exportComposeEnv(
-					fmt.Sprintf("%s_%d", service, containerPort.PrivatePort),
-					fmt.Sprintf("%d", containerPort.PublicPort),
-					service); err2 != nil {
-					return err2
-				}
-				break
-			}
-		}
+	err = exposeServiceEnv(serviceWithPorts, cli, identifier, e2eConfig)
+	if err != nil {
+		return err
 	}
 
 	// run steps
@@ -136,6 +85,56 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
+	return nil
+}
+
+func exposeServiceEnv(serviceWithPorts map[string][]*hostPortCachedStrategy, cli *client.Client, identity string, e2eConfig *config.E2EConfig) error {
+	dockerProvider := &DockerProvider{client: cli}
+	// find exported port and build env
+	for service, portList := range serviceWithPorts {
+		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identity, getInstanceName(service)))
+		if err != nil {
+			return err
+		}
+		if len(portList) == 0 {
+			continue
+		}
+
+		containerPorts := container.Ports
+
+		// get real ip address for access and export to env
+		host, err := dockerProvider.daemonHost(context.Background())
+		if err != nil {
+			return err
+		}
+
+		// format: <service_name>_host
+		if err := exportComposeEnv(fmt.Sprintf("%s_host", service), host, service); err != nil {
+			return err
+		}
+
+		for inx := range portList {
+			for _, containerPort := range containerPorts {
+				if int(containerPort.PrivatePort) != portList[inx].expectPort {
+					continue
+				}
+
+				if err := waitPortUntilReady(e2eConfig, container, dockerProvider, portList[inx].expectPort); err != nil {
+					return err
+				}
+
+				// expose env config to env
+				// format: <service_name>_<port>
+				if err := exportComposeEnv(
+					fmt.Sprintf("%s_%d", service, containerPort.PrivatePort),
+					fmt.Sprintf("%d", containerPort.PublicPort),
+					service); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
 	return nil
 }
 
@@ -234,4 +233,20 @@ type hostPortCachedStrategy struct {
 func (hp *hostPortCachedStrategy) WaitUntilReady(ctx context.Context, target wait.StrategyTarget) error {
 	hp.target = target
 	return hp.HostPortStrategy.WaitUntilReady(ctx, target)
+}
+
+func waitPortUntilReady(e2eConfig *config.E2EConfig, container *types.Container, dockerProvider *DockerProvider, expectPort int) error {
+	// wait port
+	var waitTimeout time.Duration
+	if e2eConfig.Setup.Timeout <= 0 {
+		waitTimeout = constant.DefaultWaitTimeout
+	} else {
+		waitTimeout = time.Duration(e2eConfig.Setup.Timeout) * time.Second
+	}
+	waitPort := nat.Port(fmt.Sprintf("%d/tcp", expectPort))
+	target := &DockerContainer{
+		ID:         container.ID,
+		WaitingFor: wait.NewHostPortStrategy(waitPort),
+		provider:   dockerProvider}
+	return WaitPort(context.Background(), target, waitPort, waitTimeout)
 }
