@@ -26,7 +26,7 @@ runs:
   using: "composite"
   steps:
     - shell: bash
-      run: make -C $GITHUB_ACTION_PATH docker
+      run: make -C $GITHUB_ACTION_PATH/.. docker
     - shell: bash
       run: |
         printenv > env.list
