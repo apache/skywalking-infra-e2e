@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: SkyWalking Infra E2E
+name: SkyWalking Infra E2E Dockerized
 description: End-to-End Tesing framework that help to set up, verify E2E tests.
 author: Apache SkyWalking
 inputs:
@@ -26,9 +26,11 @@ runs:
   using: "composite"
   steps:
     - shell: bash
-      run: |
-        make -C $GITHUB_ACTION_PATH docker
-        docker run -v $(pwd):/tmp -w /tmp --entrypoint=sh docker.io/apache/e2e:latest -c "cp /usr/local/bin/e2e /tmp/e2e"
-        install ./e2e /usr/local/bin
+      run: make -C $GITHUB_ACTION_PATH docker
     - shell: bash
-      run: e2e run -c "${{ inputs.e2e-file }}"
+      run: |
+        printenv > env.list
+        docker run -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+                   -v /var/run/docker.sock:/var/run/docker.sock \
+                   -w $GITHUB_WORKSPACE --env-file env.list \
+                   docker.io/apache/e2e:latest run -c "${{ inputs.e2e-file }}"
