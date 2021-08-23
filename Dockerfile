@@ -26,15 +26,7 @@ RUN make linux
 
 FROM golang:1.16 AS bin
 
-RUN apt update; \
-    apt install -y docker-compose
-
 COPY --from=build /e2e/bin/linux/e2e /usr/local/bin/e2e
-
-# Add common tools, copy from prebuilt Docker image whenever possible.
-COPY --from=stedolan/jq /usr/local/bin/jq /usr/local/bin/jq
-COPY --from=mikefarah/yq:4 /usr/bin/yq /usr/local/bin/yq
-COPY --from=docker /usr/local/bin/docker /usr/local/bin/docker
 
 WORKDIR /github/workspace/
 
