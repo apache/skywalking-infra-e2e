@@ -8,6 +8,7 @@ SkyWalking Infra E2E is the next generation End-to-End Testing framework that ai
 
 ## Documentation
 
+- **[Official documentation](docs/README.md)**
 - **[The design doc](https://skywalking.apache.org/blog/e2e-design/).**
 
 ## GitHub Actions
