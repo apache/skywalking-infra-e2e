@@ -33,7 +33,7 @@ catalog:
             path: /en/guide/compile/how-to-build
       - name: Execute
         catalog:
-          - name: How to write configuration file?
-            path: /en/guide/execute/how-to-write-configuration-file
-          - name: How to execute?
-            path: /en/guide/execute/how-to-execute
+          - name: configuration file
+            path: /en/guide/execute/configuration-file
+          - name: execute
+            path: /en/guide/execute/execute

@@ -1,11 +1,10 @@
 # Design Goals
 The document outlines the core design goals for the SkyWalking Infra E2E project.
 
-- Keep the feature parity with the existing E2E framework in SkyWalking main repo.
+- Support various E2E testing requirements in SkyWalking main repository with other ecosystem repositories.
 - Support both [docker-compose](https://docs.docker.com/compose/) and [KinD](https://kind.sigs.k8s.io/) to orchestrate the tested services 
   under different environments.
-- Get rid of the heavy `Java/Maven` stack, which exists in the current E2E; be language-independent as much as possible, 
-  users only need to configure YAMLs and run commands, without writing codes.
+- Be language-independent as much as possible, users only need to configure YAMLs and run COmmands, without writing codes.
 
 ## Non-Goal
 

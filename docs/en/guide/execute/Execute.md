@@ -21,14 +21,17 @@ e2e run -c /path/to/the/test/e2e.yaml
 Also, could run the separate step in the command line, these commands are all done by reading the configuration.
 
 ```shell
-e2e setup/trigger/verify/cleanup
+e2e setup
+e2e trigger
+e2e verify
+e2e cleanup
 ```
 
 ## GitHub Action
 
 To use skywalking-infra-e2e in GitHub Actions, add a step in your GitHub workflow.
 
-```xml
+```yaml
 - name: Run E2E Test
   uses: apache/skywalking-infra-e2e@main      # always prefer to use a revision instead of `main`.
   with:
