@@ -35,5 +35,5 @@ catalog:
         catalog:
           - name: configuration file
             path: /en/guide/execute/configuration-file
-          - name: Run e2e Tests
-            path: /en/guide/execute/execute
+          - name: Run E2E Tests
+            path: /en/guide/execute/run-e2e-tests
