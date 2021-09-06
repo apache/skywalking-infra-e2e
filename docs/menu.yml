@@ -18,22 +18,22 @@ catalog:
   - name: Welcome
     path: /readme
   - name: Concepts and Designs
-    path: /en/concepts-and-designs/readme
     catalog:
+      - name: Concepts and Designs
+        path: /en/concepts-and-designs/readme
       - name: Project Goals
         path: /en/concepts-and-designs/project-goals
       - name: Module Design
         path: /en/concepts-and-designs/module-design
   - name: Guide
-    path: /en/guide/readme
     catalog:
-      - name: Compile
-        catalog:
-          - name: How to build?
-            path: /en/guide/compile/how-to-build
-      - name: Execute
+      - name: Guide
+        path: /en/guide/readme
+      - name: Compiling Guidance
+        path: /en/guide/compiling-guidance
+      - name: Set up
         catalog:
           - name: configuration file
             path: /en/guide/execute/configuration-file
-          - name: execute
+          - name: Run e2e Tests
             path: /en/guide/execute/execute

@@ -4,7 +4,7 @@ If you want to debug, develop or execute SkyWalking Infra E2E, The following doc
 
 ## Compile
 
-* [How to build?](compile/How-To-Build.md)
+* [Build](Compiling-Guidance.md)
 
 ## Execute
 
