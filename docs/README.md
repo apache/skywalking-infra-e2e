@@ -8,7 +8,9 @@ From here you can learn all about **SkyWalking Infra E2E's** architecture, how t
 
 - [Concepts and Designs](en/concepts-and-designs/README.md). The most important core ideas about SkyWalking Infra E2E. You can learn from here if you want to understand what is going on under our cool features.
   
-- [Guide](en/guide/README.md). Introduce how to set up and running E2E testing.
+- [Setup](en/setup/README.md). Introduce how to set up and running E2E testing.
+ 
+- [Contribution](en/contribution/README.md). Introduce how to contribute SkyWalking Infra E2E.
 
 We're always looking for help improve our documentation and codes, so please don’t hesitate to [file an issue](https://github.com/apache/skywalking/issues/new) 
 if you see any problem. 
