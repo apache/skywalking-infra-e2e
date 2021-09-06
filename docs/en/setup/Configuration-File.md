@@ -1,7 +1,7 @@
 # SkyWalking Infra E2E Configuration Guide
 
 The configuration file is used to integrate all the step configuration content.
-You can see the sample configuration files for different environments in the [examples directory](../../../../examples).
+You can see the sample configuration files for different environments in the [examples directory](../../../examples).
 
 There is a quick view about the configuration file, and using the `yaml` format.
 ```yaml
@@ -127,7 +127,7 @@ Support two kind source to verify, one case only supports one kind source type:
 After clarifying the content that needs to be verified, you need to write content to verify the real content and ensure that the data is correct.
 
 You need to use the form of [Go Template](https://pkg.go.dev/text/template#pkg-overview) to write the verification file, and the data content to be rendered comes from the real data. By verifying whether the rendered data is consistent with the real data, it is verified whether the content is consistent.
-You could see [many test cases in this directory](../../../../test/verify).
+You could see [many test cases in this directory](../../../test/verify).
 
 We have done a lot of extension functions for verification functions on the original Go Template.
 
