@@ -595,7 +595,7 @@ The text of each license is also included at licenses/LICENSE-[project].txt.
     dhcp4client v1.0.0 https://github.com/d2g/dhcp4client MPL-2.0
     dhcp4server v0.0.0 https://github.com/d2g/dhcp4server MPL-2.0
     hardwareaddr v0.0.0 https://github.com/d2g/hardwareaddr MPL-2.0
-    mysql v1.6.0 https://github.com/go-sql-driver/mysql MPL-2.0
+    gosqldriver-mysql v1.6.0 https://github.com/go-sql-driver/mysql MPL-2.0
     consul-api v1.1.0 https://github.com/hashicorp/consul/api MPL-2.0
     consul-sdk v0.1.1 https://github.com/hashicorp/consul/sdk MPL-2.0
     errwrap v0.0.0 https://github.com/hashicorp/errwrap MPL-2.0
