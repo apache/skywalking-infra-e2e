@@ -5,7 +5,7 @@ Release Notes.
 1.0.0
 ------------------
 #### Features
-* Support using `KinD` and `docker-compose` to setup the environment.
+* Support using `docker-compose` to setup the environment.
 * Support using the HTTP request as trigger.
 * Support verify test case by command-line or file with retry strategy.
 * Support GitHub Action.
