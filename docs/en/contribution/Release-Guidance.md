@@ -58,7 +58,7 @@ This is a call for vote to release Apache SkyWalking Infra E2E version $VERSION.
 
 Release notes:
 
- * https://github.com/apache/skywalking-infra-e2e/blob/v$VERSION/CHANGELOG.md
+ * https://github.com/apache/skywalking-infra-e2e/blob/v$VERSION/CHANGES.md
 
 Release Candidate:
 
@@ -81,7 +81,7 @@ Keys to verify the Release Candidate :
 
 Guide to build the release from source :
 
- * https://github.com/apache/skywalking-infra-e2e/blob/main/docs/en/contribution/Compiling-Guidance.md
+ * https://github.com/apache/skywalking-infra-e2e/blob/main/docs/en/contribution/Release-Guidance.md
 
 Voting will start now and will remain open for at least 72 hours, all PMC members are required to give their votes.
 
@@ -140,7 +140,7 @@ Vote result should follow these:
     svn mv https://dist.apache.org/repos/dist/dev/skywalking/infra-e2e/"$VERSION" https://dist.apache.org/repos/dist/release/skywalking/infra-e2e/"$VERSION"
     ```
 
-1. Refer to the previous [PR](https://github.com/apache/skywalking-website/pull/132), update news and links on the website. There are several files need to modify.
+1. Refer to the previous [PR](https://github.com/apache/skywalking-website/pull/329), update news and links on the website. There are several files need to modify.
 
 1. Update [Github release page](https://github.com/apache/skywalking-infra-e2e/releases), follow the previous convention.
 
@@ -161,7 +161,7 @@ Vote result should follow these:
 
     Download Links: http://skywalking.apache.org/downloads/
 
-    Release Notes : https://github.com/apache/skywalking-infra-e2e/blob/v$VERSION/CHANGELOG.md
+    Release Notes : https://github.com/apache/skywalking-infra-e2e/blob/v$VERSION/CHANGES.md
 
     Website: http://skywalking.apache.org/
 
