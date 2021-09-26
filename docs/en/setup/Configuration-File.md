@@ -129,6 +129,8 @@ After clarifying the content that needs to be verified, you need to write conten
 You need to use the form of [Go Template](https://pkg.go.dev/text/template#pkg-overview) to write the verification file, and the data content to be rendered comes from the real data. By verifying whether the rendered data is consistent with the real data, it is verified whether the content is consistent.
 You could see [many test cases in this directory](../../../test/verify).
 
+We use [go-cmp](https://pkg.go.dev/github.com/google/go-cmp/cmp#Diff) to show the parts where excepted do not match the actual data. `-` prefix represents the expected data content, `+` prefix represents the actual data content.
+
 We have done a lot of extension functions for verification functions on the original Go Template.
 
 #### Extension functions
