@@ -6,6 +6,10 @@ SkyWalking Infra E2E is the next generation End-to-End Testing framework that ai
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/asfskywalking.svg?style=for-the-badge&label=Follow&logo=twitter)](https://twitter.com/AsfSkyWalking)
 
+## Documentation
+
+- **[Official documentation](https://skywalking.apache.org/docs/#SkyWalkingInfraE2E).**
+
 ## GitHub Actions
 
 To use skywalking-infra-e2e in GitHub Actions, add a step in your GitHub workflow.
