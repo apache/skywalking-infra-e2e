@@ -68,7 +68,7 @@ func Verify(actualData, expectedTemplate string) error {
 	if !cmp.Equal(expected, actual) {
 		// TODO: use a custom Reporter (suggested by the comment of cmp.Diff)
 		diff := cmp.Diff(expected, actual)
-		return &MismatchError{diff: diff}
+		return &MismatchError{diff: fmt.Sprintf("mismatch (-want +got):\n%s", diff)}
 	}
 	return nil
 }
