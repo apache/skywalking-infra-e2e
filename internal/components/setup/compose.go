@@ -33,6 +33,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -67,7 +68,17 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return fmt.Errorf("bind wait ports error: %v", err)
 	}
 
-	execError := compose.WithCommand([]string{"up", "-d"}).Invoke()
+	// build command
+	cmd := make([]string, 0)
+	if e2eConfig.Setup.InitSystemEnvironment != "" {
+		profilePath := util.ResolveAbs(e2eConfig.Setup.InitSystemEnvironment)
+		cmd = append(cmd, "--env-file", profilePath)
+		util.ExportEnvVars(profilePath)
+	}
+	cmd = append(cmd, "up", "-d")
+
+	// setup
+	execError := compose.WithCommand(cmd).Invoke()
 	if execError.Error != nil {
 		return execError.Error
 	}
