@@ -57,7 +57,8 @@ setup:
 ```
 
 The `docker-compose` environment follow these steps:
-1. Import `init-system-environment` file for help build service and execute steps.
+1. Import `init-system-environment` file for help build service and execute steps. 
+Each line of the file content is an environment variable, and the key value is separate by "=".
 1. Start the `docker-compose` services.
 1. Check the services' healthiness.
 1. Wait until all services are ready according to the interval, etc.
