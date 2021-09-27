@@ -48,14 +48,16 @@ The `KinD` environment follow these steps:
 ```yaml
 setup:
   env: compose
-  file: path/to/compose.yaml  # Specified docker-compose file path
-  timeout: 1200               # Timeout second
-  steps:                      # Customize steps for prepare the environment
-    - name: customize setups        # Step name
-      command: command lines        # Use command line to setup 
+  file: path/to/compose.yaml            # Specified docker-compose file path
+  timeout: 1200                         # Timeout second
+  init-system-environment: path/to/env  # Import environment file
+  steps:                                # Customize steps for prepare the environment
+    - name: customize setups            # Step name
+      command: command lines            # Use command line to setup 
 ```
 
 The `docker-compose` environment follow these steps:
+1. Import `init-system-environment` file for help build service and execute steps.
 1. Start the `docker-compose` services.
 1. Check the services' healthiness.
 1. Wait until all services are ready according to the interval, etc.

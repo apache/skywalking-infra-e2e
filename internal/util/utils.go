@@ -61,7 +61,7 @@ func ExecuteCommand(cmd string) (stdout, stderr string, err error) {
 	}
 
 	// Propagate the env vars from sub-process back to parent process
-	defer exportEnvVars()
+	defer ExportEnvVars(filepath.Join(WorkDir, ".env"))
 
 	cmd = hookScript + "\n" + cmd
 
@@ -101,8 +101,7 @@ func hookScript() (string, error) {
 	return hookScript.String(), nil
 }
 
-func exportEnvVars() {
-	envFile := filepath.Join(WorkDir, ".env")
+func ExportEnvVars(envFile string) {
 	b, err := ioutil.ReadFile(envFile)
 	if err != nil {
 		logger.Log.Warnf("failed to export environment variables, %v", err)
@@ -112,6 +111,9 @@ func exportEnvVars() {
 
 	lines := strings.Split(s, "\n")
 	for _, line := range lines {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
 		kv := strings.SplitN(line, "=", 2)
 		if len(kv) != 2 {
 			continue

@@ -29,10 +29,11 @@ type E2EConfig struct {
 }
 
 type Setup struct {
-	Env     string `yaml:"env"`
-	File    string `yaml:"file"`
-	Steps   []Step `yaml:"steps"`
-	Timeout int    `yaml:"timeout"`
+	Env                   string `yaml:"env"`
+	File                  string `yaml:"file"`
+	Steps                 []Step `yaml:"steps"`
+	Timeout               int    `yaml:"timeout"`
+	InitSystemEnvironment string `yaml:"init-system-environment"`
 }
 
 type Cleanup struct {
