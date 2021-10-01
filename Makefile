@@ -97,3 +97,11 @@ release: verify release-src release-bin
 	shasum -a 512 $(RELEASE_SRC).tgz > $(RELEASE_SRC).tgz.sha512
 	gpg --batch --yes --armor --detach-sig $(RELEASE_BIN).tgz
 	shasum -a 512 $(RELEASE_BIN).tgz > $(RELEASE_BIN).tgz.sha512
+
+.PHONY: install
+install: $(OSNAME)
+	-cp $(OUT_DIR)/$(OSNAME)/$(PROJECT) $(DESTDIR)
+
+.PHONY: uninstall
+uninstall: $(OSNAME)
+	-rm $(DESTDIR)/$(PROJECT)

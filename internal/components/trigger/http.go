@@ -20,6 +20,7 @@ package trigger
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -33,10 +34,12 @@ type httpAction struct {
 	times         int
 	url           string
 	method        string
+	body          string
+	headers       map[string]string
 	executedCount int
 }
 
-func NewHTTPAction(intervalStr string, times int, url, method string) Action {
+func NewHTTPAction(intervalStr string, times int, url, method, body string, headers map[string]string) Action {
 	interval, err := time.ParseDuration(intervalStr)
 	if err != nil {
 		logger.Log.Errorf("interval [%s] parse error: %s.", intervalStr, err)
@@ -56,6 +59,8 @@ func NewHTTPAction(intervalStr string, times int, url, method string) Action {
 		times:         times,
 		url:           url,
 		method:        strings.ToUpper(method),
+		body:          body,
+		headers:       headers,
 		executedCount: 0,
 	}
 }
@@ -65,7 +70,16 @@ func (h *httpAction) Do() error {
 	t := time.NewTicker(h.interval)
 	h.executedCount = 0
 	client := &http.Client{}
-	request, err := http.NewRequest(h.method, h.url, nil)
+
+	r := strings.NewReader(h.body)
+	rc := ioutil.NopCloser(r)
+
+	request, err := http.NewRequest(h.method, h.url, rc)
+	headers := http.Header{}
+	for k, v := range h.headers {
+		headers[k] = []string{v}
+	}
+	request.Header = headers
 	if err != nil {
 		logger.Log.Errorf("new request error %v", err)
 		return err

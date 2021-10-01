@@ -74,11 +74,13 @@ type Wait struct {
 }
 
 type Trigger struct {
-	Action   string `yaml:"action"`
-	Interval string `yaml:"interval"`
-	Times    int    `yaml:"times"`
-	URL      string `yaml:"url"`
-	Method   string `yaml:"method"`
+	Action   string            `yaml:"action"`
+	Interval string            `yaml:"interval"`
+	Times    int               `yaml:"times"`
+	URL      string            `yaml:"url"`
+	Method   string            `yaml:"method"`
+	Body     string            `yaml:"body"`
+	Headers  map[string]string `yaml:"headers"`
 }
 
 type VerifyCase struct {
