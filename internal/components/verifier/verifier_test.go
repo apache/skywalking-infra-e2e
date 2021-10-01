@@ -195,6 +195,83 @@ metrics:
 			},
 			wantErr: true,
 		},
+		{
+			name: "multiple level attribute and contains greater 2",
+			args: args{
+				actualData: `
+metrics:
+  key:
+  - name: business-zone::projectA
+    id: YnVzaW5lc3Mtem9uZTo6cHJvamVjdEE=.1
+    value: 1
+`,
+				expectedTemplate: `
+metrics:
+  key:
+  {{- contains .metrics.key }}
+    - name: {{ notEmpty .name }}
+      id: {{ notEmpty .id }}
+      value: {{ gt .value 0 }}
+    - name: {{ notEmpty .name }}
+      id: {{ notEmpty .id }}
+      value: {{ gt .value 2 }}
+  {{- end }}
+`,
+			},
+			wantErr: true,
+		},
+		{
+			name: "contains unordered slices",
+			args: args{
+				actualData: `
+- id: ZTJlLXNlcnZpY2UtcHJvdmlkZXI=.1_cHJvdmlkZXIx
+  name: whatever
+  attributes:
+  - name: JVM Arguments
+    value: abcde
+  - name: OS Name
+    value: Linux
+  - name: hostname
+    value: 127.0.0.1
+  - name: Process No.
+    value: "1"
+  - name: Start Time
+    value: "12345"
+  - name: Jar Dependencies
+    value: abcde
+  - name: ipv4s
+    value: abcde
+  language: JAVA
+  instanceuuid: ZTJlLXNlcnZpY2UtcHJvdmlkZXI=.1_cHJvdmlkZXIx
+`,
+				expectedTemplate: `
+{{- contains . }}
+- id: {{ b64enc "e2e-service-provider" }}.1_{{ b64enc "provider1" }}
+  name: {{ notEmpty .name }}
+  attributes:
+  {{- contains .attributes }}
+  - name: Jar Dependencies
+    value: '{{ notEmpty .value }}'
+  - name: OS Name
+    value: Linux
+  - name: hostname
+    value: {{ notEmpty .value }}
+  - name: ipv4s
+    value: {{ notEmpty .value }}
+  - name: Process No.
+    value: "1"
+  - name: Start Time
+    value: {{ notEmpty .value }}
+  - name: JVM Arguments
+    value: '{{ notEmpty .value }}'
+  {{- end}}
+  language: JAVA
+  instanceuuid: {{ b64enc "e2e-service-provider" }}.1_{{ b64enc "provider1" }}
+{{- end}}
+`,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

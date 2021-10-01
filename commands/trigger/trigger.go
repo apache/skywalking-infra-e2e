@@ -50,7 +50,10 @@ func DoActionAccordingE2E() error {
 		action := trigger.NewHTTPAction(e2eConfig.Trigger.Interval,
 			e2eConfig.Trigger.Times,
 			e2eConfig.Trigger.URL,
-			e2eConfig.Trigger.Method)
+			e2eConfig.Trigger.Method,
+			e2eConfig.Trigger.Body,
+			e2eConfig.Trigger.Headers,
+		)
 		if action == nil {
 			return fmt.Errorf("trigger [%+v] parse error", e2eConfig.Trigger)
 		}

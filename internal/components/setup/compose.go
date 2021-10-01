@@ -154,7 +154,7 @@ func exportComposeEnv(key, value, service string) error {
 	if err != nil {
 		return fmt.Errorf("could not set env for %s, %v", service, err)
 	}
-	logger.Log.Infof("expose env : %s : %s", key, value)
+	logger.Log.Infof("export %s=%s", key, value)
 	return nil
 }
 
