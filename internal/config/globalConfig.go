@@ -21,7 +21,9 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
@@ -36,6 +38,14 @@ type GlobalE2EConfig struct {
 
 var GlobalConfig GlobalE2EConfig
 
+func init() {
+	if os.Getenv("CI") == "true" {
+		GlobalConfig.E2EConfig.Cleanup.On = constant.CleanUpAlways
+	} else {
+		GlobalConfig.E2EConfig.Cleanup.On = constant.CleanUpOnSuccess
+	}
+}
+
 func ReadGlobalConfigFile() {
 	if !util.PathExist(util.CfgFile) {
 		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", util.CfgFile)
@@ -48,13 +58,11 @@ func ReadGlobalConfigFile() {
 		return
 	}
 
-	e2eConfigObject := E2EConfig{}
-	if err := yaml.Unmarshal(data, &e2eConfigObject); err != nil {
+	if err := yaml.Unmarshal(data, &GlobalConfig.E2EConfig); err != nil {
 		GlobalConfig.Error = fmt.Errorf("unmarshal e2e config file %s error: %s", util.CfgFile, err)
 		return
 	}
 
-	GlobalConfig.E2EConfig = e2eConfigObject
 	GlobalConfig.Error = nil
 	logger.Log.Info("load the e2e config successfully")
 }

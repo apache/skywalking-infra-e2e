@@ -108,7 +108,7 @@ After the `Trigger` step is finished, running test cases.
 verify:
   retry:            # verify with retry strategy
     count: 10       # max retry count
-    interval: 10000 # the interval between two retries, in millisecond.
+    interval: 10s   # the duration between two attempts, e.g. 10s, 1m.
   cases:            # verify test cases
     - actual: path/to/actual.yaml       # verify by actual file path
       expected: path/to/expected.yaml   # excepted content file path
@@ -186,7 +186,11 @@ cleanup:
    on: always     # Clean up strategy
 ```
 
-Supports the following strategies:
+If the `on` option under `cleanup` is not set, it will be automatically set to `always` if there is environment
+variable `CI=true`, which is present on many popular CI services, such as GitHub Actions, CircleCI, etc., otherwise it
+will be set to `success`, so the testing environment can be preserved when tests failed in your local machine.
+
+All available strategies:
 1. `always`: No matter the execution result is success or failure, cleanup will be performed.
 1. `success`: Only when the execution succeeds.
 1. `failure`: Only when the execution failed.
