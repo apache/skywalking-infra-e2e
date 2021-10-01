@@ -29,42 +29,32 @@ import (
 )
 
 var Trigger = &cobra.Command{
-	Use:   "trigger",
-	Short: "",
+	Use: "trigger",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := DoActionAccordingE2E(); err != nil {
-			return fmt.Errorf("[Trigger] %s", err)
+		action, err := CreateTriggerAction()
+		if err != nil {
+			return fmt.Errorf("[Trigger] %v", err)
 		}
-
-		return nil
+		return <-action.Do()
 	},
 }
 
-func DoActionAccordingE2E() error {
-	if config.GlobalConfig.Error != nil {
-		return config.GlobalConfig.Error
+func CreateTriggerAction() (trigger.Action, error) {
+	if err := config.GlobalConfig.Error; err != nil {
+		return nil, err
 	}
 
-	e2eConfig := config.GlobalConfig.E2EConfig
-	if e2eConfig.Trigger.Action == constant.ActionHTTP {
-		action := trigger.NewHTTPAction(e2eConfig.Trigger.Interval,
-			e2eConfig.Trigger.Times,
-			e2eConfig.Trigger.URL,
-			e2eConfig.Trigger.Method,
-			e2eConfig.Trigger.Body,
-			e2eConfig.Trigger.Headers,
+	switch t := config.GlobalConfig.E2EConfig.Trigger; t.Action {
+	case constant.ActionHTTP:
+		return trigger.NewHTTPAction(
+			t.Interval,
+			t.Times,
+			t.URL,
+			t.Method,
+			t.Body,
+			t.Headers,
 		)
-		if action == nil {
-			return fmt.Errorf("trigger [%+v] parse error", e2eConfig.Trigger)
-		}
-
-		err := action.Do()
-		if err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("no such action for trigger: %s", e2eConfig.Trigger.Action)
+	default:
+		return nil, fmt.Errorf("unsupported trigger action: %s", t.Action)
 	}
-
-	return nil
 }

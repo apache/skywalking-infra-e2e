@@ -428,7 +428,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		// the contents inside `contains` must be an array
 		var re []interface{}
 		if err := yaml.Unmarshal(b.Bytes(), &re); err != nil {
-			logger.Log.Errorf("failed to unmarshal index: %v", index)
+			logger.Log.Errorf("failed to unmarshal index: %v, %v", index, err)
 		}
 		return re
 	}
@@ -471,7 +471,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 
 		listTokenIndex := strings.Index(strings.TrimPrefix(r.List.Nodes[0].String(), "\n"), "-")
 		marshal = addRootIndent(marshal, listTokenIndex)
-		s.wr.Write(append([]byte("\n"), marshal...))
+		_, _ = s.wr.Write(append([]byte("\n"), marshal...))
 		return
 	case reflect.Map:
 		if val.Len() == 0 {

@@ -336,7 +336,6 @@ The text of each license is the standard Apache 2.0 license.
     go-ini/ini v1.25.4 https://github.com/go-ini/ini Apache-2.0
     go-jose v2.2.2 https://github.com/square/go-jose Apache-2.0
     yaml/v2 v2.4.0 https://gopkg.in/yaml.v2 Apache-2.0
-    yaml/v3 v3.0.0 https://gopkg.in/yaml.v3 MIT and Apache
     gotest.tools v2.2.0 https://github.com/gotestyourself/gotest.tools Apache-2.0
     k8s-api v0.20.7 https://k8s.io/api Apache-2.0
     k8s-apimachinery v0.18.0 https://k8s.io/apimachinery Apache-2.0

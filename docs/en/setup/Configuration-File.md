@@ -92,6 +92,10 @@ trigger:
   times: 5          # How many times to trigger the action, 0=infinite.
   url: http://apache.skywalking.com/ # Http trigger url link.
   method: GET       # Http trigger method.
+  headers:
+    "Content-Type": "application/json"
+    "Authorization": "Basic whatever"
+  body: '{"k1":"v1", "k2":"v2"}'
 ```
 
 The Trigger executed successfully at least once, after success, the next stage could be continued. Otherwise, there is an error and exit.
