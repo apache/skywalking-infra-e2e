@@ -19,5 +19,21 @@
 package trigger
 
 type Action interface {
-	Do() error
+	// Do performs the trigger action according to the settings,
+	// and returns an error channel, the controller waits for the
+	// error and if it's nil, the controller considers the action
+	// is successfully scheduled, otherwise the controller considers
+	// this is a failure and aborts the process.
+	//
+	// It's guaranteed that the error channel will receive the first
+	// error, and receive at most 1 error, all following errors will
+	// not be returned.
+	//
+	// This returning style can be used to wait for the http action
+	// being normal, and then schedule it, otherwise we can interrupt
+	// according to the first error.
+	Do() chan error
+
+	// Stop stops the scheduled actions.
+	Stop()
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
+	t "github.com/apache/skywalking-infra-e2e/internal/components/trigger"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
@@ -47,10 +48,11 @@ func runAccordingE2E() error {
 		return config.GlobalConfig.Error
 	}
 
+	var action t.Action
 	// If cleanup.on == Always and there is error in setup step, we should defer cleanup step right now.
 	cleanupOnCondition := config.GlobalConfig.E2EConfig.Cleanup.On
 	if cleanupOnCondition == constant.CleanUpAlways {
-		defer doCleanup()
+		defer doCleanup(action)
 	}
 
 	// setup part
@@ -70,12 +72,16 @@ func runAccordingE2E() error {
 				return
 			}
 
-			doCleanup()
+			doCleanup(action)
 		}()
 	}
 
 	// trigger part
-	err = trigger.DoActionAccordingE2E()
+	action, err = trigger.CreateTriggerAction()
+	if err != nil {
+		return err
+	}
+	err = <-action.Do()
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,10 @@ func runAccordingE2E() error {
 	return nil
 }
 
-func doCleanup() {
+func doCleanup(action t.Action) {
+	if action != nil {
+		action.Stop()
+	}
 	if err := cleanup.DoCleanupAccordingE2E(); err != nil {
 		logger.Log.Errorf("cleanup part error: %s", err)
 	} else {

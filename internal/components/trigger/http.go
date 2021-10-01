@@ -18,9 +18,7 @@
 package trigger
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -37,18 +35,18 @@ type httpAction struct {
 	body          string
 	headers       map[string]string
 	executedCount int
+	stopCh        chan struct{}
+	client        *http.Client
 }
 
-func NewHTTPAction(intervalStr string, times int, url, method, body string, headers map[string]string) Action {
+func NewHTTPAction(intervalStr string, times int, url, method, body string, headers map[string]string) (Action, error) {
 	interval, err := time.ParseDuration(intervalStr)
 	if err != nil {
-		logger.Log.Errorf("interval [%s] parse error: %s.", intervalStr, err)
-		return nil
+		return nil, err
 	}
 
 	if interval <= 0 {
-		logger.Log.Errorf("interval [%s] is not positive", interval)
-		return nil
+		return nil, fmt.Errorf("trigger interval should be > 0, but was %s", interval)
 	}
 
 	// there can be env variables in url, say, "http://${GATEWAY_HOST}:${GATEWAY_PORT}/test"
@@ -62,66 +60,65 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 		body:          body,
 		headers:       headers,
 		executedCount: 0,
-	}
+		stopCh:        make(chan struct{}),
+		client:        &http.Client{},
+	}, nil
 }
 
-func (h *httpAction) Do() error {
-	ctx := context.Background()
+func (h *httpAction) Do() chan error {
 	t := time.NewTicker(h.interval)
-	h.executedCount = 0
-	client := &http.Client{}
 
-	r := strings.NewReader(h.body)
-	rc := ioutil.NopCloser(r)
+	logger.Log.Infof("trigger will request URL %s %d times with interval %s.", h.url, h.times, h.interval)
 
-	request, err := http.NewRequest(h.method, h.url, rc)
-	headers := http.Header{}
-	for k, v := range h.headers {
-		headers[k] = []string{v}
-	}
-	request.Header = headers
-	if err != nil {
-		logger.Log.Errorf("new request error %v", err)
-		return err
-	}
-
-	logger.Log.Infof("Trigger will request URL %s %d times, %s seconds apart each time.", h.url, h.times, h.interval)
-
-	// execute until success
-	for range t.C {
-		err = h.executeOnce(client, request)
-		if err == nil {
-			break
-		}
-		if !h.couldContinue() {
-			logger.Log.Errorf("do request %d times, but still failed", h.times)
-			return err
-		}
-	}
-
-	// background interval trigger
+	result := make(chan error)
+	sent := false
 	go func() {
 		for {
 			select {
 			case <-t.C:
-				err = h.executeOnce(client, request)
-				if !h.couldContinue() {
-					return
+				err := h.execute()
+
+				// `h.times == h.executedCount` makes sure to only send the first error
+				if !sent && (err == nil || h.times == h.executedCount) {
+					result <- err
+					sent = true
 				}
-			case <-ctx.Done():
+			case <-h.stopCh:
 				t.Stop()
+				result <- nil
 				return
 			}
 		}
 	}()
 
-	return nil
+	return result
 }
 
-// execute http request once time
-func (h *httpAction) executeOnce(client *http.Client, req *http.Request) error {
+func (h *httpAction) Stop() {
+	h.stopCh <- struct{}{}
+}
+
+func (h *httpAction) request() (*http.Request, error) {
+	request, err := http.NewRequest(h.method, h.url, strings.NewReader(h.body))
+	if err != nil {
+		return nil, err
+	}
+	headers := http.Header{}
+	for k, v := range h.headers {
+		headers[k] = []string{v}
+	}
+	request.Header = headers
+	return request, err
+}
+
+func (h *httpAction) execute() error {
+	req, err := h.request()
+	if err != nil {
+		logger.Log.Errorf("failed to create new request %v", err)
+		return err
+	}
 	logger.Log.Debugf("request URL %s the %d time.", h.url, h.executedCount)
-	response, err := client.Do(req)
+	response, err := h.client.Do(req)
 	h.executedCount++
 	if err != nil {
 		logger.Log.Errorf("do request error %v", err)
@@ -135,12 +132,4 @@ func (h *httpAction) executeOnce(client *http.Client, req *http.Request) error {
 		return nil
 	}
 	return fmt.Errorf("do request failed, response status code: %d", response.StatusCode)
-}
-
-// verify http action could continue
-func (h *httpAction) couldContinue() bool {
-	if h.times > 0 && h.times <= h.executedCount {
-		return false
-	}
-	return true
 }
