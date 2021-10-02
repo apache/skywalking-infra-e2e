@@ -96,9 +96,9 @@ func DoVerifyAccordingConfig() error {
 	if retryCount <= 0 {
 		retryCount = 1
 	}
-	retryInterval := e2eConfig.Verify.RetryStrategy.Interval
-	if retryInterval < 0 {
-		retryInterval = 1000
+	interval, err := parseInterval(e2eConfig.Verify.RetryStrategy.Interval)
+	if err != nil {
+		return err
 	}
 
 	for idx, v := range e2eConfig.Verify.Cases {
@@ -110,7 +110,7 @@ func DoVerifyAccordingConfig() error {
 				break
 			} else if current != retryCount {
 				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
-				time.Sleep(time.Duration(retryInterval) * time.Millisecond)
+				time.Sleep(interval)
 			} else {
 				return err
 			}
@@ -118,4 +118,25 @@ func DoVerifyAccordingConfig() error {
 	}
 
 	return nil
+}
+
+func parseInterval(retryInterval interface{}) (time.Duration, error) {
+	var interval time.Duration
+	var err error
+	switch itv := retryInterval.(type) {
+	case int:
+		logger.Log.Warnf(`configuring verify.retry.interval with number is deprecated
+and will be removed in future version, please use Duration style instead, such as 10s, 1m.`)
+		interval = time.Duration(itv) * time.Millisecond
+	case string:
+		if interval, err = time.ParseDuration(itv); err != nil {
+			return 0, err
+		}
+	default:
+		return 0, fmt.Errorf("failed to parse verify.retry.interval: %v", retryInterval)
+	}
+	if interval < 0 {
+		interval = 1 * time.Second
+	}
+	return interval, nil
 }

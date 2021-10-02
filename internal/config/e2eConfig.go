@@ -90,8 +90,8 @@ type VerifyCase struct {
 }
 
 type VerifyRetryStrategy struct {
-	Count    int `yaml:"count"`
-	Interval int `yaml:"interval"`
+	Count    int         `yaml:"count"`
+	Interval interface{} `yaml:"interval"`
 }
 
 // GetActual resolves the absolute file path of the actual data file.
