@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -516,6 +517,19 @@ func ne(arg1, arg2 reflect.Value) (bool, error) {
 	return !equal, err
 }
 
+func toFloat64(val reflect.Value, k kind) (float64, error) {
+	switch k {
+	case intKind:
+		return float64(val.Int()), nil
+	case uintKind:
+		return strconv.ParseFloat(strconv.FormatUint(val.Uint(), 10), 10)
+	case floatKind:
+		return val.Float(), nil
+	default:
+		return 0, errors.New("not a number")
+	}
+}
+
 // lt evaluates the comparison a < b.
 func lt2bool(arg1, arg2 reflect.Value) (bool, error) {
 	arg1 = indirectInterface(arg1)
@@ -531,14 +545,14 @@ func lt2bool(arg1, arg2 reflect.Value) (bool, error) {
 	truth := false
 	if k1 != k2 {
 		// Special case: Can compare integer values regardless of type's sign.
-		switch {
-		case k1 == intKind && k2 == uintKind:
-			truth = arg1.Int() < 0 || uint64(arg1.Int()) < arg2.Uint()
-		case k1 == uintKind && k2 == intKind:
-			truth = arg2.Int() >= 0 && arg1.Uint() < uint64(arg2.Int())
-		default:
+		var v1, v2 float64
+		if v1, err = toFloat64(arg1, k1); err != nil {
 			return false, errBadComparison
 		}
+		if v2, err = toFloat64(arg2, k2); err != nil {
+			return false, errBadComparison
+		}
+		return v1 < v2, nil
 	} else {
 		switch k1 {
 		case boolKind, complexKind:
