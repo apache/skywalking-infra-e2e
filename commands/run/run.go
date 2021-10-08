@@ -49,10 +49,15 @@ func runAccordingE2E() error {
 	}
 
 	var action t.Action
+	stopAction := func() {
+		if action != nil {
+			action.Stop()
+		}
+	}
 	// If cleanup.on == Always and there is error in setup step, we should defer cleanup step right now.
 	cleanupOnCondition := config.GlobalConfig.E2EConfig.Cleanup.On
 	if cleanupOnCondition == constant.CleanUpAlways {
-		defer doCleanup(action)
+		defer doCleanup(stopAction)
 	}
 
 	// setup part
@@ -72,7 +77,7 @@ func runAccordingE2E() error {
 				return
 			}
 
-			doCleanup(action)
+			doCleanup(stopAction)
 		}()
 	}
 
@@ -97,9 +102,9 @@ func runAccordingE2E() error {
 	return nil
 }
 
-func doCleanup(action t.Action) {
-	if action != nil {
-		action.Stop()
+func doCleanup(stopAction func()) {
+	if stopAction != nil {
+		stopAction()
 	}
 	if err := cleanup.DoCleanupAccordingE2E(); err != nil {
 		logger.Log.Errorf("cleanup part error: %s", err)
