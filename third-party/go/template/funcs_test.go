@@ -7,10 +7,11 @@ import (
 
 func TestCompare(t *testing.T) {
 	tests := []struct {
-		arg0           int
-		arg1           int
+		arg0           interface{}
+		arg1           interface{}
 		compareResults []bool
 	}{
+		// same type compare
 		{
 			5, 10,
 			[]bool{5 < 10, 5 <= 10, 5 >= 10, 5 > 10},
@@ -22,6 +23,15 @@ func TestCompare(t *testing.T) {
 		{
 			15, 10,
 			[]bool{15 < 10, 15 <= 10, 15 >= 10, 15 > 10},
+		},
+		// deference type compare
+		{
+			5, 10.10,
+			[]bool{5 < 10.10, 5 <= 10.10, 5 >= 10.10, 5 > 10.10},
+		},
+		{
+			5, uint(10),
+			[]bool{5 < uint(10), 5 <= uint(10), 5 >= uint(10), 5 > uint(10)},
 		},
 	}
 
@@ -40,7 +50,7 @@ func TestCompare(t *testing.T) {
 			// need be true
 			if err == nil {
 				if data.compareResults[inx] {
-					validateSuccess = data.arg0 == int(res.(reflect.Value).Int())
+					validateSuccess = reflect.DeepEqual(reflect.ValueOf(data.arg0), res)
 				} else {
 					validateSuccess = reflect.TypeOf(res).Kind() == reflect.String
 				}
