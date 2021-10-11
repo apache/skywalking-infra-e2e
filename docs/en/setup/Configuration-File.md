@@ -108,7 +108,7 @@ After the `Trigger` step is finished, running test cases.
 verify:
   retry:            # verify with retry strategy
     count: 10       # max retry count
-    interval: 10s   # the duration between two attempts, e.g. 10s, 1m.
+    interval: 10s   # the interval between two attempts, e.g. 10s, 1m.
   cases:            # verify test cases
     - actual: path/to/actual.yaml       # verify by actual file path
       expected: path/to/expected.yaml   # excepted content file path
