@@ -179,11 +179,11 @@ In order to make the program easier for users to read and use, some code convers
 |-------|------------|-------|------|
 |b64enc|Base64 encode|{{ b64enc "Foo" }}|Zm9v|
 
-### Include cases
+### Reuse cases
 
-Could be including multiple cases into one single E2E verify, It's help for reusing the same verify cases.
+You could include multiple cases into one single E2E verify, It's helpful for reusing the same verify cases.
 
-Here is the reusing verify cases, and using `include` configuration item to include this into E2E config.
+Here is the reused verify cases, and using `include` configuration item to include this into E2E config.
 
 ```yaml
 cases:

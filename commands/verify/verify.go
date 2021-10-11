@@ -101,29 +101,7 @@ func DoVerifyAccordingConfig() error {
 		return err
 	}
 
-	if err := verifyCases(retryCount, interval, e2eConfig.Verify.Cases); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func verifyCases(retryCount int, interval time.Duration, cases []config.VerifyCase) error {
-	for idx, v := range cases {
-		if len(v.Include) > 0 {
-			for _, include := range v.Include {
-				reusingCases, err := config.ReadReusingCases(include)
-				if err != nil {
-					return err
-				}
-
-				if err := verifyCases(retryCount, interval, reusingCases.Cases); err != nil {
-					return err
-				}
-			}
-			continue
-		}
-
+	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
 			return fmt.Errorf("the expected data file for case[%v] is not specified", idx)
 		}

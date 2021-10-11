@@ -63,25 +63,59 @@ func ReadGlobalConfigFile() {
 		return
 	}
 
+	// convert verify
+	if err := convertVerify(&GlobalConfig.E2EConfig.Verify); err != nil {
+		GlobalConfig.Error = err
+		return
+	}
+
 	GlobalConfig.Error = nil
 	logger.Log.Info("load the e2e config successfully")
 }
 
-func ReadReusingCases(path string) (*ReusingCases, error) {
-	path = util.ResolveAbs(path)
-	if !util.PathExist(path) {
-		return nil, fmt.Errorf("reusing cases file %s not exist", path)
+func convertVerify(verify *Verify) error {
+	// convert cases
+	result := make([]VerifyCase, 0)
+	for _, c := range verify.Cases {
+		cases, err := convertSingleCase(c)
+		if err != nil {
+			return err
+		}
+		result = append(result, cases...)
 	}
+	verify.Cases = result
+	return nil
+}
 
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read reusing cases file %s error: %v", path, err)
+func convertSingleCase(verifyCase VerifyCase) ([]VerifyCase, error) {
+	if len(verifyCase.Include) > 0 {
+		result := make([]VerifyCase, 0)
+		for _, include := range verifyCase.Include {
+			includePath := util.ResolveAbs(include)
+
+			if !util.PathExist(includePath) {
+				return nil, fmt.Errorf("reuse case config file %s not exist", includePath)
+			}
+
+			data, err := ioutil.ReadFile(includePath)
+			if err != nil {
+				return nil, fmt.Errorf("reuse case config file %s error: %s", includePath, err)
+			}
+
+			r := &ReusingCases{}
+			if err := yaml.Unmarshal(data, r); err != nil {
+				return nil, fmt.Errorf("unmarshal reuse case config file %s error: %s", includePath, err)
+			}
+
+			for _, c := range r.Cases {
+				cases, err := convertSingleCase(c)
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, cases...)
+			}
+		}
+		return result, nil
 	}
-
-	r := &ReusingCases{}
-	if err := yaml.Unmarshal(data, r); err != nil {
-		return nil, fmt.Errorf("unmarshal reusing cases file %s error: %v", path, err)
-	}
-
-	return r, nil
+	return []VerifyCase{verifyCase}, nil
 }
