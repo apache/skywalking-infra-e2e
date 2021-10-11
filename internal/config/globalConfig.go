@@ -88,34 +88,37 @@ func convertVerify(verify *Verify) error {
 }
 
 func convertSingleCase(verifyCase VerifyCase) ([]VerifyCase, error) {
-	if len(verifyCase.Includes) > 0 {
-		result := make([]VerifyCase, 0)
-		for _, include := range verifyCase.Includes {
-			includePath := util.ResolveAbs(include)
-
-			if !util.PathExist(includePath) {
-				return nil, fmt.Errorf("reuse case config file %s not exist", includePath)
-			}
-
-			data, err := ioutil.ReadFile(includePath)
-			if err != nil {
-				return nil, fmt.Errorf("reuse case config file %s error: %s", includePath, err)
-			}
-
-			r := &ReusingCases{}
-			if err := yaml.Unmarshal(data, r); err != nil {
-				return nil, fmt.Errorf("unmarshal reuse case config file %s error: %s", includePath, err)
-			}
-
-			for _, c := range r.Cases {
-				cases, err := convertSingleCase(c)
-				if err != nil {
-					return nil, err
-				}
-				result = append(result, cases...)
-			}
-		}
-		return result, nil
+	if len(verifyCase.Includes) > 0 && (verifyCase.Expected != "" || verifyCase.Query != "") {
+		return nil, fmt.Errorf("include and query/expected only support selecting one of them in a case")
 	}
-	return []VerifyCase{verifyCase}, nil
+	if len(verifyCase.Includes) == 0 {
+		return []VerifyCase{verifyCase}, nil
+	}
+	result := make([]VerifyCase, 0)
+	for _, include := range verifyCase.Includes {
+		includePath := util.ResolveAbs(include)
+
+		if !util.PathExist(includePath) {
+			return nil, fmt.Errorf("reuse case config file %s not exist", includePath)
+		}
+
+		data, err := ioutil.ReadFile(includePath)
+		if err != nil {
+			return nil, fmt.Errorf("reuse case config file %s error: %s", includePath, err)
+		}
+
+		r := &ReusingCases{}
+		if err := yaml.Unmarshal(data, r); err != nil {
+			return nil, fmt.Errorf("unmarshal reuse case config file %s error: %s", includePath, err)
+		}
+
+		for _, c := range r.Cases {
+			cases, err := convertSingleCase(c)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, cases...)
+		}
+	}
+	return result, nil
 }
