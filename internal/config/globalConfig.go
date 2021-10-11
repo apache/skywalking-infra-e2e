@@ -88,9 +88,9 @@ func convertVerify(verify *Verify) error {
 }
 
 func convertSingleCase(verifyCase VerifyCase) ([]VerifyCase, error) {
-	if len(verifyCase.Include) > 0 {
+	if len(verifyCase.Includes) > 0 {
 		result := make([]VerifyCase, 0)
-		for _, include := range verifyCase.Include {
+		for _, include := range verifyCase.Includes {
 			includePath := util.ResolveAbs(include)
 
 			if !util.PathExist(includePath) {

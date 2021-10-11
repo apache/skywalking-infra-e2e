@@ -39,7 +39,7 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
-    - include:
+    - includes:
         - simple-cases.yaml
     - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
       expected: ../../test/verify/3.expected.yaml

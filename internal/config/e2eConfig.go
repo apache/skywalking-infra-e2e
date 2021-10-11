@@ -87,7 +87,7 @@ type VerifyCase struct {
 	Query    string   `yaml:"query"`
 	Actual   string   `yaml:"actual"`
 	Expected string   `yaml:"expected"`
-	Include  []string `yaml:"include"`
+	Includes []string `yaml:"includes"`
 }
 
 type VerifyRetryStrategy struct {
