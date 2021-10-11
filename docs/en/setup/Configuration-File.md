@@ -114,6 +114,8 @@ verify:
       expected: path/to/expected.yaml   # excepted content file path
     - query: echo 'foo'                 # verify by command execute output
       expected: path/to/expected.yaml   # excepted content file path
+    - include:      # including cases
+        - path/to/cases.yaml            # cases file path
 ```
 
 The test cases are executed in the order of declaration from top to bottom, If the execution fails, and the retry strategy is exceeded, the process is deemed to have failed.
@@ -176,6 +178,20 @@ In order to make the program easier for users to read and use, some code convers
 |Function|Description|Grammar|Result|
 |-------|------------|-------|------|
 |b64enc|Base64 encode|{{ b64enc "Foo" }}|Zm9v|
+
+### Include cases
+
+Could be including multiple cases into one single E2E verify, It's help for reusing the same verify cases.
+
+Here is the reusing verify cases, and using `include` configuration item to include this into E2E config.
+
+```yaml
+cases:
+   - actual: path/to/actual.yaml       # verify by actual file path
+     expected: path/to/expected.yaml   # excepted content file path
+   - query: echo 'foo'                 # verify by command execute output
+     expected: path/to/expected.yaml   # excepted content file path
+```
 
 ## Cleanup
 

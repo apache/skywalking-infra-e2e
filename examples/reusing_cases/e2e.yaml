@@ -19,19 +19,6 @@ setup:
   env: compose
   file: docker-compose.yml
   timeout: 1200
-  init-system-environment: env
-  steps:
-    - name: install yq
-      command: |
-        if ! type "yq" > /dev/null; then
-          mkdir -p /tmp/skywalking-infra-e2e/bin && cd /tmp/skywalking-infra-e2e
-          mkdir yq && cd yq
-          wget -O yq.tar.gz https://github.com/mikefarah/yq/archive/v4.11.1.tar.gz
-          tar -zxf yq.tar.gz --strip=1
-          go install && go build -ldflags -s && mv yq ../bin/yq
-          export PATH="$PATH:/tmp/skywalking-infra-e2e/bin"
-          echo "success to install yq"
-        fi
 
 cleanup:
   # always never success failure
@@ -52,9 +39,7 @@ verify:
     # the duration between two attempts, e.g. 10s, 1m.
     interval: 10s
   cases:
+    - include:
+        - simple-cases.yaml
     - actual: ../../test/verify/1.actual.yaml
       expected: ../../test/verify/1.expected.yaml
-    - actual: ../../test/verify/2.actual.yaml
-      expected: ../../test/verify/2.expected.yaml
-    - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
-      expected: ../../test/verify/3.expected.yaml

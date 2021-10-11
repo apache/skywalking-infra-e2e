@@ -66,3 +66,22 @@ func ReadGlobalConfigFile() {
 	GlobalConfig.Error = nil
 	logger.Log.Info("load the e2e config successfully")
 }
+
+func ReadReusingCases(path string) (*ReusingCases, error) {
+	path = util.ResolveAbs(path)
+	if !util.PathExist(path) {
+		return nil, fmt.Errorf("reusing cases file %s not exist", path)
+	}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read reusing cases file %s error: %v", path, err)
+	}
+
+	r := &ReusingCases{}
+	if err := yaml.Unmarshal(data, r); err != nil {
+		return nil, fmt.Errorf("unmarshal reusing cases file %s error: %v", path, err)
+	}
+
+	return r, nil
+}
