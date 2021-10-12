@@ -84,14 +84,19 @@ type Trigger struct {
 }
 
 type VerifyCase struct {
-	Query    string `yaml:"query"`
-	Actual   string `yaml:"actual"`
-	Expected string `yaml:"expected"`
+	Query    string   `yaml:"query"`
+	Actual   string   `yaml:"actual"`
+	Expected string   `yaml:"expected"`
+	Includes []string `yaml:"includes"`
 }
 
 type VerifyRetryStrategy struct {
 	Count    int         `yaml:"count"`
 	Interval interface{} `yaml:"interval"`
+}
+
+type ReusingCases struct {
+	Cases []VerifyCase `yaml:"cases"`
 }
 
 // GetActual resolves the absolute file path of the actual data file.

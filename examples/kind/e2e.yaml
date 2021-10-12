@@ -60,8 +60,8 @@ verify:
   retry:
     # max retry count
     count: 10
-    # the interval between two retries, in millisecond.
-    interval: 10000
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
   cases:
     - actual: ../../test/verify/1.actual.yaml
       expected: ../../test/verify/1.expected.yaml

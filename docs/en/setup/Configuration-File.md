@@ -108,12 +108,14 @@ After the `Trigger` step is finished, running test cases.
 verify:
   retry:            # verify with retry strategy
     count: 10       # max retry count
-    interval: 10s   # the duration between two attempts, e.g. 10s, 1m.
+    interval: 10s   # the interval between two attempts, e.g. 10s, 1m.
   cases:            # verify test cases
     - actual: path/to/actual.yaml       # verify by actual file path
       expected: path/to/expected.yaml   # excepted content file path
     - query: echo 'foo'                 # verify by command execute output
       expected: path/to/expected.yaml   # excepted content file path
+    - includes:      # including cases
+        - path/to/cases.yaml            # cases file path
 ```
 
 The test cases are executed in the order of declaration from top to bottom, If the execution fails, and the retry strategy is exceeded, the process is deemed to have failed.
@@ -176,6 +178,20 @@ In order to make the program easier for users to read and use, some code convers
 |Function|Description|Grammar|Result|
 |-------|------------|-------|------|
 |b64enc|Base64 encode|{{ b64enc "Foo" }}|Zm9v|
+
+### Reuse cases
+
+You could include multiple cases into one single E2E verify, It's helpful for reusing the same verify cases.
+
+Here is the reused verify cases, and using `includes` configuration item to include this into E2E config.
+
+```yaml
+cases:
+   - actual: path/to/actual.yaml       # verify by actual file path
+     expected: path/to/expected.yaml   # excepted content file path
+   - query: echo 'foo'                 # verify by command execute output
+     expected: path/to/expected.yaml   # excepted content file path
+```
 
 ## Cleanup
 
