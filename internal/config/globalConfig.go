@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
@@ -76,8 +77,9 @@ func ReadGlobalConfigFile() {
 func convertVerify(verify *Verify) error {
 	// convert cases
 	result := make([]VerifyCase, 0)
+	cfgAbsPath, _ := filepath.Abs(util.CfgFile)
 	for _, c := range verify.Cases {
-		cases, err := convertSingleCase(c)
+		cases, err := convertSingleCase(c, cfgAbsPath)
 		if err != nil {
 			return err
 		}
@@ -87,16 +89,23 @@ func convertVerify(verify *Verify) error {
 	return nil
 }
 
-func convertSingleCase(verifyCase VerifyCase) ([]VerifyCase, error) {
+func convertSingleCase(verifyCase VerifyCase, baseFile string) ([]VerifyCase, error) {
 	if len(verifyCase.Includes) > 0 && (verifyCase.Expected != "" || verifyCase.Query != "") {
 		return nil, fmt.Errorf("include and query/expected only support selecting one of them in a case")
 	}
 	if len(verifyCase.Includes) == 0 {
+		// using base path to resolve case paths
+		if verifyCase.Expected != "" {
+			verifyCase.Expected = util.ResolveAbsWithBase(verifyCase.Expected, baseFile)
+		}
+		if verifyCase.Actual != "" {
+			verifyCase.Actual = util.ResolveAbsWithBase(verifyCase.Actual, baseFile)
+		}
 		return []VerifyCase{verifyCase}, nil
 	}
 	result := make([]VerifyCase, 0)
 	for _, include := range verifyCase.Includes {
-		includePath := util.ResolveAbs(include)
+		includePath := util.ResolveAbsWithBase(include, baseFile)
 
 		if !util.PathExist(includePath) {
 			return nil, fmt.Errorf("reuse case config file %s not exist", includePath)
@@ -113,7 +122,8 @@ func convertSingleCase(verifyCase VerifyCase) ([]VerifyCase, error) {
 		}
 
 		for _, c := range r.Cases {
-			cases, err := convertSingleCase(c)
+			// using include file path as base path to resolve cases
+			cases, err := convertSingleCase(c, includePath)
 			if err != nil {
 				return nil, err
 			}

@@ -32,6 +32,16 @@ var (
 
 // ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
 func ResolveAbs(p string) string {
+	abs, err := filepath.Abs(CfgFile)
+	if err != nil {
+		logger.Log.Warnf("failed to resolve the absolute file path of %v\n", CfgFile)
+		return p
+	}
+	return ResolveAbsWithBase(p, abs)
+}
+
+// ResolveAbsWithBase resolves the relative path (relative to appoint file path) to an absolute file path.
+func ResolveAbsWithBase(p, baseFile string) string {
 	if p == "" {
 		return p
 	}
@@ -40,11 +50,5 @@ func ResolveAbs(p string) string {
 		return p
 	}
 
-	abs, err := filepath.Abs(CfgFile)
-	if err != nil {
-		logger.Log.Warnf("failed to resolve the absolute file path of %v\n", CfgFile)
-		return p
-	}
-
-	return filepath.Join(filepath.Dir(abs), p)
+	return filepath.Join(filepath.Dir(baseFile), p)
 }
