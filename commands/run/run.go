@@ -86,11 +86,15 @@ func runAccordingE2E() error {
 	if err != nil {
 		return err
 	}
-	err = <-action.Do()
-	if err != nil {
-		return err
+	if action != nil {
+		err = <-action.Do()
+		if err != nil {
+			return err
+		}
+		logger.Log.Infof("trigger part finished successfully")
+	} else {
+		logger.Log.Infof("no trigger need to execute")
 	}
-	logger.Log.Infof("trigger part finished successfully")
 
 	// verify part
 	err = verify.DoVerifyAccordingConfig()
