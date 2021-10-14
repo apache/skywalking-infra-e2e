@@ -35,6 +35,9 @@ var Trigger = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("[Trigger] %v", err)
 		}
+		if action == nil {
+			return nil
+		}
 		return <-action.Do()
 	},
 }
@@ -45,6 +48,8 @@ func CreateTriggerAction() (trigger.Action, error) {
 	}
 
 	switch t := config.GlobalConfig.E2EConfig.Trigger; t.Action {
+	case "":
+		return nil, nil
 	case constant.ActionHTTP:
 		return trigger.NewHTTPAction(
 			t.Interval,
