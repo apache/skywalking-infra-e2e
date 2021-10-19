@@ -42,6 +42,10 @@ setup:
         - namespace: default
           resource: deployment/nginx1
           for: condition=Available
+  kind-expose-ports:
+    - namespace: default
+      resource: deployment/nginx1
+      port: 80
   timeout: 1200
 
 cleanup:

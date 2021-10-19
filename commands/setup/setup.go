@@ -50,9 +50,10 @@ func DoSetupAccordingE2E() error {
 	}
 
 	e2eConfig := config.GlobalConfig.E2EConfig
+	useCommand := config.GlobalConfig.UseCommand
 
 	if e2eConfig.Setup.Env == constant.Kind {
-		err := setup.KindSetup(&e2eConfig)
+		err := setup.KindSetup(&e2eConfig, useCommand)
 		if err != nil {
 			return err
 		}

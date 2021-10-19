@@ -21,15 +21,14 @@ package cleanup
 import (
 	"io/ioutil"
 	"os"
-
-	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
-	"strings"
-
+	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
@@ -82,6 +81,9 @@ func cleanKindCluster(kindConfigFilePath string) error {
 	if err != nil {
 		return err
 	}
+
+	// notify clean up
+	setup.KindCleanNotify()
 
 	args := []string{"delete", "cluster", "--name", clusterName}
 

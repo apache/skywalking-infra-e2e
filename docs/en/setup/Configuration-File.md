@@ -24,24 +24,64 @@ Support two kinds of the environment to set up the system.
 ```yaml
 setup:
   env: kind
-  file: path/to/kind.yaml  # Specified kinD manifest file path
-  timeout: 1200            # timeout second
-  steps:                   # customize steps for prepare the environment
-    - name: customize setups        # step name
+  file: path/to/kind.yaml               # Specified kinD manifest file path
+  timeout: 1200                         # timeout second
+  init-system-environment: path/to/env  # Import environment file
+  kind-import-images:                   # import docker images to KinD
+     - image:version                    # support using env to expend image, such as `${env_key}` or `$env_key`
+  steps:                                # customize steps for prepare the environment
+    - name: customize setups            # step name
       # one of command line or kinD manifest file
-      command: command lines        # use command line to setup 
-      path: /path/to/manifest.yaml  # the manifest file path
-      wait:                         # how to verify the manifest is set up finish
-        - namespace:                # The pod namespace
-          resource:                 # The pod resource name
-          label-selector:           # The resource label selector
-          for:                      # The wait condition 
+      command: command lines            # use command line to setup 
+      path: /path/to/manifest.yaml      # the manifest file path
+      wait:                             # how to verify the manifest is set up finish
+        - namespace:                    # The pod namespace
+          resource:                     # The pod resource name
+          label-selector:               # The resource label selector
+          for:                          # The wait condition
+  kind-expose-ports:                    # Expose resource for host access
+     - namespace:                       # The resource namespace
+       resource:                        # The resource name, such as `pod/foo` or `service/foo`
+       port:                            # Want to expose port from resource
 ```
 
 The `KinD` environment follow these steps:
-1. Start the `KinD` cluster according to the config file.
+1. Start the `KinD` cluster according to the config file, expose `KUBECONFIG` to environment for help execute `kubectl` in the steps.
+1. Load docker images from `kind-import-images` if needed.
 1. Apply the resources files (`--manifests`) or/and run the custom init command (`--commands`) by steps.
 1. Wait until all steps are finished and all services are ready with the timeout(second).
+1. Expose all resource ports for host access.
+
+#### Import docker image
+
+If you want to import docker image from private registries, there are several ways to do this:
+1. Using `imagePullSecrets` to pull images, [please take reference from document](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials).
+2. Using `kind-import-images` to load images from host.
+   ```yaml
+   kind:
+      kind-import-images:
+        - skywalking/oap:${OAP_HASH} # support using environment to expend the image name
+   ```
+
+#### Resource Export
+
+If you want to access the resource from host, should follow these steps:
+1. Declare which resource and ports need to be access from host.
+   ```yaml
+   setup:
+      kind-expose-ports:
+        - namespace: default  # Need to expose resource namespace
+          resource: pod/foo   # Resource description, such as `pod/foo` or `service/foo`
+          port: 8080          # Resource port want to expose, support `<resource_port>`, `<bind_to_host_port>:<resource_port>`
+   ```
+2. Follow this format to get the host and port mapping by the environment, and it's available in steps(trigger, verify).
+   ```yaml
+   trigger:
+      # trigger with specified mapped port, the resource name replace all `/` or `-` as `_`
+      # host format: <resource_name>_host
+      # port format: <resource_name>_<container_port>
+      url: http://${pod_foo_host}:${pod_foo_8080}/
+   ```
 
 ### Compose
 
@@ -78,7 +118,7 @@ If you want to get the service host and port mapping, should follow these steps:
    ```yaml
    trigger:
       # trigger with specified mappinged port
-      url: http://${oap.host}:${oap_8080}/
+      url: http://${oap_host}:${oap_8080}/
    ```
 
 ## Trigger
