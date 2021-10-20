@@ -136,6 +136,10 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	return nil
 }
 
+func KindShouldWaitSignal() bool {
+	return portForwardContext != nil && portForwardContext.resourceCount > 0
+}
+
 // KindCleanNotify notify when clean up
 func KindCleanNotify() {
 	if portForwardContext != nil {

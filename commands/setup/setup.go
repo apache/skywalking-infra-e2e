@@ -42,7 +42,7 @@ var Setup = &cobra.Command{
 			return fmt.Errorf("[Setup] %s", err)
 		}
 
-		if config.GlobalConfig.E2EConfig.Setup.Env == constant.Kind {
+		if config.GlobalConfig.E2EConfig.Setup.Env == constant.Kind && setup.KindShouldWaitSignal() {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			util.AddShutDownHook(wg.Done)

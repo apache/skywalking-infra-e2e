@@ -39,7 +39,7 @@ setup:
           for:                          # The wait condition
   kind:
      import-images:                     # import docker images to KinD
-        - image:version                 # support using env to expend image, such as `${env_key}` or `$env_key`
+        - image:version                 # support using env to expand image, such as `${env_key}` or `$env_key`
      expose-ports:                      # Expose resource for host access
         - namespace:                    # The resource namespace
           resource:                     # The resource name, such as `pod/foo` or `service/foo`
@@ -61,7 +61,7 @@ If you want to import docker image from private registries, there are several wa
    ```yaml
    kind:
       import-images:
-        - skywalking/oap:${OAP_HASH} # support using environment to expend the image name
+        - skywalking/oap:${OAP_HASH} # support using environment to expand the image name
    ```
 
 #### Resource Export
