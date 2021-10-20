@@ -19,11 +19,13 @@ package trigger
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/spf13/cobra"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/trigger"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 )
@@ -38,7 +40,17 @@ var Trigger = &cobra.Command{
 		if action == nil {
 			return nil
 		}
-		return <-action.Do()
+		if err := <-action.Do(); err != nil {
+			return err
+		}
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		util.AddShutDownHook(wg.Done)
+		wg.Wait()
+
+		action.Stop()
+		return nil
 	},
 }
 
