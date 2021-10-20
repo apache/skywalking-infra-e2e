@@ -26,10 +26,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	apiv1 "k8s.io/api/admission/v1"
@@ -79,7 +77,7 @@ type kindPort struct {
 }
 
 // KindSetup sets up environment according to e2e.yaml.
-func KindSetup(e2eConfig *config.E2EConfig, useCommand string) error {
+func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
 
 	if kindConfigPath == "" {
@@ -104,8 +102,8 @@ func KindSetup(e2eConfig *config.E2EConfig, useCommand string) error {
 	}
 
 	// import images
-	if len(e2eConfig.Setup.KindImportImages) > 0 {
-		for _, image := range e2eConfig.Setup.KindImportImages {
+	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
+		for _, image := range e2eConfig.Setup.Kind.ImportImages {
 			image = os.ExpandEnv(image)
 			args := []string{"load", "docker-image", image}
 
@@ -130,7 +128,7 @@ func KindSetup(e2eConfig *config.E2EConfig, useCommand string) error {
 	}
 
 	// expose ports
-	err = exposeKindService(e2eConfig.Setup.KindExposePorts, e2eConfig.Setup.Timeout, useCommand, kubeConfigPath)
+	err = exposeKindService(e2eConfig.Setup.Kind.ExposePorts, e2eConfig.Setup.Timeout, kubeConfigPath)
 	if err != nil {
 		logger.Log.Errorf("export ports error: %v", err)
 		return err
@@ -389,7 +387,7 @@ func exposePerKindService(port config.KindExposePort, timeout time.Duration, cli
 	return nil
 }
 
-func exposeKindService(exports []config.KindExposePort, timeout int, useCommand, kubeConfig string) error {
+func exposeKindService(exports []config.KindExposePort, timeout int, kubeConfig string) error {
 	// round tripper
 	kubeConfigYaml, err := ioutil.ReadFile(kubeConfig)
 	if err != nil {
@@ -442,31 +440,8 @@ func exposeKindService(exports []config.KindExposePort, timeout int, useCommand,
 	}
 
 	// bind context
-	bindPortForwardContext(useCommand, forwardContext)
+	portForwardContext = forwardContext
 	return nil
-}
-
-func bindPortForwardContext(useCommand string, forwardContext *kindPortForwardContext) {
-	if forwardContext.resourceCount == 0 {
-		return
-	}
-
-	if useCommand == "run" {
-		portForwardContext = forwardContext
-	} else {
-		// wait signal
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		<-ch
-
-		// notify stop
-		forwardContext.stopChannel <- struct{}{}
-
-		// wait all stopped
-		for i := 0; i < forwardContext.resourceCount; i++ {
-			<-forwardContext.resourceFinishedChannel
-		}
-	}
 }
 
 func exportKindEnv(key, value, res string) error {

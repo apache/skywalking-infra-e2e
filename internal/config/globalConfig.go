@@ -24,8 +24,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
-
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
@@ -35,9 +33,8 @@ import (
 
 // GlobalE2EConfig stores E2EConfig which can be used globally.
 type GlobalE2EConfig struct {
-	Error      error
-	E2EConfig  E2EConfig
-	UseCommand string
+	Error     error
+	E2EConfig E2EConfig
 }
 
 var GlobalConfig GlobalE2EConfig
@@ -50,8 +47,7 @@ func init() {
 	}
 }
 
-func ReadGlobalConfigFile(cmd *cobra.Command) {
-	GlobalConfig.UseCommand = cmd.Use
+func ReadGlobalConfigFile() {
 	if !util.PathExist(util.CfgFile) {
 		GlobalConfig.Error = fmt.Errorf("e2e config file %s not exist", util.CfgFile)
 		return

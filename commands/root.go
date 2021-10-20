@@ -47,7 +47,7 @@ var Root = &cobra.Command{
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		config.ReadGlobalConfigFile(cmd)
+		config.ReadGlobalConfigFile()
 
 		level, err := logrus.ParseLevel(verbosity)
 		if err != nil {
