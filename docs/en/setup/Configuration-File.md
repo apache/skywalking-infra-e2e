@@ -116,6 +116,8 @@ verify:
       expected: path/to/expected.yaml   # excepted content file path
     - includes:      # including cases
         - path/to/cases.yaml            # cases file path
+      environment:                      # include cases with environment
+        customKey: customValue          # define environment key(string) and value(string)
 ```
 
 The test cases are executed in the order of declaration from top to bottom, If the execution fails, and the retry strategy is exceeded, the process is deemed to have failed.
@@ -191,6 +193,28 @@ cases:
      expected: path/to/expected.yaml   # excepted content file path
    - query: echo 'foo'                 # verify by command execute output
      expected: path/to/expected.yaml   # excepted content file path
+```
+
+#### Environment
+
+You could be using `environment` to replace variables from include cases. 
+In the include file, you could declare `${var}` or `$var` to show which environment need to be replaced.
+
+```yaml
+# verify file
+- include:
+    - path/to/include
+  environment:
+    # The key and value only accept string value
+    customKey: customValue  
+
+# include file
+cases:
+  - query: echo "$customKey"
+  
+# Executing verify case, replace environment data
+cases:
+   - query: echo "customValue"
 ```
 
 ## Cleanup

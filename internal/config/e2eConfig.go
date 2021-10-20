@@ -49,7 +49,7 @@ type Step struct {
 
 type Verify struct {
 	RetryStrategy VerifyRetryStrategy `yaml:"retry"`
-	Cases         []VerifyCase        `yaml:"cases"`
+	Cases         []*VerifyCase       `yaml:"cases"`
 }
 
 func (s *Setup) GetFile() string {
@@ -84,10 +84,11 @@ type Trigger struct {
 }
 
 type VerifyCase struct {
-	Query    string   `yaml:"query"`
-	Actual   string   `yaml:"actual"`
-	Expected string   `yaml:"expected"`
-	Includes []string `yaml:"includes"`
+	Query       string            `yaml:"query"`
+	Actual      string            `yaml:"actual"`
+	Expected    string            `yaml:"expected"`
+	Includes    []string          `yaml:"includes"`
+	Environment map[string]string `yaml:"environment"`
 }
 
 type VerifyRetryStrategy struct {
@@ -96,7 +97,7 @@ type VerifyRetryStrategy struct {
 }
 
 type ReusingCases struct {
-	Cases []VerifyCase `yaml:"cases"`
+	Cases []*VerifyCase `yaml:"cases"`
 }
 
 // GetActual resolves the absolute file path of the actual data file.

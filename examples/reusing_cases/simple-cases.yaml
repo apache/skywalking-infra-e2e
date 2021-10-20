@@ -18,3 +18,5 @@ cases:
     expected: ../../test/verify/1.expected.yaml
   - actual: ../../test/verify/2.actual.yaml
     expected: ../../test/verify/2.expected.yaml
+  - query: echo "$message"
+    expected: ../../test/verify/include_echo.expected.yaml

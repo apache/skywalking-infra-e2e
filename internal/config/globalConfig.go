@@ -27,6 +27,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
+	extend_os "github.com/apache/skywalking-infra-e2e/third-party/go/os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -76,10 +77,10 @@ func ReadGlobalConfigFile() {
 
 func convertVerify(verify *Verify) error {
 	// convert cases
-	result := make([]VerifyCase, 0)
+	result := make([]*VerifyCase, 0)
 	cfgAbsPath, _ := filepath.Abs(util.CfgFile)
 	for _, c := range verify.Cases {
-		cases, err := convertSingleCase(c, cfgAbsPath)
+		cases, err := convertSingleCase(c, cfgAbsPath, c.Environment)
 		if err != nil {
 			return err
 		}
@@ -89,7 +90,7 @@ func convertVerify(verify *Verify) error {
 	return nil
 }
 
-func convertSingleCase(verifyCase VerifyCase, baseFile string) ([]VerifyCase, error) {
+func convertSingleCase(verifyCase *VerifyCase, baseFile string, env map[string]string) ([]*VerifyCase, error) {
 	if len(verifyCase.Includes) > 0 && (verifyCase.Expected != "" || verifyCase.Query != "") {
 		return nil, fmt.Errorf("include and query/expected only support selecting one of them in a case")
 	}
@@ -101,9 +102,12 @@ func convertSingleCase(verifyCase VerifyCase, baseFile string) ([]VerifyCase, er
 		if verifyCase.Actual != "" {
 			verifyCase.Actual = util.ResolveAbsWithBase(verifyCase.Actual, baseFile)
 		}
-		return []VerifyCase{verifyCase}, nil
+		if len(env) > 0 && verifyCase.Query != "" {
+			verifyCase.Query = extend_os.ExpandFromSpecificEnv(verifyCase.Query, env)
+		}
+		return []*VerifyCase{verifyCase}, nil
 	}
-	result := make([]VerifyCase, 0)
+	result := make([]*VerifyCase, 0)
 	for _, include := range verifyCase.Includes {
 		includePath := util.ResolveAbsWithBase(include, baseFile)
 
@@ -123,7 +127,7 @@ func convertSingleCase(verifyCase VerifyCase, baseFile string) ([]VerifyCase, er
 
 		for _, c := range r.Cases {
 			// using include file path as base path to resolve cases
-			cases, err := convertSingleCase(c, includePath)
+			cases, err := convertSingleCase(c, includePath, verifyCase.Environment)
 			if err != nil {
 				return nil, err
 			}

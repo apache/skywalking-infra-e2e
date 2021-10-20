@@ -41,5 +41,7 @@ verify:
   cases:
     - includes:
         - simple-cases.yaml
+      environment:
+        message: "message: OK"
     - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
       expected: ../../test/verify/3.expected.yaml
