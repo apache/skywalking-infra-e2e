@@ -431,7 +431,7 @@ func exposeKindService(exports []config.KindExposePort, timeout int, kubeConfig 
 		resourceCount:           len(exports),
 	}
 	for _, p := range exports {
-		if err = exposePerKindService(p, waitTimeout, clientGetter, client, tripperFor, upgrader, forwardContext); err != nil {
+		if err := exposePerKindService(p, waitTimeout, clientGetter, client, tripperFor, upgrader, forwardContext); err != nil {
 			return err
 		}
 	}
