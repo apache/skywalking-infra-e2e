@@ -21,7 +21,6 @@ package setup
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -63,8 +62,6 @@ var (
 )
 
 type kindPortForwardContext struct {
-	ctx                     context.Context
-	cancelFunc              context.CancelFunc
 	stopChannel             chan struct{}
 	resourceCount           int
 	resourceFinishedChannel chan struct{}
@@ -428,17 +425,13 @@ func exposeKindService(exports []config.KindExposePort, timeout int, kubeConfig 
 	}
 
 	// stop port-forward channel
-	childCtx, cancelFunc := context.WithCancel(context.Background())
 	forwardContext := &kindPortForwardContext{
-		ctx:                     childCtx,
-		cancelFunc:              cancelFunc,
 		stopChannel:             make(chan struct{}, 1),
 		resourceFinishedChannel: make(chan struct{}, len(exports)),
 		resourceCount:           len(exports),
 	}
 	for _, p := range exports {
 		if err = exposePerKindService(p, waitTimeout, clientGetter, client, tripperFor, upgrader, forwardContext); err != nil {
-			cancelFunc()
 			return err
 		}
 	}

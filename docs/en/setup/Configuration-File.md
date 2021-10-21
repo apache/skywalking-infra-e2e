@@ -57,7 +57,7 @@ The `KinD` environment follow these steps:
 
 If you want to import docker image from private registries, there are several ways to do this:
 1. Using `imagePullSecrets` to pull images, [please take reference from document](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials).
-2. Using `kind-import-images` to load images from host.
+2. Using `kind.import-images` to load images from host.
    ```yaml
    kind:
       import-images:
@@ -67,7 +67,7 @@ If you want to import docker image from private registries, there are several wa
 #### Resource Export
 
 If you want to access the resource from host, should follow these steps:
-1. Declare which resource and ports need to be access from host.
+1. Declare which resource and ports need to be accessible from host.
    ```yaml
    setup:
       kind:
