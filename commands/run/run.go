@@ -110,6 +110,7 @@ func doCleanup(stopAction func()) {
 	if stopAction != nil {
 		stopAction()
 	}
+	setup.DoStopSetup()
 	if err := cleanup.DoCleanupAccordingE2E(); err != nil {
 		logger.Log.Errorf("cleanup part error: %s", err)
 	} else {

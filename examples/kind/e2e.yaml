@@ -42,6 +42,11 @@ setup:
         - namespace: default
           resource: deployment/nginx1
           for: condition=Available
+  kind:
+    expose-ports:
+      - namespace: default
+        resource: deployment/nginx1
+        port: 80
   timeout: 1200
 
 cleanup:
@@ -52,7 +57,7 @@ trigger:
   action: http
   interval: 3s
   times: 5
-  url: http://localhost:9090/user
+  url: http://${deployment_nginx1_host}:${deployment_nginx1_80}/
   method: GET
 
 verify:
@@ -67,7 +72,3 @@ verify:
       expected: ../../test/verify/1.expected.yaml
     - actual: ../../test/verify/2.actual.yaml
       expected: ../../test/verify/2.expected.yaml
-    - actual: ../../test/verify/1.actual.yaml
-      expected: ../../test/verify/2.expected.yaml
-    - query: swctl --display yaml service ls
-      expected: ../../test/verify/3.expected.yaml

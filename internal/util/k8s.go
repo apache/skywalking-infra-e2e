@@ -102,8 +102,7 @@ func GetManifests(manifests string) (files []string, err error) {
 		case mode.IsRegular():
 			filename := fi.Name()
 			if strings.HasSuffix(filename, ".yml") || strings.HasSuffix(filename, ".yaml") {
-				filename = ResolveAbs(filename)
-				s = append(s, filename)
+				s = append(s, f)
 			}
 		}
 	}

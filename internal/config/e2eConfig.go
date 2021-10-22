@@ -29,11 +29,12 @@ type E2EConfig struct {
 }
 
 type Setup struct {
-	Env                   string `yaml:"env"`
-	File                  string `yaml:"file"`
-	Steps                 []Step `yaml:"steps"`
-	Timeout               int    `yaml:"timeout"`
-	InitSystemEnvironment string `yaml:"init-system-environment"`
+	Env                   string    `yaml:"env"`
+	File                  string    `yaml:"file"`
+	Steps                 []Step    `yaml:"steps"`
+	Timeout               int       `yaml:"timeout"`
+	InitSystemEnvironment string    `yaml:"init-system-environment"`
+	Kind                  KindSetup `yaml:"kind"`
 }
 
 type Cleanup struct {
@@ -45,6 +46,17 @@ type Step struct {
 	Path    string `yaml:"path"`
 	Command string `yaml:"command"`
 	Waits   []Wait `yaml:"wait"`
+}
+
+type KindSetup struct {
+	ImportImages []string         `yaml:"import-images"`
+	ExposePorts  []KindExposePort `yaml:"expose-ports"`
+}
+
+type KindExposePort struct {
+	Namespace string `yaml:"namespace"`
+	Resource  string `yaml:"resource"`
+	Port      string `yaml:"port"`
 }
 
 type Verify struct {

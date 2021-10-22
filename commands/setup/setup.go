@@ -20,6 +20,7 @@ package setup
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -39,6 +40,15 @@ var Setup = &cobra.Command{
 
 		if err := DoSetupAccordingE2E(); err != nil {
 			return fmt.Errorf("[Setup] %s", err)
+		}
+
+		if config.GlobalConfig.E2EConfig.Setup.Env == constant.Kind && setup.KindShouldWaitSignal() {
+			wg := sync.WaitGroup{}
+			wg.Add(1)
+			util.AddShutDownHook(wg.Done)
+			wg.Wait()
+
+			setup.KindCleanNotify()
 		}
 		return nil
 	},
@@ -67,4 +77,9 @@ func DoSetupAccordingE2E() error {
 	}
 
 	return nil
+}
+
+func DoStopSetup() {
+	// notify clean up
+	setup.KindCleanNotify()
 }
