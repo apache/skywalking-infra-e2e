@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -140,10 +141,14 @@ func KindShouldWaitSignal() bool {
 // KindCleanNotify notify when clean up
 func KindCleanNotify() {
 	if portForwardContext != nil {
-		portForwardContext.stopChannel <- struct{}{}
+		close(portForwardContext.stopChannel)
 		// wait all stopped
 		for i := 0; i < portForwardContext.resourceCount; i++ {
-			<-portForwardContext.resourceFinishedChannel
+			// add timeout prevent port already close
+			select {
+			case <-portForwardContext.resourceFinishedChannel:
+			case <-time.After(time.Second * 2):
+			}
 		}
 	}
 }
@@ -151,12 +156,27 @@ func KindCleanNotify() {
 func createKindCluster(kindConfigPath string) error {
 	// the config file name of the k8s cluster that kind create
 	kubeConfigPath = constant.K8sClusterConfigFilePath
-	args := []string{"create", "cluster", "--config", kindConfigPath, "--kubeconfig", kubeConfigPath}
 
 	logger.Log.Info("creating kind cluster...")
-	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
-	if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
-		return err
+	_, findKindErr := exec.LookPath("kind")
+	args := []string{"create", "cluster", "--config", kindConfigPath, "--kubeconfig", kubeConfigPath}
+	if findKindErr != nil {
+		logger.Log.Debugf("using internal kind cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
+		if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
+			return err
+		}
+	} else {
+		logger.Log.Debugf("using command kind cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
+		command := exec.Command("kind", args...)
+		command.Stdout = kindcmd.StandardIOStreams().Out
+		command.Stderr = kindcmd.StandardIOStreams().ErrOut
+
+		if err := command.Start(); err != nil {
+			return err
+		}
+		if err := command.Wait(); err != nil {
+			return err
+		}
 	}
 	logger.Log.Info("create kind cluster succeeded")
 
