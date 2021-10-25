@@ -18,7 +18,14 @@
 
 package config
 
-import "github.com/apache/skywalking-infra-e2e/internal/util"
+import (
+	"fmt"
+	"time"
+
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
+)
 
 // E2EConfig corresponds to configuration file e2e.yaml.
 type E2EConfig struct {
@@ -29,12 +36,30 @@ type E2EConfig struct {
 }
 
 type Setup struct {
-	Env                   string    `yaml:"env"`
-	File                  string    `yaml:"file"`
-	Steps                 []Step    `yaml:"steps"`
-	Timeout               int       `yaml:"timeout"`
-	InitSystemEnvironment string    `yaml:"init-system-environment"`
-	Kind                  KindSetup `yaml:"kind"`
+	Env                   string      `yaml:"env"`
+	File                  string      `yaml:"file"`
+	Steps                 []Step      `yaml:"steps"`
+	Timeout               interface{} `yaml:"timeout"`
+	InitSystemEnvironment string      `yaml:"init-system-environment"`
+	Kind                  KindSetup   `yaml:"kind"`
+
+	timeout time.Duration
+}
+
+func (s *Setup) Finalize() error {
+	interval, err := parseInterval(s.Timeout, "setup.timeout")
+	if err != nil {
+		return err
+	}
+	if interval <= 0 {
+		interval = constant.DefaultWaitTimeout
+	}
+	s.timeout = interval
+	return nil
+}
+
+func (s *Setup) GetTimeout() time.Duration {
+	return s.timeout
 }
 
 type Cleanup struct {
@@ -119,4 +144,28 @@ func (v *VerifyCase) GetActual() string {
 // GetExpected resolves the absolute file path of the expected data file.
 func (v *VerifyCase) GetExpected() string {
 	return util.ResolveAbs(v.Expected)
+}
+
+// parseInterval parses a Duration field with number and string content for compatibility,
+// only use this when we previously allow configuring number like 120 and now string like 2m.
+// TODO remove this in 2.0
+func parseInterval(retryInterval interface{}, name string) (time.Duration, error) {
+	var interval time.Duration
+	var err error
+	switch itv := retryInterval.(type) {
+	case int:
+		logger.Log.Warnf("configuring %v with number %v is deprecated and will be removed in future version,"+
+			" please use Duration style instead, such as 10s, 1m.", name, itv)
+		interval = time.Duration(itv) * time.Second
+	case string:
+		if interval, err = time.ParseDuration(itv); err != nil {
+			return 0, err
+		}
+	default:
+		return 0, fmt.Errorf("failed to parse %v: %v", name, retryInterval)
+	}
+	if interval < 0 {
+		interval = constant.DefaultWaitTimeout
+	}
+	return interval, nil
 }

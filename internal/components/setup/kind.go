@@ -94,7 +94,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		util.ExportEnvVars(profilePath)
 	}
 
-	if err := createKindCluster(kindConfigPath); err != nil {
+	if err := createKindCluster(kindConfigPath, e2eConfig); err != nil {
 		return err
 	}
 
@@ -118,14 +118,14 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	}
 
 	// run steps
-	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.Timeout, cluster)
+	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.GetTimeout(), cluster)
 	if err != nil {
 		logger.Log.Errorf("execute steps error: %v", err)
 		return err
 	}
 
 	// expose ports
-	err = exposeKindService(e2eConfig.Setup.Kind.ExposePorts, e2eConfig.Setup.Timeout, kubeConfigPath)
+	err = exposeKindService(e2eConfig.Setup.Kind.ExposePorts, e2eConfig.Setup.GetTimeout(), kubeConfigPath)
 	if err != nil {
 		logger.Log.Errorf("export ports error: %v", err)
 		return err
@@ -148,10 +148,15 @@ func KindCleanNotify() {
 	}
 }
 
-func createKindCluster(kindConfigPath string) error {
+func createKindCluster(kindConfigPath string, e2eConfig *config.E2EConfig) error {
 	// the config file name of the k8s cluster that kind create
 	kubeConfigPath = constant.K8sClusterConfigFilePath
-	args := []string{"create", "cluster", "--config", kindConfigPath, "--kubeconfig", kubeConfigPath}
+	args := []string{
+		"create", "cluster",
+		"--config", kindConfigPath,
+		"--kubeconfig", kubeConfigPath,
+		"--wait", e2eConfig.Setup.GetTimeout().String(),
+	}
 
 	logger.Log.Info("creating kind cluster...")
 	logger.Log.Debugf("cluster create commands: %s %s", constant.KindCommand, strings.Join(args, " "))
@@ -388,7 +393,7 @@ func exposePerKindService(port config.KindExposePort, timeout time.Duration, cli
 	return nil
 }
 
-func exposeKindService(exports []config.KindExposePort, timeout int, kubeConfig string) error {
+func exposeKindService(exports []config.KindExposePort, timeout time.Duration, kubeConfig string) error {
 	// round tripper
 	kubeConfigYaml, err := ioutil.ReadFile(kubeConfig)
 	if err != nil {
@@ -421,7 +426,7 @@ func exposeKindService(exports []config.KindExposePort, timeout int, kubeConfig 
 	if timeout <= 0 {
 		waitTimeout = constant.DefaultWaitTimeout
 	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
+		waitTimeout = timeout
 	}
 
 	// stop port-forward channel

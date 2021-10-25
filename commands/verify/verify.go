@@ -120,6 +120,7 @@ func DoVerifyAccordingConfig() error {
 	return nil
 }
 
+// TODO remove this in 2.0.0
 func parseInterval(retryInterval interface{}) (time.Duration, error) {
 	var interval time.Duration
 	var err error

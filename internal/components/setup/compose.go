@@ -25,13 +25,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
@@ -90,7 +88,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	}
 
 	// run steps
-	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.Timeout, nil)
+	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.GetTimeout(), nil)
 	if err != nil {
 		logger.Log.Errorf("execute steps error: %v", err)
 		return err
@@ -159,13 +157,7 @@ func exportComposeEnv(key, value, service string) error {
 }
 
 func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) (map[string][]*hostPortCachedStrategy, error) {
-	timeout := e2eConfig.Setup.Timeout
-	var waitTimeout time.Duration
-	if timeout <= 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
-	}
+	waitTimeout := e2eConfig.Setup.GetTimeout()
 	serviceWithPorts := make(map[string][]*hostPortCachedStrategy)
 	for service, content := range compose.Services {
 		serviceConfig := content.(map[interface{}]interface{})
@@ -248,12 +240,7 @@ func (hp *hostPortCachedStrategy) WaitUntilReady(ctx context.Context, target wai
 
 func waitPortUntilReady(e2eConfig *config.E2EConfig, container *types.Container, dockerProvider *DockerProvider, expectPort int) error {
 	// wait port
-	var waitTimeout time.Duration
-	if e2eConfig.Setup.Timeout <= 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(e2eConfig.Setup.Timeout) * time.Second
-	}
+	waitTimeout := e2eConfig.Setup.GetTimeout()
 	waitPort := nat.Port(fmt.Sprintf("%d/tcp", expectPort))
 	target := &DockerContainer{
 		ID:         container.ID,

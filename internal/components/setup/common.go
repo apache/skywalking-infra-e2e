@@ -29,19 +29,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 )
 
-func RunStepsAndWait(steps []config.Step, timeout int, k8sCluster *util.K8sClusterInfo) error {
-	var waitTimeout time.Duration
-	if timeout <= 0 {
-		waitTimeout = constant.DefaultWaitTimeout
-	} else {
-		waitTimeout = time.Duration(timeout) * time.Second
-	}
-	logger.Log.Debugf("wait timeout is %d seconds", int(waitTimeout.Seconds()))
+func RunStepsAndWait(steps []config.Step, waitTimeout time.Duration, k8sCluster *util.K8sClusterInfo) error {
+	logger.Log.Debugf("wait timeout is %v", waitTimeout.String())
 
 	// record time now
 	timeNow := time.Now()
