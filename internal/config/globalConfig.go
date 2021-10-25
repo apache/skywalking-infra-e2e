@@ -70,6 +70,10 @@ func ReadGlobalConfigFile() {
 		return
 	}
 
+	if err := GlobalConfig.E2EConfig.Setup.Finalize(); err != nil {
+		GlobalConfig.Error = err
+	}
+
 	GlobalConfig.Error = nil
 	logger.Log.Info("load the e2e config successfully")
 }

@@ -25,7 +25,7 @@ Support two kinds of the environment to set up the system.
 setup:
   env: kind
   file: path/to/kind.yaml               # Specified kinD manifest file path
-  timeout: 1200                         # timeout second
+  timeout: 20m                          # timeout duration
   init-system-environment: path/to/env  # Import environment file
   steps:                                # customize steps for prepare the environment
     - name: customize setups            # step name
@@ -91,7 +91,7 @@ If you want to access the resource from host, should follow these steps:
 setup:
   env: compose
   file: path/to/compose.yaml            # Specified docker-compose file path
-  timeout: 1200                         # Timeout second
+  timeout: 20m                          # Timeout duration
   init-system-environment: path/to/env  # Import environment file
   steps:                                # Customize steps for prepare the environment
     - name: customize setups            # Step name
