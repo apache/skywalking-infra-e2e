@@ -131,7 +131,7 @@ After the `Setup` step is finished, use the `Trigger` step to generate traffic.
 trigger:
   action: http      # The action of the trigger. support HTTP invoke.
   interval: 3s      # Trigger the action every 3 seconds.
-  times: 5          # How many times to trigger the action, 0=infinite.
+  times: 5          # The retry count before the request success.
   url: http://apache.skywalking.com/ # Http trigger url link.
   method: GET       # Http trigger method.
   headers:

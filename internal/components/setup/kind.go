@@ -140,7 +140,7 @@ func KindShouldWaitSignal() bool {
 // KindCleanNotify notify when clean up
 func KindCleanNotify() {
 	if portForwardContext != nil {
-		portForwardContext.stopChannel <- struct{}{}
+		close(portForwardContext.stopChannel)
 		// wait all stopped
 		for i := 0; i < portForwardContext.resourceCount; i++ {
 			<-portForwardContext.resourceFinishedChannel
