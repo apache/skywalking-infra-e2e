@@ -19,6 +19,7 @@ package trigger
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -83,6 +84,10 @@ func (h *httpAction) Do() chan error {
 					result <- err
 					sent = true
 				}
+				if h.times == h.executedCount {
+					t.Stop()
+					return
+				}
 			case <-h.stopCh:
 				t.Stop()
 				result <- nil
@@ -124,6 +129,7 @@ func (h *httpAction) execute() error {
 		logger.Log.Errorf("do request error %v", err)
 		return err
 	}
+	_, _ = io.ReadAll(response.Body)
 	_ = response.Body.Close()
 
 	logger.Log.Debugf("do request %v response http code %v", h.url, response.StatusCode)
