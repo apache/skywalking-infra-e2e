@@ -31,4 +31,9 @@ runs:
         docker run -v $(pwd):/tmp -w /tmp --entrypoint=sh docker.io/apache/e2e:latest -c "cp /usr/local/bin/e2e /tmp/e2e"
         install ./e2e /usr/local/bin
     - shell: bash
-      run: e2e run -c "${{ inputs.e2e-file }}"
+      run: e2e run -c "${{ inputs.e2e-file }}" -w "${{ runner.temp }}/skywalking-infra-e2e"
+    - name: Upload Work Directory
+      uses: actions/upload-artifact@v2
+      with:
+        name: skywalking-infra-e2e
+        path: ${{ runner.temp }}/skywalking-infra-e2e

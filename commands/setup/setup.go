@@ -38,6 +38,7 @@ var Setup = &cobra.Command{
 			return err
 		}
 
+		defer setup.CloseLogFollower()
 		if err := DoSetupAccordingE2E(); err != nil {
 			return fmt.Errorf("[Setup] %s", err)
 		}
@@ -61,6 +62,7 @@ func DoSetupAccordingE2E() error {
 
 	e2eConfig := config.GlobalConfig.E2EConfig
 
+	setup.InitLogFollower()
 	if e2eConfig.Setup.Env == constant.Kind {
 		err := setup.KindSetup(&e2eConfig)
 		if err != nil {
@@ -80,6 +82,8 @@ func DoSetupAccordingE2E() error {
 }
 
 func DoStopSetup() {
+	// close log follower
+	setup.CloseLogFollower()
 	// notify clean up
 	setup.KindCleanNotify()
 }

@@ -85,6 +85,10 @@ If you want to access the resource from host, should follow these steps:
       url: http://${pod_foo_host}:${pod_foo_8080}/
    ```
 
+#### Log
+
+The console output of each pod will be saved after startup. File address: `${workDir}/logs/${namespace}/${podName}.log`
+
 ### Compose
 
 ```yaml
@@ -122,6 +126,10 @@ If you want to get the service host and port mapping, should follow these steps:
       # trigger with specified mappinged port
       url: http://${oap_host}:${oap_8080}/
    ```
+
+#### Log
+
+The console output of each pod will be saved after startup. File address: `${workDir}/logs/{serviceName}/std.log`
 
 ## Trigger
 

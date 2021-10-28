@@ -28,16 +28,17 @@ import (
 	"strings"
 
 	apiv1 "k8s.io/api/admission/v1"
-
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -46,8 +47,10 @@ import (
 
 // K8sClusterInfo created when connect to cluster
 type K8sClusterInfo struct {
-	Client    *kubernetes.Clientset
-	Interface dynamic.Interface
+	Client     *kubernetes.Clientset
+	Interface  dynamic.Interface
+	restConfig *rest.Config
+	namespace  string
 }
 
 // ConnectToK8sCluster gets clientSet and dynamic client from k8s config file.
@@ -66,9 +69,64 @@ func ConnectToK8sCluster(kubeConfigPath string) (info *K8sClusterInfo, err error
 		return nil, err
 	}
 
+	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigYaml)
+	if err != nil {
+		return nil, err
+	}
+
 	logger.Log.Info("connect to k8s cluster succeeded")
 
-	return &K8sClusterInfo{c, dc}, nil
+	return &K8sClusterInfo{c, dc, restConfig, ""}, nil
+}
+
+func (c *K8sClusterInfo) CopyClusterToNamespace(namespace string) *K8sClusterInfo {
+	return &K8sClusterInfo{
+		Client:     c.Client,
+		Interface:  c.Interface,
+		restConfig: c.restConfig,
+		namespace:  namespace,
+	}
+}
+
+func (c *K8sClusterInfo) ToRESTConfig() (*rest.Config, error) {
+	return c.restConfig, nil
+}
+
+func (c *K8sClusterInfo) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+	config, err := c.ToRESTConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	config.Burst = 100
+
+	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
+	return memory.NewMemCacheClient(discoveryClient), nil
+}
+
+func (c *K8sClusterInfo) ToRESTMapper() (meta.RESTMapper, error) {
+	discoveryClient, err := c.ToDiscoveryClient()
+	if err != nil {
+		return nil, err
+	}
+
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
+	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
+	return expander, nil
+}
+
+func (c *K8sClusterInfo) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
+
+	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
+	overrides.Context.Namespace = c.namespace
+
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
 }
 
 // GetManifests recursively gets all yml and yaml files from manifests string.

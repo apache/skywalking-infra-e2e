@@ -31,6 +31,8 @@ e2e cleanup
 
 To use skywalking-infra-e2e in GitHub Actions, add a step in your GitHub workflow.
 
+The working directory is uploaded to GitHub Action Artifact after the task is completed, which contains environment variables and container logs in the environment.
+
 ```yaml
 - name: Run E2E Test
   uses: apache/skywalking-infra-e2e@main      # always prefer to use a revision instead of `main`.

@@ -36,6 +36,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 
 	"github.com/testcontainers/testcontainers-go"
 )
@@ -61,7 +62,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
 
 	// bind wait port
-	serviceWithPorts, err := bindWaitPort(e2eConfig, compose)
+	services, err := buildComposeServices(e2eConfig, compose)
 	if err != nil {
 		return fmt.Errorf("bind wait ports error: %v", err)
 	}
@@ -75,6 +76,18 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	}
 	cmd = append(cmd, "up", "-d")
 
+	// Listen container create
+	listener := NewComposeContainerListener(context.Background(), cli, services)
+	defer listener.Stop()
+	err = listener.Listen(func(container *ComposeContainer) {
+		if err = exposeComposeLog(cli, container.Service, container.ID, logFollower); err == nil {
+			container.Service.beenFollowLog = true
+		}
+	})
+	if err != nil {
+		return err
+	}
+
 	// setup
 	execError := compose.WithCommand(cmd).Invoke()
 	if execError.Error != nil {
@@ -82,7 +95,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	}
 
 	// find exported port and build env
-	err = exposeServiceEnv(serviceWithPorts, cli, identifier, e2eConfig)
+	err = exposeComposeService(services, cli, identifier, e2eConfig)
 	if err != nil {
 		return err
 	}
@@ -97,53 +110,103 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	return nil
 }
 
-func exposeServiceEnv(serviceWithPorts map[string][]*hostPortCachedStrategy, cli *client.Client, identity string, e2eConfig *config.E2EConfig) error {
+type ComposeService struct {
+	Name           string
+	waitStrategies []*hostPortCachedStrategy
+	beenFollowLog  bool
+}
+
+func exposeComposeService(services []*ComposeService, cli *client.Client,
+	identity string, e2eConfig *config.E2EConfig) error {
 	dockerProvider := &DockerProvider{client: cli}
+
 	// find exported port and build env
-	for service, portList := range serviceWithPorts {
-		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identity, getInstanceName(service)))
-		if err != nil {
-			return err
-		}
-		if len(portList) == 0 {
-			continue
-		}
-
-		containerPorts := container.Ports
-
-		// get real ip address for access and export to env
-		host, err := dockerProvider.daemonHost(context.Background())
+	for _, service := range services {
+		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identity, getInstanceName(service.Name)))
 		if err != nil {
 			return err
 		}
 
-		// format: <service_name>_host
-		if err := exportComposeEnv(fmt.Sprintf("%s_host", service), host, service); err != nil {
+		// expose port
+		if err := exposeComposePort(dockerProvider, service, container, e2eConfig); err != nil {
 			return err
 		}
 
-		for inx := range portList {
-			for _, containerPort := range containerPorts {
-				if int(containerPort.PrivatePort) != portList[inx].expectPort {
-					continue
-				}
-
-				if err := waitPortUntilReady(e2eConfig, container, dockerProvider, portList[inx].expectPort); err != nil {
-					return err
-				}
-
-				// expose env config to env
-				// format: <service_name>_<port>
-				if err := exportComposeEnv(
-					fmt.Sprintf("%s_%d", service, containerPort.PrivatePort),
-					fmt.Sprintf("%d", containerPort.PublicPort),
-					service); err != nil {
-					return err
-				}
-				break
+		// if service log not follow, expose log
+		if !service.beenFollowLog {
+			if err := exposeComposeLog(dockerProvider.client, service, container.ID, logFollower); err != nil {
+				return err
 			}
+			service.beenFollowLog = true
 		}
 	}
+	return nil
+}
+
+func exposeComposePort(dockerProvider *DockerProvider, service *ComposeService, container *types.Container,
+	e2eConfig *config.E2EConfig) error {
+	if len(service.waitStrategies) == 0 {
+		return nil
+	}
+
+	// get real ip address for access and export to env
+	host, err := dockerProvider.daemonHost(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// format: <service_name>_host
+	if err := exportComposeEnv(fmt.Sprintf("%s_host", service.Name), host, service.Name); err != nil {
+		return err
+	}
+
+	for inx := range service.waitStrategies {
+		for _, containerPort := range container.Ports {
+			if int(containerPort.PrivatePort) != service.waitStrategies[inx].expectPort {
+				continue
+			}
+
+			if err := waitPortUntilReady(e2eConfig, container, dockerProvider, service.waitStrategies[inx].expectPort); err != nil {
+				return err
+			}
+
+			// expose env config to env
+			// format: <service_name>_<port>
+			if err := exportComposeEnv(
+				fmt.Sprintf("%s_%d", service.Name, containerPort.PrivatePort),
+				fmt.Sprintf("%d", containerPort.PublicPort),
+				service.Name); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	return nil
+}
+
+// export container log to local path
+func exposeComposeLog(cli *client.Client, service *ComposeService, containerID string, logFollower *util.ResourceLogFollower) error {
+	logs, err := cli.ContainerLogs(logFollower.Ctx, containerID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Details:    false,
+	})
+	if err != nil {
+		return err
+	}
+	writer, err := logFollower.BuildLogWriter(fmt.Sprintf("%s/std.log", service.Name))
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer writer.Close()
+		if _, err := stdcopy.StdCopy(writer, writer, logs); err != nil {
+			logger.Log.Warnf("write %s std log error: %v", service.Name, err)
+		}
+	}()
 	return nil
 }
 
@@ -156,16 +219,17 @@ func exportComposeEnv(key, value, service string) error {
 	return nil
 }
 
-func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) (map[string][]*hostPortCachedStrategy, error) {
+func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) ([]*ComposeService, error) {
 	waitTimeout := e2eConfig.Setup.GetTimeout()
-	serviceWithPorts := make(map[string][]*hostPortCachedStrategy)
+	services := make([]*ComposeService, 0)
 	for service, content := range compose.Services {
 		serviceConfig := content.(map[interface{}]interface{})
 		ports := serviceConfig["ports"]
+		serviceContext := &ComposeService{Name: service}
+		services = append(services, serviceContext)
 		if ports == nil {
 			continue
 		}
-		serviceWithPorts[service] = []*hostPortCachedStrategy{}
 
 		portList := ports.([]interface{})
 		for inx := range portList {
@@ -180,11 +244,10 @@ func bindWaitPort(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDock
 			}
 			// temporary don't use testcontainers-go framework wait strategy until fix docker-in-docker bug
 			// compose.WithExposedService(service, exportPort, strategy)
-
-			serviceWithPorts[service] = append(serviceWithPorts[service], strategy)
+			serviceContext.waitStrategies = append(serviceContext.waitStrategies, strategy)
 		}
 	}
-	return serviceWithPorts, nil
+	return services, nil
 }
 
 func getExpectPort(portConfig interface{}) (int, error) {
