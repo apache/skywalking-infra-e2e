@@ -129,7 +129,7 @@ If you want to get the service host and port mapping, should follow these steps:
 
 #### Log
 
-The console output of each pod will be saved after startup. File address: `${workDir}/logs/{serviceName}/std.log`
+The console output of each service will be saved after startup. File address: `${workDir}/logs/{serviceName}/std.log`
 
 ## Trigger
 
