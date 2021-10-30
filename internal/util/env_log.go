@@ -27,10 +27,6 @@ import (
 	"sync"
 )
 
-var (
-	LogBase = "logs"
-)
-
 type ResourceLogFollower struct {
 	Ctx        context.Context
 	cancelFunc context.CancelFunc
@@ -106,7 +102,7 @@ func (l *ResourceLogFollower) Close() {
 }
 
 func (l *ResourceLogFollower) buildLogFilename(path string) string {
-	return filepath.Join(l.basePath, LogBase, path)
+	return filepath.Join(l.basePath, path)
 }
 
 func (l *ResourceLogFollower) writeFollowed(writer *os.File) {

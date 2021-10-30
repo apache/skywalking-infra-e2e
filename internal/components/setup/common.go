@@ -205,7 +205,7 @@ func GetIdentity() string {
 }
 
 func InitLogFollower() {
-	logFollower = util.NewResourceLogFollower(context.Background(), util.WorkDir)
+	logFollower = util.NewResourceLogFollower(context.Background(), util.LogDir)
 }
 
 func CloseLogFollower() {
