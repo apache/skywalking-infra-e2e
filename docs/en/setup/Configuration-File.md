@@ -87,7 +87,7 @@ If you want to access the resource from host, should follow these steps:
 
 #### Log
 
-The console output of each pod will be saved after startup. File address: `${workDir}/logs/${namespace}/${podName}.log`
+The console output of each pod could be found in `${workDir}/logs/${namespace}/${podName}.log`.
 
 ### Compose
 
@@ -129,7 +129,7 @@ If you want to get the service host and port mapping, should follow these steps:
 
 #### Log
 
-The console output of each service will be saved after startup. File address: `${workDir}/logs/{serviceName}/std.log`
+The console output of each service could be found in `${workDir}/logs/{serviceName}/std.log`.
 
 ## Trigger
 
