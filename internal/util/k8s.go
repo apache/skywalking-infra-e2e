@@ -21,7 +21,6 @@ package util
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -204,10 +203,6 @@ func OperateManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest str
 
 		var dri dynamic.ResourceInterface
 		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-			// constrict resources to the default namespace
-			if unstructuredObj.GetNamespace() != "" && unstructuredObj.GetNamespace() != metav1.NamespaceDefault {
-				return fmt.Errorf("all resources must in default namespace")
-			}
 			if unstructuredObj.GetNamespace() == "" {
 				unstructuredObj.SetNamespace(metav1.NamespaceDefault)
 			}
