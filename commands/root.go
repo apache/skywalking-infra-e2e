@@ -55,16 +55,30 @@ var Root = &cobra.Command{
 		}
 		logger.Log.SetLevel(level)
 
-		util.WorkDir = util.ExpandFilePath(util.WorkDir)
-		if _, err := os.Stat(util.WorkDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(util.WorkDir, os.ModePerm); err != nil {
-				logger.Log.Warnf("failed to create working directory %v", util.WorkDir)
-				return err
-			}
+		util.WorkDir, err = ExpandPathAndCreate(util.WorkDir)
+		if err != nil {
+			logger.Log.Warnf("failed to create working directory %v", util.WorkDir)
+			return err
+		}
+
+		util.LogDir, err = ExpandPathAndCreate(util.LogDir)
+		if err != nil {
+			logger.Log.Warnf("failed to create logging directory %v", util.LogDir)
+			return err
 		}
 
 		return nil
 	},
+}
+
+func ExpandPathAndCreate(path string) (string, error) {
+	path = util.ExpandFilePath(path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return path, err
+		}
+	}
+	return path, nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -78,6 +92,7 @@ func Execute() error {
 
 	Root.PersistentFlags().StringVarP(&verbosity, "verbosity", "v", logrus.InfoLevel.String(), "log level (debug, info, warn, error, fatal, panic")
 	Root.PersistentFlags().StringVarP(&util.WorkDir, "work-dir", "w", "~/.skywalking-infra-e2e", "the working directory for skywalking-infra-e2e")
+	Root.PersistentFlags().StringVarP(&util.LogDir, "log-dir", "l", "~/.skywalking-infra-e2e/logs", "the container logs directory for environment")
 	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
 
 	return Root.Execute()

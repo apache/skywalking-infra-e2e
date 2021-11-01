@@ -21,6 +21,9 @@ inputs:
   e2e-file:
     description: File path of e2e file
     required: true
+  log-dir:
+    description: The container logs directory
+    required: false
 
 runs:
   using: "composite"
@@ -30,5 +33,46 @@ runs:
         make -C $GITHUB_ACTION_PATH docker
         docker run -v $(pwd):/tmp -w /tmp --entrypoint=sh docker.io/apache/e2e:latest -c "cp /usr/local/bin/e2e /tmp/e2e"
         install ./e2e /usr/local/bin
+    - name: E2E Dir Generator
+      id: 'e2e-dir-generator'
+      shell: bash
+      run: |
+        WORK_DIR="${{ runner.temp }}/skywalking-infra-e2e"
+        echo "::set-output name=work::$WORK_DIR"
+
+        LOG_DIR=""
+        LOG_JOB_DIR=""
+        if [[ "${{ inputs.log-dir }}" == "" ]]
+        then
+          matrix='${{ toJSON(matrix) }}'
+          if [[ "$matrix" == "null" ]]
+          then
+            LOG_DIR="$WORK_DIR/logs"
+            LOG_JOB_DIR="$LOG_DIR/${{ github.job }}"
+          else
+            combine_matrix=$(echo $matrix|jq -r 'to_entries|map(.value)|tostring')
+            # remove json syntax
+            combine_matrix=`echo $combine_matrix|sed -e 's/\[\|\]\|\"//g'`
+            combine_matrix=`echo $combine_matrix|sed -e 's/[\{|\}]//g'`
+            # replace to path
+            combine_matrix=`echo $combine_matrix|sed -e 's/[^A-Za-z0-9_-]/_/g'`
+            LOG_DIR="$WORK_DIR/logs"
+            LOG_JOB_DIR="$LOG_DIR/${{ github.job }}_$combine_matrix"
+          fi
+        elif [[ "${{ inputs.log-dir }}" == /* ]]
+        then
+          LOG_DIR="${{ inputs.log-dir }}"
+          LOG_JOB_DIR="${{ inputs.log-dir }}"
+        else
+          LOG_DIR="$WORK_DIR/${{ inputs.log-dir }}"
+          LOG_JOB_DIR="$WORK_DIR/${{ inputs.log-dir }}"
+        fi
+        echo "::set-output name=log::$LOG_DIR"
+        echo "::set-output name=log-case::$LOG_JOB_DIR"
+        echo "SW_INFRA_E2E_LOG_DIR=$LOG_DIR" >> $GITHUB_ENV
     - shell: bash
-      run: e2e run -c "${{ inputs.e2e-file }}"
+      run: |
+        e2e run \
+          -c "${{ inputs.e2e-file }}" \
+          -w "${{ steps.e2e-dir-generator.outputs.work }}" \
+          -l "${{ steps.e2e-dir-generator.outputs.log-case }}"

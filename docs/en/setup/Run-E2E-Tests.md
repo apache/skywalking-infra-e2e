@@ -31,9 +31,23 @@ e2e cleanup
 
 To use skywalking-infra-e2e in GitHub Actions, add a step in your GitHub workflow.
 
+The working directory could be uploaded to GitHub Action Artifact after the task is completed, which contains environment variables and container logs in the environment.
+
 ```yaml
 - name: Run E2E Test
   uses: apache/skywalking-infra-e2e@main      # always prefer to use a revision instead of `main`.
   with:
-    e2e-file: e2e.yaml                        # need to run E2E file path
+    e2e-file: e2e.yaml                        # (required)need to run E2E file path
+    log-dir: /path/to/log/dir                 # (Optional)Use `<work_dir>/logs/<job_name>_<matrix_value>`(if have GHA matrix) or `<work_dir>/logs/<job_name>` in GHA, and output logs into `<work_dir>/logs` out of GHA env, such as running locally.
+```
+
+If you want to upload the log directory to the GitHub Action Artifact when this E2E test failure, you could define the below content in your GitHub Action Job.
+
+```yaml
+- name: Upload E2E Log
+  uses: actions/upload-artifact@v2
+  if: ${{ failure() }}                      # Only upload the artifact when E2E testing failure
+  with:
+    name: e2e-log
+    path: "${{ env.SW_INFRA_E2E_LOG_DIR }}" # The SkyWalking Infra E2E action sets SW_INFRA_E2E_LOG_DIR automatically. 
 ```

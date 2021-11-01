@@ -21,12 +21,14 @@ package setup
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	apiv1 "k8s.io/api/admission/v1"
@@ -35,8 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
@@ -117,6 +117,17 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
+	listener := NewKindContainerListener(context.Background(), cluster)
+	defer listener.Stop()
+	err = listener.Listen(func(pod *v1.Pod) {
+		if err = exposePerContainerLog(cluster, pod, e2eConfig.Setup.GetTimeout()); err != nil {
+			logger.Log.Warnf("export kubernetes pod log failure: %v", err)
+		}
+	})
+	if err != nil {
+		logger.Log.Warnf("listen kubernetes pod event failure: %v", err)
+	}
+
 	// run steps
 	err = RunStepsAndWait(e2eConfig.Setup.Steps, e2eConfig.Setup.GetTimeout(), cluster)
 	if err != nil {
@@ -124,8 +135,14 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
+	// expose logs
+	if err = exposeLogs(cluster, listener, e2eConfig.Setup.GetTimeout()); err != nil {
+		logger.Log.Errorf("export logs error: %v", err)
+		return err
+	}
+
 	// expose ports
-	err = exposeKindService(e2eConfig.Setup.Kind.ExposePorts, e2eConfig.Setup.GetTimeout(), kubeConfigPath)
+	err = exposeKindService(e2eConfig.Setup.Kind.ExposePorts, e2eConfig.Setup.GetTimeout(), cluster)
 	if err != nil {
 		logger.Log.Errorf("export ports error: %v", err)
 		return err
@@ -174,12 +191,12 @@ func createKindCluster(kindConfigPath string, e2eConfig *config.E2EConfig) error
 	return nil
 }
 
-func getWaitOptions(kubeConfigYaml []byte, wait *config.Wait) (options *ctlwait.WaitOptions, err error) {
+func getWaitOptions(cluster *util.K8sClusterInfo, wait *config.Wait) (options *ctlwait.WaitOptions, err error) {
 	if strings.Contains(wait.Resource, "/") && wait.LabelSelector != "" {
 		return nil, fmt.Errorf("when passing resource.group/resource.name in Resource, the labelSelector can not be set at the same time")
 	}
 
-	restClientGetter := util.NewSimpleRESTClientGetter(wait.Namespace, string(kubeConfigYaml))
+	restClientGetter := cluster.CopyClusterToNamespace(wait.Namespace)
 	silenceOutput, _ := os.Open(os.DevNull)
 	ioStreams := genericclioptions.IOStreams{In: os.Stdin, Out: silenceOutput, ErrOut: os.Stderr}
 	waitFlags := ctlwait.NewWaitFlags(restClientGetter, ioStreams)
@@ -209,7 +226,7 @@ func getWaitOptions(kubeConfigYaml []byte, wait *config.Wait) (options *ctlwait.
 	return options, nil
 }
 
-func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest) error {
+func createByManifest(c *util.K8sClusterInfo, manifest config.Manifest) error {
 	files, err := util.GetManifests(manifest.Path)
 	if err != nil {
 		logger.Log.Error("get manifests failed")
@@ -218,7 +235,7 @@ func createByManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest co
 
 	for _, f := range files {
 		logger.Log.Infof("creating manifest %s", f)
-		err = util.OperateManifest(c, dc, f, apiv1.Create)
+		err = util.OperateManifest(c.Client, c.Interface, f, apiv1.Create)
 		if err != nil {
 			logger.Log.Errorf("create manifest %s failed", f)
 			return err
@@ -302,10 +319,10 @@ func buildKindPort(port string, ro runtime.Object, pod *v1.Pod) (*kindPort, erro
 	}, nil
 }
 
-func exposePerKindService(port config.KindExposePort, timeout time.Duration, clientGetter *util.SimpleRESTClientGetter,
+func exposePerKindService(port config.KindExposePort, timeout time.Duration, cluster *util.K8sClusterInfo,
 	client *rest.RESTClient, roundTripper http.RoundTripper, upgrader spdy.Upgrader, forward *kindPortForwardContext) error {
 	// find resource
-	builder := resource.NewBuilder(clientGetter).
+	builder := resource.NewBuilder(cluster).
 		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
 		ContinueOnError().
 		NamespaceParam(port.Namespace).DefaultNamespace()
@@ -314,7 +331,7 @@ func exposePerKindService(port config.KindExposePort, timeout time.Duration, cli
 	if err != nil {
 		return err
 	}
-	forwardablePod, err := polymorphichelpers.AttachablePodForObjectFn(clientGetter, obj, timeout)
+	forwardablePod, err := polymorphichelpers.AttachablePodForObjectFn(cluster, obj, timeout)
 	if err != nil {
 		return err
 	}
@@ -393,15 +410,8 @@ func exposePerKindService(port config.KindExposePort, timeout time.Duration, cli
 	return nil
 }
 
-func exposeKindService(exports []config.KindExposePort, timeout time.Duration, kubeConfig string) error {
-	// round tripper
-	kubeConfigYaml, err := ioutil.ReadFile(kubeConfig)
-	if err != nil {
-		return err
-	}
-	clientGetter := util.NewSimpleRESTClientGetter("", string(kubeConfigYaml))
-
-	restConf, err := clientGetter.ToRESTConfig()
+func exposeKindService(exports []config.KindExposePort, timeout time.Duration, cluster *util.K8sClusterInfo) error {
+	restConf, err := cluster.ToRESTConfig()
 	if err != nil {
 		return err
 	}
@@ -436,13 +446,73 @@ func exposeKindService(exports []config.KindExposePort, timeout time.Duration, k
 		resourceCount:           len(exports),
 	}
 	for _, p := range exports {
-		if err := exposePerKindService(p, waitTimeout, clientGetter, client, tripperFor, upgrader, forwardContext); err != nil {
+		if err := exposePerKindService(p, waitTimeout, cluster, client, tripperFor, upgrader, forwardContext); err != nil {
 			return err
 		}
 	}
 
 	// bind context
 	portForwardContext = forwardContext
+	return nil
+}
+
+func exposePerContainerLog(clientGetter *util.K8sClusterInfo, pod *v1.Pod, timeout time.Duration) error {
+	if pod.Status.Phase != v1.PodRunning {
+		return nil
+	}
+
+	file := filepath.Join(pod.Namespace, fmt.Sprintf("%s.log", pod.Name))
+	// check is followed
+	if logFollower.IsFollowed(file) {
+		return nil
+	}
+
+	logOptions := &v1.PodLogOptions{
+		Follow: true,
+	}
+	data, err := polymorphichelpers.LogsForObjectFn(clientGetter, pod, logOptions, timeout, true)
+	if err != nil {
+		return err
+	}
+
+	writer, err := logFollower.BuildLogWriter(file)
+	if err != nil {
+		return err
+	}
+	wg := &sync.WaitGroup{}
+	wg.Add(len(data))
+	// following each container
+	for _, resp := range data {
+		stream, err := resp.Stream(logFollower.Ctx)
+		if err != nil {
+			return err
+		}
+		go func() {
+			if finish := logFollower.ConsumeLog(writer, stream); finish != nil {
+				<-finish
+			}
+			wg.Done()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		writer.Close()
+	}()
+
+	return nil
+}
+
+func exposeLogs(clientGetter *util.K8sClusterInfo, listener *KindContainerListener, timeout time.Duration) error {
+	pods, err := listener.GetAllPods()
+	if err != nil {
+		return err
+	}
+	for _, pod := range pods {
+		if err := exposePerContainerLog(clientGetter, pod, timeout); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

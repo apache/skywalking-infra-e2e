@@ -19,18 +19,19 @@
 package setup
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
+)
+
+var (
+	logFollower *util.ResourceLogFollower
 )
 
 func RunStepsAndWait(steps []config.Step, waitTimeout time.Duration, k8sCluster *util.K8sClusterInfo) error {
@@ -50,7 +51,7 @@ func RunStepsAndWait(steps []config.Step, waitTimeout time.Duration, k8sCluster 
 				Path:  step.Path,
 				Waits: step.Waits,
 			}
-			err := createManifestAndWait(k8sCluster.Client, k8sCluster.Interface, manifest, waitTimeout)
+			err := createManifestAndWait(k8sCluster, manifest, waitTimeout)
 			if err != nil {
 				return err
 			}
@@ -60,7 +61,7 @@ func RunStepsAndWait(steps []config.Step, waitTimeout time.Duration, k8sCluster 
 				Waits:   step.Waits,
 			}
 
-			err := RunCommandsAndWait(command, waitTimeout)
+			err := RunCommandsAndWait(command, waitTimeout, k8sCluster)
 			if err != nil {
 				return err
 			}
@@ -79,16 +80,11 @@ func RunStepsAndWait(steps []config.Step, waitTimeout time.Duration, k8sCluster 
 }
 
 // createManifestAndWait creates manifests in k8s cluster and concurrent waits according to the manifests' wait conditions.
-func createManifestAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manifest config.Manifest, timeout time.Duration) error {
+func createManifestAndWait(c *util.K8sClusterInfo, manifest config.Manifest, timeout time.Duration) error {
 	waitSet := util.NewWaitSet(timeout)
 
-	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
-	if err != nil {
-		return err
-	}
-
 	waits := manifest.Waits
-	err = createByManifest(c, dc, manifest)
+	err := createByManifest(c, manifest)
 	if err != nil {
 		return err
 	}
@@ -103,7 +99,7 @@ func createManifestAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manife
 		wait := waits[idx]
 		logger.Log.Infof("waiting for %+v", wait)
 
-		options, err := getWaitOptions(kubeConfigYaml, &wait)
+		options, err := getWaitOptions(c, &wait)
 		if err != nil {
 			return err
 		}
@@ -131,7 +127,7 @@ func createManifestAndWait(c *kubernetes.Clientset, dc dynamic.Interface, manife
 }
 
 // RunCommandsAndWait Concurrently run commands and wait for conditions.
-func RunCommandsAndWait(run config.Run, timeout time.Duration) error {
+func RunCommandsAndWait(run config.Run, timeout time.Duration, cluster *util.K8sClusterInfo) error {
 	waitSet := util.NewWaitSet(timeout)
 
 	commands := run.Command
@@ -140,7 +136,7 @@ func RunCommandsAndWait(run config.Run, timeout time.Duration) error {
 	}
 
 	waitSet.WaitGroup.Add(1)
-	go executeCommandsAndWait(commands, run.Waits, waitSet)
+	go executeCommandsAndWait(commands, run.Waits, waitSet, cluster)
 
 	go func() {
 		waitSet.WaitGroup.Wait()
@@ -160,7 +156,7 @@ func RunCommandsAndWait(run config.Run, timeout time.Duration) error {
 	return nil
 }
 
-func executeCommandsAndWait(commands string, waits []config.Wait, waitSet *util.WaitSet) {
+func executeCommandsAndWait(commands string, waits []config.Wait, waitSet *util.WaitSet, cluster *util.K8sClusterInfo) {
 	defer waitSet.WaitGroup.Done()
 
 	// executes commands
@@ -177,13 +173,7 @@ func executeCommandsAndWait(commands string, waits []config.Wait, waitSet *util.
 		wait := waits[idx]
 		logger.Log.Infof("waiting for %+v", wait)
 
-		kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
-		if err != nil {
-			err = fmt.Errorf("read kube config failed: %s", err)
-			waitSet.ErrChan <- err
-		}
-
-		options, err := getWaitOptions(kubeConfigYaml, &wait)
+		options, err := getWaitOptions(cluster, &wait)
 		if err != nil {
 			err = fmt.Errorf("commands: [%s] get wait options error: %s", commands, err)
 			waitSet.ErrChan <- err
@@ -212,4 +202,14 @@ func GetIdentity() string {
 		return "skywalking_e2e"
 	}
 	return runID
+}
+
+func InitLogFollower() {
+	logFollower = util.NewResourceLogFollower(context.Background(), util.LogDir)
+}
+
+func CloseLogFollower() {
+	if logFollower != nil {
+		logFollower.Close()
+	}
 }

@@ -28,6 +28,7 @@ import (
 var (
 	CfgFile string
 	WorkDir string
+	LogDir  string
 )
 
 // ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
