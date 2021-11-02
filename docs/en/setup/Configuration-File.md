@@ -53,8 +53,6 @@ The `KinD` environment follow these steps:
 1. Wait until all steps are finished and all services are ready with the timeout(second).
 1. Expose all resource ports for host access.
 
-Notice, when you create resources such as webhooks, they need time to set up. If you get some error, you can try `sleep` to wait for the resources established. 
-
 #### Import docker image
 
 If you want to import docker image from private registries, there are several ways to do this:
@@ -151,12 +149,6 @@ trigger:
 ```
 
 The Trigger executed successfully at least once, after success, the next stage could be continued. Otherwise, there is an error and exit.
-
-If you get the following error message when using the trigger, You should check whether the port is useful. A possible reason may be that the exporting service needs time to set up, so you can add a larger interval to avoid the error.
-
-```
-socat command returns error: exit status 1, stderr: "2021/11/02 10:44:26 socat[6288] E connect(5, AF=2 127.0.0.1:8085, 16): Connection refused\n
-```
 
 ## Verify
 
@@ -270,3 +262,12 @@ All available strategies:
 1. `failure`: Only when the execution failed.
 1. `never`: Never clean up the environment.
 
+### FAQ
+
+1. If you create resources such as webhooks, they need time to set up. If you get some error, you can try `sleep` to wait for the resources established. 
+
+1. If you get the following error message when using the trigger, You should check whether the port is useful. A possible reason may be that the exporting service needs time to set up, so you can add a larger interval to avoid the error.
+
+```
+socat command returns error: exit status 1, stderr: "2021/11/02 10:44:26 socat[6288] E connect(5, AF=2 127.0.0.1:8085, 16): Connection refused\n
+```
