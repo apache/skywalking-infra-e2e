@@ -133,6 +133,8 @@ and will be removed in future version, please use Duration style instead, such a
 		if interval, err = time.ParseDuration(itv); err != nil {
 			return 0, err
 		}
+	case nil:
+		interval = 0
 	default:
 		return 0, fmt.Errorf("failed to parse verify.retry.interval: %v", retryInterval)
 	}

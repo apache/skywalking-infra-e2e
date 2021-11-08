@@ -54,6 +54,11 @@ func Test_parseInterval(t *testing.T) {
 			name:    "Should fail in other cases",
 			args:    args{retryInterval: "abcdef"},
 			wantErr: true,
+		}, {
+			name:    "Should parse interval without setting value",
+			args:    args{},
+			want:    0,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
