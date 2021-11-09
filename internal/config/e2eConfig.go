@@ -20,6 +20,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
@@ -90,7 +91,10 @@ type Verify struct {
 }
 
 func (s *Setup) GetFile() string {
-	return util.ResolveAbs(s.File)
+	// expand the file path with system environment
+	file := os.ExpandEnv(s.File)
+	file = util.ResolveAbs(file)
+	return file
 }
 
 type Manifest struct {
