@@ -19,12 +19,12 @@
 PROJECT := e2e
 VERSION ?= latest
 OUT_DIR = bin
-ARCH := $(shell uname)
-OSNAME := $(if $(findstring Darwin,$(ARCH)),darwin,linux)
 HUB ?= docker.io/apache
 
 GO := GO111MODULE=on go
 GO_PATH = $(shell $(GO) env GOPATH)
+GOARCH ?= $(shell $(GO) env GOARCH)
+GOOS ?= $(shell $(GO) env GOOS)
 GO_BUILD = $(GO) build
 GO_TEST = $(GO) test
 GO_LINT = $(GO_PATH)/bin/golangci-lint
@@ -32,7 +32,6 @@ GO_BUILD_LDFLAGS = -X github.com/apache/skywalking-$(PROJECT)/commands.version=$
 
 PLATFORMS := windows linux darwin
 os = $(word 1, $@)
-ARCH = amd64
 
 RELEASE_BIN = skywalking-$(PROJECT)-$(VERSION)-bin
 RELEASE_SRC = skywalking-$(PROJECT)-$(VERSION)-src
@@ -56,7 +55,7 @@ test: clean
 .PHONY: $(PLATFORMS)
 $(PLATFORMS):
 	mkdir -p $(OUT_DIR)
-	GOOS=$(os) GOARCH=$(ARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT) cmd/main.go
+	GOOS=$(os) GOARCH=$(GOARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT) cmd/main.go
 
 .PHONY: build
 build: windows linux darwin
@@ -99,9 +98,9 @@ release: verify release-src release-bin
 	shasum -a 512 $(RELEASE_BIN).tgz > $(RELEASE_BIN).tgz.sha512
 
 .PHONY: install
-install: $(OSNAME)
-	-cp $(OUT_DIR)/$(OSNAME)/$(PROJECT) $(DESTDIR)
+install: $(GOOS)
+	-cp $(OUT_DIR)/$(GOOS)/$(PROJECT) $(DESTDIR)
 
 .PHONY: uninstall
-uninstall: $(OSNAME)
+uninstall: $(GOOS)
 	-rm $(DESTDIR)/$(PROJECT)
