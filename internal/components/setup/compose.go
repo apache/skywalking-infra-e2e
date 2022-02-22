@@ -41,6 +41,19 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 )
 
+const (
+	// SeparatorV1 is the separator used in docker-compose v1
+	// refer to https://github.com/docker/compose/blob/5becea4ca9f68875334c92f191a13482bcd6e5cf/compose/service.py#L1492-L1498
+	SeparatorV1 = "_"
+	// SeparatorV2 is the separator used in docker-compose v2
+	// refer to https://github.com/docker/compose/blob/981aea674d052ee1ab252f71c3ca1f9f8a7e32de/pkg/compose/convergence.go#L252-L257
+	SeparatorV2 = "-"
+)
+
+var (
+	containerNamePattern = regexp.MustCompile(`.*_(?P<containerNum>\d+)$`)
+)
+
 // ComposeSetup sets up environment according to e2e.yaml.
 func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	composeConfigPath := e2eConfig.Setup.GetFile()
@@ -122,7 +135,8 @@ func exposeComposeService(services []*ComposeService, cli *client.Client,
 
 	// find exported port and build env
 	for _, service := range services {
-		container, err := findContainer(cli, fmt.Sprintf("%s_%s", identity, getInstanceName(service.Name)))
+		serviceName, num := getInstanceName(service.Name)
+		container, err := findContainer(cli, identity, serviceName, num)
 		if err != nil {
 			return err
 		}
@@ -264,8 +278,13 @@ func getExpectPort(portConfig interface{}) (int, error) {
 	return 0, fmt.Errorf("unknown port information: %v", portConfig)
 }
 
-func findContainer(c *client.Client, instanceName string) (*types.Container, error) {
-	f := filters.NewArgs(filters.Arg("name", instanceName))
+func findContainer(c *client.Client, projectName, serviceName string, number int) (*types.Container, error) {
+	nameV1 := strings.Join([]string{projectName, serviceName, strconv.Itoa(number)}, SeparatorV1)
+	nameV2 := strings.Join([]string{projectName, serviceName, strconv.Itoa(number)}, SeparatorV2)
+	// filter either names
+	// 1) {project}_{service}_{number}
+	// 2) {project}-{service}-{number}
+	f := filters.NewArgs(filters.Arg("name", nameV1), filters.Arg("name", nameV2))
 	containerListOptions := types.ContainerListOptions{Filters: f}
 	containers, err := c.ContainerList(context.Background(), containerListOptions)
 	if err != nil {
@@ -273,20 +292,22 @@ func findContainer(c *client.Client, instanceName string) (*types.Container, err
 	}
 
 	if len(containers) == 0 {
-		return nil, fmt.Errorf("could not found container: %s", instanceName)
+		return nil, fmt.Errorf("could not found container: %s(docker-compose v1) or %s(docker-compose v2)", nameV1, nameV2)
 	}
 	return &containers[0], nil
 }
 
-func getInstanceName(serviceName string) string {
-	match, err := regexp.MatchString(".*_[0-9]+", serviceName)
+func getInstanceName(serviceName string) (service string, number int) {
+	matches := containerNamePattern.FindStringSubmatch(serviceName)
+	if len(matches) == 0 {
+		return serviceName, 1
+	}
+	numberStr := matches[0]
+	number, err := strconv.Atoi(numberStr)
 	if err != nil {
-		return serviceName
+		return serviceName, 1
 	}
-	if !match {
-		return serviceName + "_1"
-	}
-	return serviceName
+	return serviceName, number
 }
 
 // hostPortCachedStrategy cached original target
