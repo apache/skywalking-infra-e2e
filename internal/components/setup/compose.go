@@ -51,7 +51,7 @@ const (
 )
 
 var (
-	containerNamePattern = regexp.MustCompile(".*_(?P<containerNum>[0-9]+)$")
+	containerNamePattern = regexp.MustCompile(`.*_(?P<containerNum>\d+)$`)
 )
 
 // ComposeSetup sets up environment according to e2e.yaml.
@@ -297,7 +297,7 @@ func findContainer(c *client.Client, projectName, serviceName string, number int
 	return &containers[0], nil
 }
 
-func getInstanceName(serviceName string) (string, int) {
+func getInstanceName(serviceName string) (service string, number int) {
 	matches := containerNamePattern.FindStringSubmatch(serviceName)
 	if len(matches) == 0 {
 		return serviceName, 1
