@@ -79,7 +79,8 @@ func (h *httpAction) Do() chan error {
 			case <-t.C:
 				err := h.execute()
 
-				// `h.times == h.executedCount` makes sure to only send the first error
+				// `err == nil`: if no error occurs, everything is OK and send `nil` to the channel to continue.
+				// `h.times == h.executedCount`: reach to the maximum retry count and send the `err`, no matter it's `nil` or not.
 				if !sent && (err == nil || h.times == h.executedCount) {
 					result <- err
 					sent = true
