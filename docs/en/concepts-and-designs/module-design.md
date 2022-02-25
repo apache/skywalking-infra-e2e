@@ -66,7 +66,7 @@ Generate traffic by trigger the action, It could access `HTTP API` or execute `c
 
 It could have these settings:
 1. **interval**: How frequency to trigger the action.
-1. **times**: how many times the operation is triggered before aborting on the condition that trigger had failed always. `0=infinite`.
+1. **times**: How many times the operation is triggered before aborting on the condition that the trigger had failed always. `0=infinite`.
 1. **action**: The action of the trigger.
 
 ### Verify
