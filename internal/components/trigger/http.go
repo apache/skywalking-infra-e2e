@@ -79,7 +79,8 @@ func (h *httpAction) Do() chan error {
 			case <-t.C:
 				err := h.execute()
 
-				// `h.times == h.executedCount` makes sure to only send the first error
+				// `send == false && h.times == h.executedCount` makes sure to only send firstly the error and
+				// ignore errors before.
 				if !sent && (err == nil || h.times == h.executedCount) {
 					result <- err
 					sent = true
