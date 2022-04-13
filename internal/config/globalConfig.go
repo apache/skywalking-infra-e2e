@@ -20,7 +20,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -53,7 +52,7 @@ func ReadGlobalConfigFile() {
 		return
 	}
 
-	data, err := ioutil.ReadFile(util.CfgFile)
+	data, err := os.ReadFile(util.CfgFile)
 	if err != nil {
 		GlobalConfig.Error = fmt.Errorf("read e2e config file %s error: %s", util.CfgFile, err)
 		return
@@ -115,7 +114,7 @@ func convertSingleCase(verifyCase VerifyCase, baseFile string) ([]VerifyCase, er
 			return nil, fmt.Errorf("reuse case config file %s not exist", includePath)
 		}
 
-		data, err := ioutil.ReadFile(includePath)
+		data, err := os.ReadFile(includePath)
 		if err != nil {
 			return nil, fmt.Errorf("reuse case config file %s error: %s", includePath, err)
 		}

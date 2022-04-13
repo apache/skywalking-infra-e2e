@@ -21,7 +21,6 @@ package util
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,7 +67,7 @@ func ConnectToK8sCluster(kubeConfigPath string) (info *K8sClusterInfo, err error
 		return nil, err
 	}
 
-	kubeConfigYaml, err := ioutil.ReadFile(kubeConfigPath)
+	kubeConfigYaml, err := os.ReadFile(kubeConfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +167,7 @@ func GetManifests(manifests string) (files []string, err error) {
 
 // OperateManifest operates manifest in k8s cluster which kind created.
 func OperateManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest string, operation apiv1.Operation) error {
-	b, err := ioutil.ReadFile(manifest)
+	b, err := os.ReadFile(manifest)
 	if err != nil {
 		return err
 	}
