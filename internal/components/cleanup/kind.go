@@ -19,7 +19,6 @@
 package cleanup
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -57,7 +56,7 @@ func KindCleanUp(e2eConfig *config.E2EConfig) error {
 }
 
 func getKindClusterName(kindConfigFilePath string) (name string, err error) {
-	data, err := ioutil.ReadFile(kindConfigFilePath)
+	data, err := os.ReadFile(kindConfigFilePath)
 	if err != nil {
 		return "", err
 	}

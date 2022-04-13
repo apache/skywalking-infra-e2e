@@ -22,7 +22,6 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,7 +43,7 @@ func PathExist(_path string) bool {
 // ReadFileContent reads the file content.
 func ReadFileContent(filename string) (string, error) {
 	if PathExist(filename) {
-		content, err := ioutil.ReadFile(filename)
+		content, err := os.ReadFile(filename)
 		if err != nil {
 			return "", err
 		}
@@ -102,7 +101,7 @@ func hookScript() (string, error) {
 }
 
 func ExportEnvVars(envFile string) {
-	b, err := ioutil.ReadFile(envFile)
+	b, err := os.ReadFile(envFile)
 	if err != nil {
 		logger.Log.Warnf("failed to export environment variables, %v", err)
 		return
