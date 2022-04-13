@@ -26,5 +26,5 @@ If you already have Go SDK installed, you can also directly install `e2e` via `g
 go install github.com/apache/skywalking-infra-e2e/cmd/e2e@<revision>
 ```
 
-Note that installation via `go install` is only supported after Git commit (TODO after this gets merged)
+Note that installation via `go install` is only supported after Git commit [2a33478](https://github.com/apache/skywalking-infra-e2e/commit/2a3347824633780b9e785d03124709170e1b9f08)
 so you can only `go install` a revision afterwards.
