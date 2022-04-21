@@ -21,6 +21,7 @@ package cleanup
 import (
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
@@ -29,6 +30,11 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
+)
+
+const (
+	maxRetry      = 5
+	retryInterval = 2 // in seconds
 )
 
 type KindClusterNameConfig struct {
@@ -74,7 +80,7 @@ func getKindClusterName(kindConfigFilePath string) (name string, err error) {
 	return nameConfig.Name, nil
 }
 
-func cleanKindCluster(kindConfigFilePath string) error {
+func cleanKindCluster(kindConfigFilePath string) (err error) {
 	clusterName, err := getKindClusterName(kindConfigFilePath)
 	if err != nil {
 		return err
@@ -83,5 +89,14 @@ func cleanKindCluster(kindConfigFilePath string) error {
 	args := []string{"delete", "cluster", "--name", clusterName}
 
 	logger.Log.Debugf("cluster delete commands: %s %s", constant.KindCommand, strings.Join(args, " "))
-	return kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args)
+
+	// Sometimes kind delete cluster failed, so we retry it.
+	for i := 0; i < maxRetry; i++ {
+		if err = kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err == nil {
+			return nil
+		}
+		time.Sleep(retryInterval * time.Second)
+	}
+
+	return
 }
