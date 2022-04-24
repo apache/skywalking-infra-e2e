@@ -65,7 +65,8 @@ func regexpMatch(s, pattern string) string {
 		return fmt.Sprintf(`<%q>`, err)
 	}
 	if !matched {
-		return fmt.Sprintf("<%q does not match the pattern %q>", s, pattern)
+		// Note: Changing %s to %q for s would throw yaml parsing error
+		return fmt.Sprintf("<%s does not match the pattern %q>", s, pattern)
 	}
 	return s
 }
