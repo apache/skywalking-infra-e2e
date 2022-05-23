@@ -6,6 +6,7 @@ Release Notes.
 ------------------
 #### Features
 * Expand kind file path with system environment.
+* Support shutdown service during setup phase in compose mode.
 
 #### Bug Fixes
 * Fix the problem of parsing `verify.retry.interval` without setting value.
