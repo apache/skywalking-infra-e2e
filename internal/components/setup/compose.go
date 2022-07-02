@@ -246,7 +246,7 @@ func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.L
 	waitTimeout := e2eConfig.Setup.GetTimeout()
 	services := make([]*ComposeService, 0)
 	for service, content := range compose.Services {
-		serviceConfig := content.(map[interface{}]interface{})
+		serviceConfig := content.(map[any]any)
 		ports := serviceConfig["ports"]
 		serviceContext := &ComposeService{Name: service}
 		services = append(services, serviceContext)
@@ -254,7 +254,7 @@ func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.L
 			continue
 		}
 
-		portList := ports.([]interface{})
+		portList := ports.([]any)
 		for inx := range portList {
 			exportPort, err := getExpectPort(portList[inx])
 			if err != nil {
@@ -273,7 +273,7 @@ func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.L
 	return services, nil
 }
 
-func getExpectPort(portConfig interface{}) (int, error) {
+func getExpectPort(portConfig any) (int, error) {
 	switch conf := portConfig.(type) {
 	case int:
 		return conf, nil

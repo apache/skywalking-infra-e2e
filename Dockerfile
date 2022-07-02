@@ -16,7 +16,7 @@
 # under the License.
 #
 
-FROM golang:1.16 AS build
+FROM golang:1.18 AS build
 
 WORKDIR /e2e
 
@@ -24,7 +24,7 @@ COPY . .
 
 RUN make linux
 
-FROM golang:1.16 AS bin
+FROM golang:1.18 AS bin
 
 COPY --from=build /e2e/bin/linux/e2e /usr/local/bin/e2e
 

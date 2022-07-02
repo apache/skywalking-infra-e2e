@@ -30,14 +30,14 @@ import (
 // Use this to pass the functions into the template engine:
 // 	tpl := template.New("foo").Funcs(funcMap()))
 func funcMap() template.FuncMap {
-	fm := make(map[string]interface{}, len(customFuncMap))
+	fm := make(map[string]any, len(customFuncMap))
 	for k, v := range customFuncMap {
 		fm[k] = v
 	}
 	return template.FuncMap(fm)
 }
 
-var customFuncMap = map[string]interface{}{
+var customFuncMap = map[string]any{
 	// Basic:
 	"notEmpty": notEmpty,
 

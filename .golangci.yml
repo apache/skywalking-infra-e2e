@@ -18,6 +18,7 @@
 
 run:
   tests: false
+  go: "1.18"
   skip-dirs:
     - third-party
 
@@ -96,7 +97,6 @@ linters-settings:
 
 linters:
   enable:
-    - bodyclose
     - deadcode
     - depguard
     - dogsled
@@ -117,14 +117,14 @@ linters:
     - misspell
     - nakedret
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
-    - unparam
     - unused
     - varcheck
     - whitespace
+  disable:
+    - structcheck
 
 service:
   golangci-lint-version: 1.20.x

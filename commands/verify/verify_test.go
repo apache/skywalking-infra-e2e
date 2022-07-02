@@ -24,7 +24,7 @@ import (
 
 func Test_parseInterval(t *testing.T) {
 	type args struct {
-		retryInterval interface{}
+		retryInterval any
 	}
 	tests := []struct {
 		name    string
