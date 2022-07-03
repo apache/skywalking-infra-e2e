@@ -45,7 +45,7 @@ func (e *MismatchError) Error() string {
 
 // Verify checks if the actual data match the expected template.
 func Verify(actualData, expectedTemplate string) error {
-	var actual interface{}
+	var actual any
 	if err := yaml.Unmarshal([]byte(actualData), &actual); err != nil {
 		return fmt.Errorf("failed to unmarshal actual data: %v", err)
 	}
@@ -60,7 +60,7 @@ func Verify(actualData, expectedTemplate string) error {
 		return fmt.Errorf("failed to execute template: %v", err)
 	}
 
-	var expected interface{}
+	var expected any
 	if err := yaml.Unmarshal(b.Bytes(), &expected); err != nil {
 		return fmt.Errorf("failed to unmarshal expected data: %v", err)
 	}

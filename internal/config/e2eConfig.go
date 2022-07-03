@@ -37,12 +37,12 @@ type E2EConfig struct {
 }
 
 type Setup struct {
-	Env                   string      `yaml:"env"`
-	File                  string      `yaml:"file"`
-	Steps                 []Step      `yaml:"steps"`
-	Timeout               interface{} `yaml:"timeout"`
-	InitSystemEnvironment string      `yaml:"init-system-environment"`
-	Kind                  KindSetup   `yaml:"kind"`
+	Env                   string    `yaml:"env"`
+	File                  string    `yaml:"file"`
+	Steps                 []Step    `yaml:"steps"`
+	Timeout               any       `yaml:"timeout"`
+	InitSystemEnvironment string    `yaml:"init-system-environment"`
+	Kind                  KindSetup `yaml:"kind"`
 
 	timeout time.Duration
 }
@@ -132,8 +132,8 @@ type VerifyCase struct {
 }
 
 type VerifyRetryStrategy struct {
-	Count    int         `yaml:"count"`
-	Interval interface{} `yaml:"interval"`
+	Count    int `yaml:"count"`
+	Interval any `yaml:"interval"`
 }
 
 type ReusingCases struct {
@@ -153,7 +153,7 @@ func (v *VerifyCase) GetExpected() string {
 // parseInterval parses a Duration field with number and string content for compatibility,
 // only use this when we previously allow configuring number like 120 and now string like 2m.
 // TODO remove this in 2.0
-func parseInterval(retryInterval interface{}, name string) (time.Duration, error) {
+func parseInterval(retryInterval any, name string) (time.Duration, error) {
 	var interval time.Duration
 	var err error
 	switch itv := retryInterval.(type) {

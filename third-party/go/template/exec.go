@@ -130,7 +130,7 @@ func (e ExecError) Unwrap() error {
 }
 
 // errorf records an ExecError and terminates processing.
-func (s *state) errorf(format string, args ...interface{}) {
+func (s *state) errorf(format string, args ...any) {
 	name := doublePercent(s.tmpl.Name())
 	if s.node == nil {
 		format = fmt.Sprintf("template: %s: %s", name, format)
@@ -183,7 +183,7 @@ func errRecover(errp *error) {
 // the output writer.
 // A template may be executed safely in parallel, although if parallel
 // executions share a Writer the output may be interleaved.
-func (t *Template) ExecuteTemplate(wr io.Writer, name string, data interface{}) error {
+func (t *Template) ExecuteTemplate(wr io.Writer, name string, data any) error {
 	var tmpl *Template
 	if t.common != nil {
 		tmpl = t.tmpl[name]
@@ -204,11 +204,11 @@ func (t *Template) ExecuteTemplate(wr io.Writer, name string, data interface{}) 
 //
 // If data is a reflect.Value, the template applies to the concrete
 // value that the reflect.Value holds, as in fmt.Print.
-func (t *Template) Execute(wr io.Writer, data interface{}) error {
+func (t *Template) Execute(wr io.Writer, data any) error {
 	return t.execute(wr, data)
 }
 
-func (t *Template) execute(wr io.Writer, data interface{}) (err error) {
+func (t *Template) execute(wr io.Writer, data any) (err error) {
 	defer errRecover(&err)
 	value, ok := data.(reflect.Value)
 	if !ok {
@@ -307,13 +307,13 @@ func (s *state) walkIfOrWith(typ parse.NodeType, dot reflect.Value, pipe *parse.
 // IsTrue reports whether the value is 'true', in the sense of not the zero of its type,
 // and whether the value has a meaningful truth value. This is the definition of
 // truth used by if and other such actions.
-func IsTrue(val interface{}) (truth, ok bool) {
+func IsTrue(val any) (truth, ok bool) {
 	return isTrue(reflect.ValueOf(val))
 }
 
 func isTrue(val reflect.Value) (truth, ok bool) {
 	if !val.IsValid() {
-		// Something like var x interface{}, never set. It's a form of nil.
+		// Something like var x any, never set. It's a form of nil.
 		return false, true
 	}
 	switch val.Kind() {
@@ -407,7 +407,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 	val, _ := indirect(s.evalPipeline(dot, r.Pipe))
 	// mark top of stack before any variables in the body are pushed.
 	mark := s.mark()
-	oneIteration := func(index, elem reflect.Value) []interface{} {
+	oneIteration := func(index, elem reflect.Value) []any {
 		var b bytes.Buffer
 		ob := s.wr
 		s.wr = &b
@@ -426,7 +426,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		s.wr = ob
 
 		// the contents inside `contains` must be an array
-		var re []interface{}
+		var re []any
 		if err := yaml.Unmarshal(b.Bytes(), &re); err != nil {
 			logger.Log.Errorf("failed to unmarshal index: %v, %v", index, err)
 		}
@@ -440,7 +440,7 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		expectedSize := 0
 		// matched stores the matched pair of indices <expected index>: <actual index>
 		matched := make(map[int]int)
-		output := make([]interface{}, val.Len())
+		output := make([]any, val.Len())
 		for i := 0; i < val.Len(); i++ {
 			expectedArr := oneIteration(reflect.ValueOf(i), val.Index(i))
 			// expectedSize is the number of elements that the actual array should contain.
@@ -540,7 +540,7 @@ func (s *state) evalPipeline(dot reflect.Value, pipe *parse.PipeNode) (value ref
 	value = missingVal
 	for _, cmd := range pipe.Cmds {
 		value = s.evalCommand(dot, cmd, value) // previous value is this one's final arg.
-		// If the object has type interface{}, dig down one level to the thing inside.
+		// If the object has type any, dig down one level to the thing inside.
 		if value.Kind() == reflect.Interface && value.Type().NumMethod() == 0 {
 			value = reflect.ValueOf(value.Interface()) // lovely!
 		}
@@ -856,7 +856,7 @@ func canBeNil(typ reflect.Type) bool {
 func (s *state) validateType(value reflect.Value, typ reflect.Type) reflect.Value {
 	if !value.IsValid() {
 		if typ == nil {
-			// An untyped nil interface{}. Accept as a proper nil value.
+			// An untyped nil any. Accept as a proper nil value.
 			return reflect.ValueOf(nil)
 		}
 		if canBeNil(typ) {
@@ -1076,7 +1076,7 @@ func (s *state) printValue(n parse.Node, v reflect.Value) {
 
 // printableValue returns the, possibly indirected, interface value inside v that
 // is best for a call to formatted printer.
-func printableValue(v reflect.Value) (interface{}, bool) {
+func printableValue(v reflect.Value) (any, bool) {
 	if v.Kind() == reflect.Ptr {
 		v, _ = indirect(v) // fmt.Fprint handles nil.
 	}

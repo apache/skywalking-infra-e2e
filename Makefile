@@ -40,7 +40,7 @@ all: clean lint test build
 
 .PHONY: lint
 lint:
-	$(GO_LINT) version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_PATH)/bin -d "v1.42.1"
+	$(GO_LINT) version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_PATH)/bin -d "v1.46.2"
 	$(GO_LINT) run -v --timeout 5m ./...
 
 .PHONY: fix-lint

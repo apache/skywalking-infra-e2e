@@ -7,8 +7,8 @@ import (
 
 func TestCompare(t *testing.T) {
 	tests := []struct {
-		arg0           interface{}
-		arg1           interface{}
+		arg0           any
+		arg1           any
 		compareResults []bool
 	}{
 		// same type compare
@@ -35,7 +35,7 @@ func TestCompare(t *testing.T) {
 		},
 	}
 
-	type compare func(ar0, ar1 reflect.Value) (interface{}, error)
+	type compare func(ar0, ar1 reflect.Value) (any, error)
 	compareNames := []string{
 		"lt", "le", "ge", "gt",
 	}

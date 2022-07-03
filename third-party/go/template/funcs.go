@@ -26,10 +26,10 @@ import (
 //
 // When template execution invokes a function with an argument list, that list
 // must be assignable to the function's parameter types. Functions meant to
-// apply to arguments of arbitrary type can use parameters of type interface{} or
+// apply to arguments of arbitrary type can use parameters of type any or
 // of type reflect.Value. Similarly, functions meant to return a result of arbitrary
-// type can return interface{} or reflect.Value.
-type FuncMap map[string]interface{}
+// type can return any or reflect.Value.
+type FuncMap map[string]any
 
 // builtins returns the FuncMap.
 // It is not a global variable so the linker can dead code eliminate
@@ -573,7 +573,7 @@ func lt2bool(arg1, arg2 reflect.Value) (bool, error) {
 }
 
 // lt evaluates the comparison a < b.
-func lt(arg1, arg2 reflect.Value) (interface{}, error) {
+func lt(arg1, arg2 reflect.Value) (any, error) {
 	lessThan, err := lt2bool(arg1, arg2)
 	if err != nil {
 		return nil, err
@@ -585,7 +585,7 @@ func lt(arg1, arg2 reflect.Value) (interface{}, error) {
 }
 
 // le evaluates the comparison <= b.
-func le(arg1, arg2 reflect.Value) (interface{}, error) {
+func le(arg1, arg2 reflect.Value) (any, error) {
 	// <= is < or ==.
 	lessThan, err := lt2bool(arg1, arg2)
 	if lessThan || err != nil {
@@ -599,7 +599,7 @@ func le(arg1, arg2 reflect.Value) (interface{}, error) {
 }
 
 // gt evaluates the comparison a > b.
-func gt(arg1, arg2 reflect.Value) (interface{}, error) {
+func gt(arg1, arg2 reflect.Value) (any, error) {
 	// > is the inverse of <=.
 	less, err := lt2bool(arg1, arg2)
 	if err != nil {
@@ -618,7 +618,7 @@ func gt(arg1, arg2 reflect.Value) (interface{}, error) {
 }
 
 // ge evaluates the comparison a >= b.
-func ge(arg1, arg2 reflect.Value) (interface{}, error) {
+func ge(arg1, arg2 reflect.Value) (any, error) {
 	// >= is the inverse of <.
 	lessThan, err := lt2bool(arg1, arg2)
 	if err != nil {
@@ -702,7 +702,7 @@ func HTMLEscapeString(s string) string {
 
 // HTMLEscaper returns the escaped HTML equivalent of the textual
 // representation of its arguments.
-func HTMLEscaper(args ...interface{}) string {
+func HTMLEscaper(args ...any) string {
 	return HTMLEscapeString(evalArgs(args))
 }
 
@@ -793,13 +793,13 @@ func jsIsSpecial(r rune) bool {
 
 // JSEscaper returns the escaped JavaScript equivalent of the textual
 // representation of its arguments.
-func JSEscaper(args ...interface{}) string {
+func JSEscaper(args ...any) string {
 	return JSEscapeString(evalArgs(args))
 }
 
 // URLQueryEscaper returns the escaped value of the textual representation of
 // its arguments in a form suitable for embedding in a URL query.
-func URLQueryEscaper(args ...interface{}) string {
+func URLQueryEscaper(args ...any) string {
 	return url.QueryEscape(evalArgs(args))
 }
 
@@ -808,7 +808,7 @@ func URLQueryEscaper(args ...interface{}) string {
 // except that each argument is indirected (if a pointer), as required,
 // using the same rules as the default string evaluation during template
 // execution.
-func evalArgs(args []interface{}) string {
+func evalArgs(args []any) string {
 	ok := false
 	var s string
 	// Fast path for simple common case.

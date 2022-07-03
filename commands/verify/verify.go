@@ -121,7 +121,7 @@ func DoVerifyAccordingConfig() error {
 }
 
 // TODO remove this in 2.0.0
-func parseInterval(retryInterval interface{}) (time.Duration, error) {
+func parseInterval(retryInterval any) (time.Duration, error) {
 	var interval time.Duration
 	var err error
 	switch itv := retryInterval.(type) {
