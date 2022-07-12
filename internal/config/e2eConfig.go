@@ -88,6 +88,7 @@ type KindExposePort struct {
 type Verify struct {
 	RetryStrategy VerifyRetryStrategy `yaml:"retry"`
 	Cases         []VerifyCase        `yaml:"cases"`
+	Setting       VerifySetting       `yaml:"setting"`
 }
 
 func (s *Setup) GetFile() string {
@@ -134,6 +135,11 @@ type VerifyCase struct {
 type VerifyRetryStrategy struct {
 	Count    int `yaml:"count"`
 	Interval any `yaml:"interval"`
+}
+
+type VerifySetting struct {
+	FailFast    bool `yaml:"fail-fast"`
+	Concurrency bool `yaml:"concurrency"`
 }
 
 type ReusingCases struct {

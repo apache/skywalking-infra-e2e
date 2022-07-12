@@ -51,6 +51,13 @@ verify:
     count: 10
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
+
+  setting:
+    # whether by fail-fast or not, e.g. true, false.
+    fail-fast: true
+    # verify the cases concurrently or not, e.g. true, false
+    concurrency: true
+
   cases:
     - actual: ../../test/verify/1.actual.yaml
       expected: ../../test/verify/1.expected.yaml

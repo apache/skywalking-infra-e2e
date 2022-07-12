@@ -101,6 +101,8 @@ func DoVerifyAccordingConfig() error {
 		return err
 	}
 
+	failFast := e2eConfig.Verify.Setting.FailFast
+
 	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
 			return fmt.Errorf("the expected data file for case[%v] is not specified", idx)
@@ -112,6 +114,9 @@ func DoVerifyAccordingConfig() error {
 				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
 				time.Sleep(interval)
 			} else {
+				if failFast {
+					continue
+				}
 				return err
 			}
 		}
