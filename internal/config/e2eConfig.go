@@ -139,7 +139,6 @@ type VerifyRetryStrategy struct {
 
 type VerifySetting struct {
 	FailFast    bool `yaml:"fail-fast"`
-	Concurrency bool `yaml:"concurrency"`
 }
 
 type ReusingCases struct {

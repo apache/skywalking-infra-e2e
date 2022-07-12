@@ -55,8 +55,7 @@ verify:
   setting:
     # whether by fail-fast or not, e.g. true, false.
     fail-fast: true
-    # verify the cases concurrently or not, e.g. true, false
-    concurrency: true
+
 
   cases:
     - actual: ../../test/verify/1.actual.yaml
