@@ -159,7 +159,7 @@ verify:
   retry:            # verify with retry strategy
     count: 10       # max retry count
     interval: 10s   # the interval between two attempts, e.g. 10s, 1m.
-  fail-fast: false  # when a case fails, whether to stop verifying other cases. This property defaults to false.
+  fail-fast: true  # when a case fails, whether to stop verifying other cases. This property defaults to true.
   cases:            # verify test cases
     - actual: path/to/actual.yaml       # verify by actual file path
       expected: path/to/expected.yaml   # excepted content file path
