@@ -169,7 +169,7 @@ verify:
         - path/to/cases.yaml            # cases file path
 ```
 
-The test cases are executed in the order of declaration from top to bottom.When verifying a case, if the execution fails, and the retry strategy is exceeded, whether to stop verifying other cases depends on the value of "fail-fast". If the value of "fail-fast" is "false", the process will continue to verify the other cases.
+The test cases are executed in the order of declaration from top to bottom. When the execution of a case fails and the retry strategy is exceeded, it will stop verifying other cases if `fail-fast` is `true`. Otherwise,  the process will continue to verify other cases.
 
 ### Retry strategy
 
