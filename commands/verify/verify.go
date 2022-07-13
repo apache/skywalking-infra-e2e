@@ -105,10 +105,12 @@ func DoVerifyAccordingConfig() error {
 
 	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
+			err := fmt.Errorf("the expected data file for case[%v] is not specified", idx)
 			if !failFast {
+				logger.Log.Warnf("the expected data file for case[%v] is not specified, will continue to verify the next case", idx)
 				continue
 			}
-			return fmt.Errorf("the expected data file for case[%v] is not specified", idx)
+			return err
 		}
 		for current := 1; current <= retryCount; current++ {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
