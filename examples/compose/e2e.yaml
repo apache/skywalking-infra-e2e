@@ -52,8 +52,8 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 10s
 
-  # when a case fails, whether to stop verifying other cases. This property defaults to false.
-  fail-fast: false
+  # when a case fails, whether to stop verifying other cases. This property defaults to true.
+  fail-fast: true
 
 
   cases:
