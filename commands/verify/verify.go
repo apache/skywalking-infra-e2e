@@ -110,7 +110,7 @@ func DoVerifyAccordingConfig() error {
 				logger.Log.Warnf(errMsg)
 				continue
 			}
-			return fmt.Errorf("%s",errMsg)
+			return errors.New(errMsg)
 		}
 		for current := 1; current <= retryCount; current++ {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
