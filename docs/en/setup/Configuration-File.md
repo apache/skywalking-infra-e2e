@@ -159,6 +159,7 @@ verify:
   retry:            # verify with retry strategy
     count: 10       # max retry count
     interval: 10s   # the interval between two attempts, e.g. 10s, 1m.
+  fail-fast: false  # when a case fails, whether to stop verifying other cases. This property defaults to false.
   cases:            # verify test cases
     - actual: path/to/actual.yaml       # verify by actual file path
       expected: path/to/expected.yaml   # excepted content file path
@@ -168,7 +169,7 @@ verify:
         - path/to/cases.yaml            # cases file path
 ```
 
-The test cases are executed in the order of declaration from top to bottom, If the execution fails, and the retry strategy is exceeded, the process is deemed to have failed.
+The test cases are executed in the order of declaration from top to bottom.When verifying a case, if the execution fails, and the retry strategy is exceeded, whether to stop verifying other cases depends on the value of "fail-fast". If the value of "fail-fast" is "false", the process will continue to verify the other cases.
 
 ### Retry strategy
 

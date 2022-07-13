@@ -101,7 +101,7 @@ func DoVerifyAccordingConfig() error {
 		return err
 	}
 
-	failFast := e2eConfig.Verify.Setting.FailFast
+	failFast := e2eConfig.Verify.FailFast
 
 	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
