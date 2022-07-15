@@ -18,6 +18,7 @@
 package verify
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/spf13/cobra"
-	"errors"
 )
 
 var (
