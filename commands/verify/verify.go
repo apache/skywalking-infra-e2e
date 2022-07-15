@@ -42,6 +42,7 @@ func init() {
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 }
 
+//Verify has its meaning
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "verify if the actual data match the expected data",
