@@ -42,7 +42,7 @@ func init() {
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 }
 
-//Verify has its meaning
+//Verify verifies that the actual data satisfies the expected data pattern.
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "verify if the actual data match the expected data",
@@ -105,15 +105,19 @@ func DoVerifyAccordingConfig() error {
 
 	failFast := e2eConfig.Verify.FailFast
 
+	var errMsgList []string
 	for idx, v := range e2eConfig.Verify.Cases {
+
 		if v.GetExpected() == "" {
-			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified", idx)
-			if !failFast {
-				logger.Log.Warnf(errMsg)
-				continue
+			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
+			if failFast {
+				return errors.New(errMsg)
 			}
-			return errors.New(errMsg)
+			logger.Log.Warnf(errMsg)
+			errMsgList = append(errMsgList, errMsg)
+			continue
 		}
+
 		for current := 1; current <= retryCount; current++ {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 				break
@@ -121,15 +125,15 @@ func DoVerifyAccordingConfig() error {
 				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
 				time.Sleep(interval)
 			} else {
-				if !failFast {
-					break
+				if failFast {
+					return err
 				}
-				return err
+				errMsgList = append(errMsgList, err.Error())
 			}
 		}
 	}
-
-	return nil
+	errMsg := fmt.Sprint(errMsgList)
+	return errors.New(errMsg)
 }
 
 // TODO remove this in 2.0.0
