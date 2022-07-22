@@ -2,24 +2,15 @@ Changes by Version
 ==================
 Release Notes.
 
-1.2.0
+1.3.0
 ------------------
 #### Features
-* Expand kind file path with system environment.
-* Support shutdown service during setup phase in compose mode.
-* Expand kind file path with system environment. 
-* Support arbitrary os and arch.
-* Support `docker-compose` v2 container naming.
-* Support installing via `go install` and add install doc.
-* Add retry when delete kind cluster.
-* Upgrade to go1.18.
+* Support `sha256enc` and `sha512enc` encoding in verify case.
 
 #### Bug Fixes
-* Fix the problem of parsing `verify.retry.interval` without setting value.
 
 #### Documentation
-* Make `trigger.times` parameter doc more clear.
 
 #### Issues and PR
-- All issues are [here](https://github.com/apache/skywalking/milestone/111?closed=1)
-- All and pull requests are [here](https://github.com/apache/skywalking-infra-e2e/pulls?q=is%3Apr+is%3Aclosed+milestone%3A1.2.0)
+- All issues are [here](https://github.com/apache/skywalking/milestone/148?closed=1)
+- All and pull requests are [here](https://github.com/apache/skywalking-infra-e2e/milestone/4?closed=1)

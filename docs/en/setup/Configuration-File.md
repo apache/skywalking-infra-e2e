@@ -228,6 +228,8 @@ In order to make the program easier for users to read and use, some code convers
 |Function|Description|Grammar|Result|
 |-------|------------|-------|------|
 |b64enc|Base64 encode|{{ b64enc "Foo" }}|Zm9v|
+|sha256enc|Sha256 encode|{{ sha256enc "Foo" }}|1cbec737f863e4922cee63cc2ebbfaafcd1cff8b790d8cfd2e6a5d550b648afa|
+|sha512enc|Sha512 encode|{{ sha512enc "Foo" }}|4abcd2639957cb23e33f63d70659b602a5923fafcfd2768ef79b0badea637e5c837161aa101a557a1d4deacbd912189e2bb11bf3c0c0c70ef7797217da7e8207|
 
 ### Reuse cases
 
