@@ -42,7 +42,7 @@ func init() {
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 }
 
-//Verify verifies that the actual data satisfies the expected data pattern.
+// Verify verifies that the actual data satisfies the expected data pattern.
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "verify if the actual data match the expected data",
@@ -107,7 +107,6 @@ func DoVerifyAccordingConfig() error {
 
 	var errMsgList []string
 	for idx, v := range e2eConfig.Verify.Cases {
-
 		if v.GetExpected() == "" {
 			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
 			if failFast {

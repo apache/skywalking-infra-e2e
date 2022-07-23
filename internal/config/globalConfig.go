@@ -44,6 +44,8 @@ func init() {
 	} else {
 		GlobalConfig.E2EConfig.Cleanup.On = constant.CleanUpOnSuccess
 	}
+
+	GlobalConfig.E2EConfig.Verify.FailFast = true
 }
 
 func ReadGlobalConfigFile() {
