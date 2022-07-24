@@ -20,7 +20,6 @@ package verify
 import (
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
@@ -28,6 +27,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 )
 
