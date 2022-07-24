@@ -20,6 +20,7 @@ package verify
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
@@ -105,7 +106,7 @@ func DoVerifyAccordingConfig() error {
 
 	failFast := e2eConfig.Verify.FailFast
 
-	var errMsgList []string
+	var errCollection *multierror.Error
 	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
 			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
@@ -113,7 +114,7 @@ func DoVerifyAccordingConfig() error {
 				return errors.New(errMsg)
 			}
 			logger.Log.Warnf(errMsg)
-			errMsgList = append(errMsgList, errMsg)
+			errCollection = multierror.Append(errCollection, errors.New(errMsg))
 			continue
 		}
 
@@ -127,12 +128,12 @@ func DoVerifyAccordingConfig() error {
 				if failFast {
 					return err
 				}
-				errMsgList = append(errMsgList, err.Error())
+				errCollection = multierror.Append(errCollection, err)
 			}
 		}
 	}
-	errMsg := fmt.Sprint(errMsgList)
-	return errors.New(errMsg)
+
+	return errCollection.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0
