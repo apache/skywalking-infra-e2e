@@ -18,6 +18,7 @@
 package verify
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +43,7 @@ func init() {
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 }
 
+// Verify verifies that the actual data satisfies the expected data pattern.
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "verify if the actual data match the expected data",
@@ -101,10 +104,20 @@ func DoVerifyAccordingConfig() error {
 		return err
 	}
 
+	failFast := e2eConfig.Verify.FailFast
+
+	var errCollection *multierror.Error
 	for idx, v := range e2eConfig.Verify.Cases {
 		if v.GetExpected() == "" {
-			return fmt.Errorf("the expected data file for case[%v] is not specified", idx)
+			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
+			if failFast {
+				return errors.New(errMsg)
+			}
+			logger.Log.Warnf(errMsg)
+			errCollection = multierror.Append(errCollection, errors.New(errMsg))
+			continue
 		}
+
 		for current := 1; current <= retryCount; current++ {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 				break
@@ -112,12 +125,15 @@ func DoVerifyAccordingConfig() error {
 				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
 				time.Sleep(interval)
 			} else {
-				return err
+				if failFast {
+					return err
+				}
+				errCollection = multierror.Append(errCollection, err)
 			}
 		}
 	}
 
-	return nil
+	return errCollection.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0

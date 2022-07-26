@@ -88,6 +88,7 @@ type KindExposePort struct {
 type Verify struct {
 	RetryStrategy VerifyRetryStrategy `yaml:"retry"`
 	Cases         []VerifyCase        `yaml:"cases"`
+	FailFast      bool                `yaml:"fail-fast"`
 }
 
 func (s *Setup) GetFile() string {
