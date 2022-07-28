@@ -55,6 +55,9 @@ verify:
   # when a case fails, whether to stop verifying other cases. This property defaults to true.
   fail-fast: true
 
+  # whether to verify the cases concurrently. This property defaults to false.
+  concurrency: false
+
 
   cases:
     - actual: ../../test/verify/1.actual.yaml
