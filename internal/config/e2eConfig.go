@@ -89,6 +89,7 @@ type Verify struct {
 	RetryStrategy VerifyRetryStrategy `yaml:"retry"`
 	Cases         []VerifyCase        `yaml:"cases"`
 	FailFast      bool                `yaml:"fail-fast"`
+	Concurrency   bool                `yaml:"concurrency"`
 }
 
 func (s *Setup) GetFile() string {

@@ -20,6 +20,7 @@ package verify
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
@@ -87,6 +88,38 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
+type ErrContain struct {
+	errAddr *multierror.Error
+	mutex   sync.Mutex
+}
+
+func concurrentVerifySingleCase(idx int, v config.VerifyCase, errContain *ErrContain, retry int, interval time.Duration, wg *sync.WaitGroup) {
+	if v.GetExpected() == "" {
+		errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
+		logger.Log.Warnf(errMsg)
+		errContain.mutex.Lock()
+		errContain.errAddr = multierror.Append(errContain.errAddr, errors.New(errMsg))
+		errContain.mutex.Unlock()
+		wg.Done()
+		return
+	}
+
+	for current := 1; current <= retry; current++ {
+		if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+			break
+		} else if current != retry {
+			logger.Log.Warnf("verify case[%v] failure, will continue retry, %v", idx, err)
+			time.Sleep(interval)
+		} else {
+			errContain.mutex.Lock()
+			errContain.errAddr = multierror.Append(errContain.errAddr, err)
+			errContain.mutex.Unlock()
+		}
+	}
+
+	wg.Done()
+}
+
 // DoVerifyAccordingConfig reads cases from the config file and verifies them.
 func DoVerifyAccordingConfig() error {
 	if config.GlobalConfig.Error != nil {
@@ -105,35 +138,52 @@ func DoVerifyAccordingConfig() error {
 	}
 
 	failFast := e2eConfig.Verify.FailFast
+	concurrency := e2eConfig.Verify.Concurrency
 
-	var errCollection *multierror.Error
-	for idx, v := range e2eConfig.Verify.Cases {
-		if v.GetExpected() == "" {
-			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
-			if failFast {
-				return errors.New(errMsg)
-			}
-			logger.Log.Warnf(errMsg)
-			errCollection = multierror.Append(errCollection, errors.New(errMsg))
-			continue
+	var errCollection multierror.Error
+
+	errContain := ErrContain{
+		errAddr: &errCollection,
+	}
+
+	if concurrency {
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(len(e2eConfig.Verify.Cases))
+
+		for idx, v := range e2eConfig.Verify.Cases {
+			go concurrentVerifySingleCase(idx, v, &errContain, retryCount, interval, &waitGroup)
 		}
 
-		for current := 1; current <= retryCount; current++ {
-			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-				break
-			} else if current != retryCount {
-				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
-				time.Sleep(interval)
-			} else {
+		waitGroup.Wait()
+	} else {
+		for idx, v := range e2eConfig.Verify.Cases {
+			if v.GetExpected() == "" {
+				errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
 				if failFast {
-					return err
+					return errors.New(errMsg)
 				}
-				errCollection = multierror.Append(errCollection, err)
+				logger.Log.Warnf(errMsg)
+				errContain.errAddr = multierror.Append(errContain.errAddr, errors.New(errMsg))
+				continue
+			}
+
+			for current := 1; current <= retryCount; current++ {
+				if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+					break
+				} else if current != retryCount {
+					logger.Log.Warnf("verify case failure, will continue retry, %v", err)
+					time.Sleep(interval)
+				} else {
+					if failFast {
+						return err
+					}
+					errContain.errAddr = multierror.Append(errContain.errAddr, err)
+				}
 			}
 		}
 	}
 
-	return errCollection.ErrorOrNil()
+	return errContain.errAddr.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0
