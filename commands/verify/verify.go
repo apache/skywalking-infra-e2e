@@ -88,12 +88,11 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
-// ErrContain has two fields. The errAddr field is a pointer points to Err. Err's type is "multierror.Error".
-// When an error occurs during concurrently verifying cases, the process will append the new error to Err.Errors.
-// The Err.Errors is []error, which contains all errors occurring during the verification. errAddr points to Err.
-type ErrContain struct {
-	errAddr *multierror.Error
-	mutex   sync.Mutex
+// concurrentErrors store errors that occurred when verifying cases in goroutines.
+type concurrentErrors struct {
+	errs  *multierror.Error
+	mutex sync.Mutex
+	count int
 }
 
 // verifyInfo contains necessary information about verification
@@ -103,38 +102,63 @@ type verifyInfo struct {
 	failFast   bool
 }
 
-func concurrentSafeErrAppend(errContain *ErrContain, err error) {
-	errContain.mutex.Lock()
-	errContain.errAddr = multierror.Append(errContain.errAddr, err)
-	errContain.mutex.Unlock()
+func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
+	concurrentError.mutex.Lock()
+	concurrentError.errs = multierror.Append(concurrentError.errs, err)
+	concurrentError.mutex.Unlock()
 }
 
-func concurrentVerifySingleCase(idx int, v config.VerifyCase, errContain *ErrContain, verify verifyInfo, wg *sync.WaitGroup, chanBool chan bool) {
+func concurrentSafeCountLess(concurrentError *concurrentErrors) {
+	concurrentError.mutex.Lock()
+	concurrentError.count--
+	concurrentError.mutex.Unlock()
+}
+
+func check(stopChan chan struct{}, concurrentErrors *concurrentErrors) error {
+	for {
+		if concurrentErrors.count == 0 {
+			break
+		}
+		_, ok := <-stopChan
+		if ok {
+			return concurrentErrors.errs.ErrorOrNil()
+		}
+	}
+
+	return nil
+}
+
+func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentErrors, verify verifyInfo, wg *sync.WaitGroup, stopChan chan struct{}) {
+	var err error
+
+	defer func() {
+		if err != nil {
+			concurrentSafeErrAppend(errs, err)
+			if verify.failFast {
+				stopChan <- struct{}{}
+			}
+		}
+		if verify.failFast {
+			concurrentSafeCountLess(errs)
+		}
+		wg.Done()
+	}()
+
 	if v.GetExpected() == "" {
 		errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
 		logger.Log.Warnf(errMsg)
-		concurrentSafeErrAppend(errContain, errors.New(errMsg))
-		if verify.failFast {
-			chanBool <- true
-		}
-		wg.Done()
+		err = errors.New(errMsg)
 		return
 	}
 
 	for current := 1; current <= verify.retryCount; current++ {
-		if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+		if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 			break
 		} else if current != verify.retryCount {
 			logger.Log.Warnf("verify case[%v] failure, will continue retry, %v", idx, err)
 			time.Sleep(verify.interval)
-		} else {
-			concurrentSafeErrAppend(errContain, err)
-			if verify.failFast {
-				chanBool <- true
-			}
 		}
 	}
-	wg.Done()
 }
 
 func checkForRetryCount(retryCount int) int {
@@ -164,36 +188,34 @@ func DoVerifyAccordingConfig() error {
 	failFast := e2eConfig.Verify.FailFast
 	concurrency := e2eConfig.Verify.Concurrency
 
-	var errCollection multierror.Error
-
-	errContain := ErrContain{
-		errAddr: &errCollection,
-	}
+	var Errs *multierror.Error
 
 	if concurrency {
 		var waitGroup sync.WaitGroup
+		ConcurrentErrors := concurrentErrors{
+			errs:  Errs,
+			count: len(e2eConfig.Verify.Cases),
+		}
+
 		VerifyInfo := verifyInfo{
 			retryCount,
 			interval,
 			failFast,
 		}
-		chanBool := make(chan bool, 1)
+		stopChan := make(chan struct{})
 		waitGroup.Add(len(e2eConfig.Verify.Cases))
 
 		for idx, v := range e2eConfig.Verify.Cases {
-			go concurrentVerifySingleCase(idx, v, &errContain, VerifyInfo, &waitGroup, chanBool)
+			go concurrentVerifySingleCase(idx, v, &ConcurrentErrors, VerifyInfo, &waitGroup, stopChan)
 		}
 
 		if failFast {
-			for {
-				result := <-chanBool
-				if result {
-					return errContain.errAddr.ErrorOrNil()
-				}
+			if err := check(stopChan, &ConcurrentErrors); err != nil {
+				return err
 			}
 		}
-
 		waitGroup.Wait()
+		Errs = ConcurrentErrors.errs
 	} else {
 		for idx, v := range e2eConfig.Verify.Cases {
 			if v.GetExpected() == "" {
@@ -202,7 +224,7 @@ func DoVerifyAccordingConfig() error {
 					return errors.New(errMsg)
 				}
 				logger.Log.Warnf(errMsg)
-				errContain.errAddr = multierror.Append(errContain.errAddr, errors.New(errMsg))
+				Errs = multierror.Append(Errs, errors.New(errMsg))
 				continue
 			}
 
@@ -216,13 +238,13 @@ func DoVerifyAccordingConfig() error {
 					if failFast {
 						return err
 					}
-					errContain.errAddr = multierror.Append(errContain.errAddr, err)
+					Errs = multierror.Append(Errs, err)
 				}
 			}
 		}
 	}
 
-	return errContain.errAddr.ErrorOrNil()
+	return Errs.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0
