@@ -58,6 +58,10 @@ func builtins() FuncMap {
 		"le": le, // <=
 		"lt": lt, // <
 		"ne": ne, // !=
+
+		// string comparisons
+		"hasPrefix": strings.HasPrefix,
+		"hasSuffix": strings.HasSuffix,
 	}
 }
 

@@ -210,6 +210,8 @@ Verify that the number fits the range.
 |le|Verify the first param is less than or equals second param |{{le param1 param2}}|param1|<wanted gt $param2, but was $param1>|
 |regexp|Verify the first param matches the second regular expression|{{regexp param1 param2}}|param1|<"$param1" does not match the pattern $param2">|
 |notEmpty|Verify The param is not empty|{{notEmpty param}}|param|<"" is empty, wanted is not empty>|
+|hasPrefix|Verify The string param has the same prefix.|{{hasPrefix param1 param2}}|true|false|
+|hasSuffix|Verify The string param has the same suffix.|{{hasSuffix param1 param2}}|true|false|
 
 ##### List Matches
 
