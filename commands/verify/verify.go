@@ -188,7 +188,7 @@ func DoVerifyAccordingConfig() error {
 	failFast := e2eConfig.Verify.FailFast
 	concurrency := e2eConfig.Verify.Concurrency
 
-	var Errs *multierror.Error
+	var errs *multierror.Error
 
 	if concurrency {
 		var waitGroup sync.WaitGroup
