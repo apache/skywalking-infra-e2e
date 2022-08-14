@@ -92,7 +92,6 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 type concurrentErrors struct {
 	errs  *multierror.Error
 	mutex sync.Mutex
-	count int
 }
 
 // verifyInfo contains necessary information about verification
@@ -108,38 +107,34 @@ func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
 	concurrentError.mutex.Unlock()
 }
 
-func concurrentSafeCountLess(concurrentError *concurrentErrors) {
-	concurrentError.mutex.Lock()
-	concurrentError.count--
-	concurrentError.mutex.Unlock()
-}
-
-func check(stopChan chan struct{}, concurrentErrors *concurrentErrors) error {
+func check(stopChan chan bool) bool {
 	for {
-		if concurrentErrors.count == 0 {
-			break
-		}
-		_, ok := <-stopChan
+		v, ok := <-stopChan
 		if ok {
-			return concurrentErrors.errs.ErrorOrNil()
+			if !v {
+				return false
+			}
+		} else {
+			return true
 		}
 	}
-
-	return nil
 }
 
-func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentErrors, verify verifyInfo, wg *sync.WaitGroup, stopChan chan struct{}) {
+func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentErrors, verify verifyInfo, wg *sync.WaitGroup, stopChan chan bool) {
 	var err error
 
 	defer func() {
-		if err != nil {
-			concurrentSafeErrAppend(errs, err)
-			if verify.failFast {
-				stopChan <- struct{}{}
-			}
-		}
 		if verify.failFast {
-			concurrentSafeCountLess(errs)
+			if err != nil {
+				concurrentSafeErrAppend(errs, err)
+				stopChan <- false
+			} else {
+				stopChan <- true
+			}
+		} else {
+			if err != nil {
+				concurrentSafeErrAppend(errs, err)
+			}
 		}
 		wg.Done()
 	}()
@@ -188,13 +183,12 @@ func DoVerifyAccordingConfig() error {
 	failFast := e2eConfig.Verify.FailFast
 	concurrency := e2eConfig.Verify.Concurrency
 
-	var Errs *multierror.Error
+	errs := &multierror.Error{}
 
 	if concurrency {
 		var waitGroup sync.WaitGroup
 		ConcurrentErrors := concurrentErrors{
-			errs:  Errs,
-			count: len(e2eConfig.Verify.Cases),
+			errs: errs,
 		}
 
 		VerifyInfo := verifyInfo{
@@ -202,20 +196,21 @@ func DoVerifyAccordingConfig() error {
 			interval,
 			failFast,
 		}
-		stopChan := make(chan struct{})
-		waitGroup.Add(len(e2eConfig.Verify.Cases))
+		stopChan := make(chan bool)
+		goroutineNum := len(e2eConfig.Verify.Cases)
+		waitGroup.Add(goroutineNum)
 
 		for idx, v := range e2eConfig.Verify.Cases {
 			go concurrentVerifySingleCase(idx, v, &ConcurrentErrors, VerifyInfo, &waitGroup, stopChan)
 		}
 
 		if failFast {
-			if err := check(stopChan, &ConcurrentErrors); err != nil {
-				return err
+			if ok := check(stopChan); !ok {
+				return errs.ErrorOrNil()
 			}
 		}
+
 		waitGroup.Wait()
-		Errs = ConcurrentErrors.errs
 	} else {
 		for idx, v := range e2eConfig.Verify.Cases {
 			if v.GetExpected() == "" {
@@ -224,7 +219,7 @@ func DoVerifyAccordingConfig() error {
 					return errors.New(errMsg)
 				}
 				logger.Log.Warnf(errMsg)
-				Errs = multierror.Append(Errs, errors.New(errMsg))
+				errs = multierror.Append(errs, errors.New(errMsg))
 				continue
 			}
 
@@ -238,13 +233,13 @@ func DoVerifyAccordingConfig() error {
 					if failFast {
 						return err
 					}
-					Errs = multierror.Append(Errs, err)
+					errs = multierror.Append(errs, err)
 				}
 			}
 		}
 	}
 
-	return Errs.ErrorOrNil()
+	return errs.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0
