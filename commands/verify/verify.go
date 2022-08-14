@@ -107,14 +107,19 @@ func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
 	concurrentError.mutex.Unlock()
 }
 
-func check(stopChan chan bool) bool {
+func check(stopChan chan bool, goroutineNum int) bool {
+	count := 0
 	for {
 		v, ok := <-stopChan
 		if ok {
 			if !v {
 				return false
 			}
-		} else {
+
+			count++
+		}
+
+		if count == goroutineNum {
 			return true
 		}
 	}
@@ -205,7 +210,7 @@ func DoVerifyAccordingConfig() error {
 		}
 
 		if failFast {
-			if ok := check(stopChan); !ok {
+			if ok := check(stopChan, goroutineNum); !ok {
 				return errs.ErrorOrNil()
 			}
 		}
