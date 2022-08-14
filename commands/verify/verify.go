@@ -109,20 +109,18 @@ func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
 
 func check(stopChan chan bool, goroutineNum int) bool {
 	count := 0
-	for {
-		v, ok := <-stopChan
-		if ok {
-			if !v {
-				return false
-			}
-
-			count++
-		}
-
-		if count == goroutineNum {
+	for shouldExit := range stopChan {
+		if shouldExit {
 			return true
 		}
+
+		count++
+
+		if count == goroutineNum {
+			return false
+		}
 	}
+	return false
 }
 
 func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentErrors, verify verifyInfo, wg *sync.WaitGroup, stopChan chan bool) {
@@ -132,9 +130,9 @@ func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentEr
 		if verify.failFast {
 			if err != nil {
 				concurrentSafeErrAppend(errs, err)
-				stopChan <- false
-			} else {
 				stopChan <- true
+			} else {
+				stopChan <- false
 			}
 		} else {
 			if err != nil {
@@ -210,7 +208,7 @@ func DoVerifyAccordingConfig() error {
 		}
 
 		if failFast {
-			if ok := check(stopChan, goroutineNum); !ok {
+			if shouldExit := check(stopChan, goroutineNum); shouldExit {
 				return errs.ErrorOrNil()
 			}
 		}
