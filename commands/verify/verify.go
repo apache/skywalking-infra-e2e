@@ -29,6 +29,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -99,12 +100,29 @@ type verifyInfo struct {
 	retryCount int
 	interval   time.Duration
 	failFast   bool
+	summary    *summary
+}
+
+type summary struct {
+	mutex      sync.Mutex
+	errNum     int
+	successNum int
 }
 
 func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
 	concurrentError.mutex.Lock()
 	concurrentError.errs = multierror.Append(concurrentError.errs, err)
 	concurrentError.mutex.Unlock()
+}
+
+func concurrentSafeAdd(summary *summary, ok bool) {
+	summary.mutex.Lock()
+	if ok {
+		summary.successNum++
+	} else {
+		summary.errNum++
+	}
+	summary.mutex.Unlock()
 }
 
 func check(stopChan chan bool, goroutineNum int) bool {
@@ -129,14 +147,19 @@ func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentEr
 	defer func() {
 		if verify.failFast {
 			if err != nil {
+				concurrentSafeAdd(verify.summary, false)
 				concurrentSafeErrAppend(errs, err)
 				stopChan <- true
 			} else {
+				concurrentSafeAdd(verify.summary, true)
 				stopChan <- false
 			}
 		} else {
 			if err != nil {
+				concurrentSafeAdd(verify.summary, false)
 				concurrentSafeErrAppend(errs, err)
+			} else {
+				concurrentSafeAdd(verify.summary, true)
 			}
 		}
 		wg.Done()
@@ -153,7 +176,7 @@ func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentEr
 		if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 			break
 		} else if current != verify.retryCount {
-			logger.Log.Warnf("verify case[%v] failure, will continue retry, %v", idx, err)
+			logger.Log.Warnf("verify case[%v] failure, will continue retry, %v\n", idx, err)
 			time.Sleep(verify.interval)
 		}
 	}
@@ -165,6 +188,21 @@ func checkForRetryCount(retryCount int) int {
 	}
 
 	return retryCount
+}
+func Summary(summary *summary, total int) {
+	pterm.Info.Prefix = pterm.Prefix{
+		Text:  "Summary",
+		Style: &pterm.ThemeDefault.InfoPrefixStyle,
+	}
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgGreen}).Println(fmt.Sprintf("%d passed", summary.successNum))
+	pterm.Info.Prefix = pterm.Prefix{
+		Text:  "       ",
+		Style: &pterm.ThemeDefault.InfoPrefixStyle,
+	}
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgLightRed}).Println(fmt.Sprintf("%d failed", summary.errNum))
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgYellow}).Println(fmt.Sprintf("%d skipped", total-summary.errNum-summary.successNum))
+	fmt.Println()
+	time.Sleep(time.Second * 2)
 }
 
 // DoVerifyAccordingConfig reads cases from the config file and verifies them.
@@ -187,6 +225,8 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 
 	errs := &multierror.Error{}
+	summary := &summary{}
+	total := len(e2eConfig.Verify.Cases)
 
 	if concurrency {
 		var waitGroup sync.WaitGroup
@@ -198,6 +238,7 @@ func DoVerifyAccordingConfig() error {
 			retryCount,
 			interval,
 			failFast,
+			summary,
 		}
 		stopChan := make(chan bool)
 		goroutineNum := len(e2eConfig.Verify.Cases)
@@ -209,6 +250,7 @@ func DoVerifyAccordingConfig() error {
 
 		if failFast {
 			if shouldExit := check(stopChan, goroutineNum); shouldExit {
+				Summary(summary, total)
 				return errs.ErrorOrNil()
 			}
 		}
@@ -216,9 +258,13 @@ func DoVerifyAccordingConfig() error {
 		waitGroup.Wait()
 	} else {
 		for idx, v := range e2eConfig.Verify.Cases {
+			spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
 			if v.GetExpected() == "" {
+				_ = spinnerLiveText.Stop()
 				errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
+				summary.errNum++
 				if failFast {
+					Summary(summary, total)
 					return errors.New(errMsg)
 				}
 				logger.Log.Warnf(errMsg)
@@ -228,12 +274,25 @@ func DoVerifyAccordingConfig() error {
 
 			for current := 1; current <= retryCount; current++ {
 				if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+					summary.successNum++
+					_ = spinnerLiveText.Stop()
 					break
 				} else if current != retryCount {
-					logger.Log.Warnf("verify case failure, will continue retry, %v", err)
+					if current == 1 {
+						logger.Log.Warnf("verify case[%d] failure, will continue retry", idx+1)
+					}
+					Msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
+					spinnerLiveText.UpdateText(Msg)
 					time.Sleep(interval)
 				} else {
+					summary.errNum++
+					Msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
+					spinnerLiveText.UpdateText(Msg)
+					_ = spinnerLiveText.Stop()
+					time.Sleep(time.Second)
+					fmt.Println()
 					if failFast {
+						Summary(summary, total)
 						return err
 					}
 					errs = multierror.Append(errs, err)
@@ -241,7 +300,7 @@ func DoVerifyAccordingConfig() error {
 			}
 		}
 	}
-
+	Summary(summary, total)
 	return errs.ErrorOrNil()
 }
 
