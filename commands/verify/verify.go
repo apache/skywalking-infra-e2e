@@ -20,6 +20,7 @@ package verify
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/components/verifier"
@@ -87,6 +88,85 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
+// concurrentErrors store errors that occurred when verifying cases in goroutines.
+type concurrentErrors struct {
+	errs  *multierror.Error
+	mutex sync.Mutex
+}
+
+// verifyInfo contains necessary information about verification
+type verifyInfo struct {
+	retryCount int
+	interval   time.Duration
+	failFast   bool
+}
+
+func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
+	concurrentError.mutex.Lock()
+	concurrentError.errs = multierror.Append(concurrentError.errs, err)
+	concurrentError.mutex.Unlock()
+}
+
+func check(stopChan chan bool, goroutineNum int) bool {
+	count := 0
+	for shouldExit := range stopChan {
+		if shouldExit {
+			return true
+		}
+
+		count++
+
+		if count == goroutineNum {
+			return false
+		}
+	}
+	return false
+}
+
+func concurrentVerifySingleCase(idx int, v config.VerifyCase, errs *concurrentErrors, verify verifyInfo, wg *sync.WaitGroup, stopChan chan bool) {
+	var err error
+
+	defer func() {
+		if verify.failFast {
+			if err != nil {
+				concurrentSafeErrAppend(errs, err)
+				stopChan <- true
+			} else {
+				stopChan <- false
+			}
+		} else {
+			if err != nil {
+				concurrentSafeErrAppend(errs, err)
+			}
+		}
+		wg.Done()
+	}()
+
+	if v.GetExpected() == "" {
+		errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
+		logger.Log.Warnf(errMsg)
+		err = errors.New(errMsg)
+		return
+	}
+
+	for current := 1; current <= verify.retryCount; current++ {
+		if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+			break
+		} else if current != verify.retryCount {
+			logger.Log.Warnf("verify case[%v] failure, will continue retry, %v", idx, err)
+			time.Sleep(verify.interval)
+		}
+	}
+}
+
+func checkForRetryCount(retryCount int) int {
+	if retryCount <= 0 {
+		return 1
+	}
+
+	return retryCount
+}
+
 // DoVerifyAccordingConfig reads cases from the config file and verifies them.
 func DoVerifyAccordingConfig() error {
 	if config.GlobalConfig.Error != nil {
@@ -96,44 +176,73 @@ func DoVerifyAccordingConfig() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 
 	retryCount := e2eConfig.Verify.RetryStrategy.Count
-	if retryCount <= 0 {
-		retryCount = 1
-	}
+	retryCount = checkForRetryCount(retryCount)
+
 	interval, err := parseInterval(e2eConfig.Verify.RetryStrategy.Interval)
 	if err != nil {
 		return err
 	}
 
 	failFast := e2eConfig.Verify.FailFast
+	concurrency := e2eConfig.Verify.Concurrency
 
-	var errCollection *multierror.Error
-	for idx, v := range e2eConfig.Verify.Cases {
-		if v.GetExpected() == "" {
-			errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
-			if failFast {
-				return errors.New(errMsg)
-			}
-			logger.Log.Warnf(errMsg)
-			errCollection = multierror.Append(errCollection, errors.New(errMsg))
-			continue
+	errs := &multierror.Error{}
+
+	if concurrency {
+		var waitGroup sync.WaitGroup
+		ConcurrentErrors := concurrentErrors{
+			errs: errs,
 		}
 
-		for current := 1; current <= retryCount; current++ {
-			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-				break
-			} else if current != retryCount {
-				logger.Log.Warnf("verify case failure, will continue retry, %v", err)
-				time.Sleep(interval)
-			} else {
+		VerifyInfo := verifyInfo{
+			retryCount,
+			interval,
+			failFast,
+		}
+		stopChan := make(chan bool)
+		goroutineNum := len(e2eConfig.Verify.Cases)
+		waitGroup.Add(goroutineNum)
+
+		for idx, v := range e2eConfig.Verify.Cases {
+			go concurrentVerifySingleCase(idx, v, &ConcurrentErrors, VerifyInfo, &waitGroup, stopChan)
+		}
+
+		if failFast {
+			if shouldExit := check(stopChan, goroutineNum); shouldExit {
+				return errs.ErrorOrNil()
+			}
+		}
+
+		waitGroup.Wait()
+	} else {
+		for idx, v := range e2eConfig.Verify.Cases {
+			if v.GetExpected() == "" {
+				errMsg := fmt.Sprintf("the expected data file for case[%v] is not specified\n", idx)
 				if failFast {
-					return err
+					return errors.New(errMsg)
 				}
-				errCollection = multierror.Append(errCollection, err)
+				logger.Log.Warnf(errMsg)
+				errs = multierror.Append(errs, errors.New(errMsg))
+				continue
+			}
+
+			for current := 1; current <= retryCount; current++ {
+				if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+					break
+				} else if current != retryCount {
+					logger.Log.Warnf("verify case failure, will continue retry, %v", err)
+					time.Sleep(interval)
+				} else {
+					if failFast {
+						return err
+					}
+					errs = multierror.Append(errs, err)
+				}
 			}
 		}
 	}
 
-	return errCollection.ErrorOrNil()
+	return errs.ErrorOrNil()
 }
 
 // TODO remove this in 2.0.0

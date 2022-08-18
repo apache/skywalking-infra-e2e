@@ -54,6 +54,8 @@ verify:
 
   # when a case fails, whether to stop verifying other cases. This property defaults to true.
   fail-fast: true
+  # Whether to verify cases concurrently. This property defaults to false.
+  concurrency: false
 
 
   cases:
