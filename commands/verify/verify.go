@@ -117,12 +117,12 @@ func concurrentSafeErrAppend(concurrentError *concurrentErrors, err error) {
 
 func concurrentSafeAdd(summary *summary, ok bool) {
 	summary.mutex.Lock()
+	defer summary.mutex.Unlock()
 	if ok {
 		summary.successNum++
 	} else {
 		summary.errNum++
 	}
-	summary.mutex.Unlock()
 }
 
 func check(stopChan chan bool, goroutineNum int) bool {
@@ -286,8 +286,8 @@ func DoVerifyAccordingConfig() error {
 					time.Sleep(interval)
 				} else {
 					summary.errNum++
-					Msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
-					spinnerLiveText.UpdateText(Msg)
+					msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
+					spinnerLiveText.UpdateText(msg)
 					_ = spinnerLiveText.Stop()
 					time.Sleep(time.Second)
 					fmt.Println()
