@@ -281,8 +281,8 @@ func DoVerifyAccordingConfig() error {
 					if current == 1 {
 						logger.Log.Warnf("verify case[%d] failure, will continue retry", idx+1)
 					}
-					Msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
-					spinnerLiveText.UpdateText(Msg)
+					msg := fmt.Sprintf("Retrying to verify case[%d]  [%d/%d]", idx+1, current, retryCount)
+					spinnerLiveText.UpdateText(msg)
 					time.Sleep(interval)
 				} else {
 					summary.errNum++
