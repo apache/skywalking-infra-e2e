@@ -7,6 +7,7 @@ Release Notes.
 #### Features
 * Support `sha256enc` and `sha512enc` encoding in verify case.
 * Support `hasPrefix` and `hasSuffix` string verifier in verify case.
+* Bump up `kind` to v0.14.0.
 
 #### Bug Fixes
 

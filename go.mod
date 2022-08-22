@@ -6,8 +6,9 @@ require (
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/google/go-cmp v0.5.5
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/sirupsen/logrus v1.7.0
-	github.com/spf13/cobra v1.2.1
+	github.com/spf13/cobra v1.4.0
 	github.com/testcontainers/testcontainers-go v0.11.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.2
@@ -15,12 +16,12 @@ require (
 	k8s.io/cli-runtime v0.22.2
 	k8s.io/client-go v0.22.2
 	k8s.io/kubectl v0.22.2
-	sigs.k8s.io/kind v0.11.1
+	sigs.k8s.io/kind v0.14.0
 )
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
-	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
 	github.com/Microsoft/go-winio v0.4.17-0.20210211115548-6eac466e5fa3 // indirect
 	github.com/Microsoft/hcsshim v0.8.16 // indirect
@@ -55,7 +56,6 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
