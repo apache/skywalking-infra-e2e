@@ -127,6 +127,7 @@ type Trigger struct {
 }
 
 type VerifyCase struct {
+	Name     string   `yaml:"name"`
 	Query    string   `yaml:"query"`
 	Actual   string   `yaml:"actual"`
 	Expected string   `yaml:"expected"`
