@@ -86,46 +86,13 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
-func check(stopChan chan bool, goroutineNum int) bool {
-	count := 0
-	for shouldExit := range stopChan {
-		if shouldExit {
-			return true
-		}
-
-		count++
-
-		if count == goroutineNum {
-			return false
-		}
-	}
-	return false
-}
-
-func caseSuccess(msg string) {
-	spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
-	spinnerLiveText.Success(msg)
-	fmt.Println()
-}
-
-func caseFailure(msg string, err error) {
-	spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
-	pterm.Error.Prefix = pterm.Prefix{
-		Text:  "DETAILS",
-		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
-	}
-	spinnerLiveText.Warning(msg)
-	spinnerLiveText.Fail(err)
-}
-
 // verifyInfo contains necessary information about verification
 type verifyInfo struct {
 	caseNumber int
 	retryCount int
 	interval   time.Duration
 	failFast   bool
-	summary    *summary
-	writeLock  *WriteLock
+	outputChan chan caseInfo
 }
 
 type summary struct {
@@ -133,69 +100,101 @@ type summary struct {
 	successNum int
 }
 
-type WriteLock struct {
-	mutex sync.Mutex
+type caseInfo struct {
+	IfSuccess bool
+	msg       string
+	err       error
 }
 
-func concurrentVerifySingleCase(idx int, v *config.VerifyCase, verify verifyInfo, wg *sync.WaitGroup, stopChan chan bool) {
+func concurrentOutput(outputChan chan caseInfo, stopChan chan bool, failFast bool, wg *sync.WaitGroup, caseNumber int, s *summary, errExist *bool) {
+	defer wg.Done()
+	var number int
+	spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
+	pterm.Error.Prefix = pterm.Prefix{
+		Text:  "DETAILS",
+		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
+	}
+
+	for caseInfo := range outputChan {
+		number++
+
+		if caseInfo.IfSuccess {
+			s.successNum++
+			spinnerLiveText.Success(caseInfo.msg)
+		} else {
+			*errExist = true
+			s.errNum++
+			spinnerLiveText.Warning(caseInfo.msg)
+			spinnerLiveText.Fail(caseInfo.err)
+			if failFast {
+				stopChan <- true
+				return
+			}
+		}
+
+		if number == caseNumber {
+			if failFast {
+				stopChan <- false
+			}
+			return
+		}
+	}
+}
+
+func concurrentVerifySingleCase(idx int, v *config.VerifyCase, verify *verifyInfo, wg *sync.WaitGroup) {
 	var msg string
 	var err error
 	defer wg.Done()
 
 	if v.GetExpected() == "" {
-		verify.writeLock.mutex.Lock()
-		verify.summary.errNum++
 		msg = fmt.Sprintf("failed to verify %v:", caseName(v.Name, idx))
 		err = fmt.Errorf("the expected data file for %v is not specified", caseName(v.Name, idx))
-		caseFailure(msg, err)
-		if verify.failFast {
-			stopChan <- true
-		} else {
-			verify.writeLock.mutex.Unlock()
+		info := caseInfo{
+			false,
+			msg,
+			err,
 		}
+		verify.outputChan <- info
 		return
 	}
 
 	for current := 0; current <= verify.retryCount; current++ {
 		if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-			verify.writeLock.mutex.Lock()
-			verify.summary.successNum++
 			if current == 0 {
-				msg = fmt.Sprintf("verified %v", caseName(v.Name, idx))
+				msg = fmt.Sprintf("verified %v\n", caseName(v.Name, idx))
 			} else {
-				msg = fmt.Sprintf("verified %v, retried %d time(s)", caseName(v.Name, idx), current)
+				msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v.Name, idx), current)
 			}
-			caseSuccess(msg)
-			verify.writeLock.mutex.Unlock()
-			if verify.failFast {
-				stopChan <- false
+			info := caseInfo{
+				true,
+				msg,
+				nil,
 			}
+			verify.outputChan <- info
 			return
 		} else if current != verify.retryCount {
 			time.Sleep(verify.interval)
 		} else {
-			verify.writeLock.mutex.Lock()
-			verify.summary.errNum++
 			msg := fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v.Name, idx), current)
-			caseFailure(msg, err)
-			if verify.failFast {
-				Summary(verify.summary, verify.caseNumber)
-				stopChan <- true
-			} else {
-				verify.writeLock.mutex.Unlock()
+			info := caseInfo{
+				false,
+				msg,
+				err,
 			}
+			verify.outputChan <- info
 		}
 	}
 }
 
 func checkForRetryCount(retryCount int) int {
 	if retryCount <= 0 {
-		return 1
+		return 0
 	}
 	return retryCount
 }
 
-func Summary(summary *summary, total int) {
+// outputSummary outputs a summary of verify result
+func outputSummary(summary *summary, total int) {
 	pterm.Info.Prefix = pterm.Prefix{
 		Text:  "SUMMARY",
 		Style: &pterm.ThemeDefault.InfoPrefixStyle,
@@ -207,21 +206,31 @@ func Summary(summary *summary, total int) {
 	}
 	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgLightRed}).Println(fmt.Sprintf("%d failed", summary.errNum))
 	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgYellow}).Println(fmt.Sprintf("%d skipped", total-summary.errNum-summary.successNum))
-	time.Sleep(time.Second * 2)
+	fmt.Println()
 }
 
 func caseName(name string, idx int) string {
 	if name == "" {
 		return fmt.Sprintf("case[%d]", idx+1)
 	}
-	return `"` + name + `"`
+	return name
 }
 
-func caseSuccessByCurrent(spinnerLiveText *pterm.SpinnerPrinter, current int, caseName string, idx int) {
+func outputSuccess(spinnerLiveText *pterm.SpinnerPrinter, current int, caseName string) {
 	if current == 0 {
 		spinnerLiveText.Success(fmt.Sprintf("verified %v \n", caseName))
 	} else {
-		spinnerLiveText.Success(fmt.Sprintf("verified %v, retried %d time(s)\n", caseName, idx))
+		spinnerLiveText.Success(fmt.Sprintf("verified %v, retried %d time(s)\n", caseName, current))
+	}
+}
+
+func outputRetryInfo(spinnerLiveText *pterm.SpinnerPrinter, current int, caseName string, retryCount int, interval time.Duration) {
+	if current == 0 {
+		spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, will continue retry:", caseName))
+		time.Sleep(time.Second * 2)
+	} else {
+		spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName, current, retryCount))
+		time.Sleep(interval)
 	}
 }
 
@@ -245,30 +254,30 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 	summary := &summary{}
 	caseNumber := len(e2eConfig.Verify.Cases)
+	var errorExist bool
 
 	if concurrency {
 		var waitGroup sync.WaitGroup
 		stopChan := make(chan bool)
-		writeLock := &WriteLock{}
-
+		outputChan := make(chan caseInfo)
 		VerifyInfo := verifyInfo{
 			caseNumber,
 			retryCount,
 			interval,
 			failFast,
-			summary,
-			writeLock,
+			outputChan,
 		}
 
-		waitGroup.Add(caseNumber)
-
+		waitGroup.Add(caseNumber + 1)
+		go concurrentOutput(outputChan, stopChan, failFast, &waitGroup, caseNumber, summary, &errorExist)
 		for idx := range e2eConfig.Verify.Cases {
-			go concurrentVerifySingleCase(idx, &e2eConfig.Verify.Cases[idx], VerifyInfo, &waitGroup, stopChan)
+			go concurrentVerifySingleCase(idx, &e2eConfig.Verify.Cases[idx], &VerifyInfo, &waitGroup)
 		}
 
 		if failFast {
-			if shouldExit := check(stopChan, caseNumber); shouldExit {
-				return nil
+			if stop := <-stopChan; stop {
+				outputSummary(summary, caseNumber)
+				return fmt.Errorf("failed to verify all the cases, an error occurred")
 			}
 		}
 		waitGroup.Wait()
@@ -285,25 +294,20 @@ func DoVerifyAccordingConfig() error {
 				spinnerLiveText.Fail(fmt.Sprintf("the expected data file for %v is not specified\n", caseName(v.Name, idx)))
 				summary.errNum++
 				if failFast {
-					Summary(summary, caseNumber)
-					return nil
+					outputSummary(summary, caseNumber)
+					return fmt.Errorf("failed to verify all the cases, an error occurred")
 				}
 				continue
 			}
 			for current := 0; current <= retryCount; current++ {
 				if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 					summary.successNum++
-					caseSuccessByCurrent(spinnerLiveText, current, caseName(v.Name, idx), idx)
+					outputSuccess(spinnerLiveText, current, caseName(v.Name, idx))
 					break
 				} else if current != retryCount {
-					if current == 0 {
-						spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, will continue retry:", caseName(v.Name, idx)))
-						time.Sleep(time.Second * 2)
-					} else {
-						spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v.Name, idx), current, retryCount))
-						time.Sleep(interval)
-					}
+					outputRetryInfo(spinnerLiveText, current, caseName(v.Name, idx), retryCount, interval)
 				} else {
+					errorExist = true
 					summary.errNum++
 					spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v.Name, idx), current, retryCount))
 					time.Sleep(time.Second)
@@ -311,14 +315,17 @@ func DoVerifyAccordingConfig() error {
 					spinnerLiveText.Fail(err)
 					fmt.Println()
 					if failFast {
-						Summary(summary, caseNumber)
-						return nil
+						outputSummary(summary, caseNumber)
+						return fmt.Errorf("failed to verify all the cases, an error occurred")
 					}
 				}
 			}
 		}
 	}
-	Summary(summary, caseNumber)
+	outputSummary(summary, caseNumber)
+	if errorExist {
+		return fmt.Errorf("failed to verify all the cases")
+	}
 	return nil
 }
 
