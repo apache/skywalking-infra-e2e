@@ -62,11 +62,9 @@ type verifyInfo struct {
 	retryCount int
 	interval   time.Duration
 	failFast   bool
-	summary    *summary
-	errorExist *bool
 }
 
-type summary struct {
+type Summary struct {
 	errNum     int
 	successNum int
 }
@@ -119,7 +117,6 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 		outputInfo.writeLock.Lock()
 		outputInfo.casesInfo = append(outputInfo.casesInfo, caseInfo)
 		if caseInfo.err != nil {
-			*verifyInfo.errorExist = true
 			if verifyInfo.failFast {
 				stopChan <- true
 				return
@@ -138,7 +135,6 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 			msg,
 			err,
 		}
-		verifyInfo.summary.errNum++
 		return
 	}
 
@@ -153,7 +149,6 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 				msg,
 				nil,
 			}
-			verifyInfo.summary.successNum++
 			return
 		} else if current != verifyInfo.retryCount {
 			time.Sleep(verifyInfo.interval)
@@ -163,13 +158,13 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 				msg,
 				err,
 			}
-			verifyInfo.summary.errNum++
 		}
 	}
 }
 
-// concurrentlyDoVerify verifies the cases concurrently.
-func concurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) error {
+// verifyCasesConcurrently verifies the cases concurrently.
+func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) error {
+	summary := Summary{}
 	var waitGroup sync.WaitGroup
 	stopChan := make(chan bool)
 	waitGroup.Add(verifyInfo.caseNumber)
@@ -180,22 +175,23 @@ func concurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) error {
 
 	if verifyInfo.failFast {
 		if shouldExit(stopChan, verifyInfo.caseNumber) {
-			outputResult(&outputInfo)
-			outputSummary(verifyInfo.summary, verifyInfo.caseNumber)
+			outputResult(&outputInfo, &summary)
+			outputSummary(&summary, verifyInfo.caseNumber)
 			return fmt.Errorf("failed to verify one case")
 		}
 	}
 	waitGroup.Wait()
-	outputResult(&outputInfo)
-	outputSummary(verifyInfo.summary, verifyInfo.caseNumber)
-	if *verifyInfo.errorExist {
-		return fmt.Errorf("failed to verify %d case(s)", verifyInfo.summary.errNum)
+	outputResult(&outputInfo, &summary)
+	outputSummary(&summary, verifyInfo.caseNumber)
+	if summary.errNum > 0 {
+		return fmt.Errorf("failed to verify %d case(s)", summary.errNum)
 	}
 	return nil
 }
 
-// nonConcurrentlyDoVerify verifies the cases non-concurrently.
-func nonConcurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) error {
+// verifyCasesSerially verifies the cases serially.
+func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) error {
+	summary := Summary{}
 	for idx := range verify.Cases {
 		v := &verify.Cases[idx]
 		spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
@@ -209,9 +205,9 @@ func nonConcurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) erro
 			errMsg := fmt.Sprintf("failed to verify %v", caseName(v))
 			spinnerLiveText.Warning(errMsg)
 			spinnerLiveText.Fail(fmt.Sprintf("the expected data file for %v is not specified\n", caseName(v)))
-			verifyInfo.summary.errNum++
+			summary.errNum++
 			if verifyInfo.failFast {
-				outputSummary(verifyInfo.summary, verifyInfo.caseNumber)
+				outputSummary(&summary, verifyInfo.caseNumber)
 				return fmt.Errorf("failed to verify one case")
 			}
 			continue
@@ -219,7 +215,7 @@ func nonConcurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) erro
 
 		for current := 0; current <= verifyInfo.retryCount; current++ {
 			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-				verifyInfo.summary.successNum++
+				summary.successNum++
 				if current == 0 {
 					spinnerLiveText.Success(fmt.Sprintf("verified %v \n", caseName(v)))
 				} else {
@@ -235,30 +231,29 @@ func nonConcurrentlyDoVerify(verify *config.Verify, verifyInfo *verifyInfo) erro
 					time.Sleep(verifyInfo.interval)
 				}
 			} else {
-				verifyInfo.summary.errNum++
-				*verifyInfo.errorExist = true
+				summary.errNum++
 				spinnerLiveText.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
 				time.Sleep(time.Second)
 				spinnerLiveText.Warning(fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current))
 				spinnerLiveText.Fail(err)
 				fmt.Println()
 				if verifyInfo.failFast {
-					outputSummary(verifyInfo.summary, verifyInfo.caseNumber)
+					outputSummary(&summary, verifyInfo.caseNumber)
 					return fmt.Errorf("failed to verify one case, an error occurred")
 				}
 			}
 		}
 	}
 
-	outputSummary(verifyInfo.summary, verifyInfo.caseNumber)
-	if *verifyInfo.errorExist {
-		return fmt.Errorf("failed to verify %d case(s)", verifyInfo.summary.errNum)
+	outputSummary(&summary, verifyInfo.caseNumber)
+	if summary.errNum > 0 {
+		return fmt.Errorf("failed to verify %d case(s)", summary.errNum)
 	}
 	return nil
 }
 
 // outputSummary outputs a summary of verify result. The summary shows the number of the successful, failed and skipped cases.
-func outputSummary(summary *summary, total int) {
+func outputSummary(summary *Summary, total int) {
 	pterm.Info.Prefix = pterm.Prefix{
 		Text:  "SUMMARY",
 		Style: &pterm.ThemeDefault.InfoPrefixStyle,
@@ -273,8 +268,8 @@ func outputSummary(summary *summary, total int) {
 	fmt.Println()
 }
 
-// outputResult outputs the result of cases
-func outputResult(outputInfo *OutputInfo) {
+// outputResult outputs the result of cases.
+func outputResult(outputInfo *OutputInfo, summary *Summary) {
 	spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
@@ -282,12 +277,10 @@ func outputResult(outputInfo *OutputInfo) {
 	}
 	for _, caseInfo := range outputInfo.casesInfo {
 		if caseInfo.err == nil {
+			summary.successNum++
 			spinnerLiveText.Success(caseInfo.msg)
-		}
-	}
-
-	for _, caseInfo := range outputInfo.casesInfo {
-		if caseInfo.err != nil {
+		} else {
+			summary.errNum++
 			spinnerLiveText.Warning(caseInfo.msg)
 			spinnerLiveText.Fail(caseInfo.err)
 		}
@@ -314,7 +307,7 @@ func shouldExit(stopChan chan bool, goroutineNum int) bool {
 		}
 
 		if count == goroutineNum {
-			return false
+			break
 		}
 	}
 	return false
@@ -336,24 +329,20 @@ func DoVerifyAccordingConfig() error {
 	}
 	failFast := e2eConfig.Verify.FailFast
 	caseNumber := len(e2eConfig.Verify.Cases)
-	summary := &summary{}
-	var errorExist bool
 
 	VerifyInfo := verifyInfo{
 		caseNumber,
 		retryCount,
 		interval,
 		failFast,
-		summary,
-		&errorExist,
 	}
 
 	concurrency := e2eConfig.Verify.Concurrency
 	if concurrency {
-		return concurrentlyDoVerify(&e2eConfig.Verify, &VerifyInfo)
+		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	return nonConcurrentlyDoVerify(&e2eConfig.Verify, &VerifyInfo)
+	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 
 // TODO remove this in 2.0.0
