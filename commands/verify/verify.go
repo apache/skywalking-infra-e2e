@@ -114,27 +114,26 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 	var err error
 	var caseInfo CaseInfo
 	defer func() {
+		caseInfo = CaseInfo{
+			msg,
+			err,
+		}
 		outputInfo.writeLock.Lock()
 		outputInfo.casesInfo = append(outputInfo.casesInfo, caseInfo)
-		if caseInfo.err != nil {
-			if verifyInfo.failFast {
-				stopChan <- true
-				return
-			}
-		} else if verifyInfo.failFast {
-			stopChan <- false
-		}
 		outputInfo.writeLock.Unlock()
+		if verifyInfo.failFast {
+			if err != nil {
+				stopChan <- true
+			} else {
+				stopChan <- false
+			}
+		}
 		wg.Done()
 	}()
 
 	if v.GetExpected() == "" {
 		msg = fmt.Sprintf("failed to verify %v:", caseName(v))
 		err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
-		caseInfo = CaseInfo{
-			msg,
-			err,
-		}
 		return
 	}
 
@@ -145,19 +144,11 @@ func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, 
 			} else {
 				msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current)
 			}
-			caseInfo = CaseInfo{
-				msg,
-				nil,
-			}
 			return
 		} else if current != verifyInfo.retryCount {
 			time.Sleep(verifyInfo.interval)
 		} else {
-			msg := fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
-			caseInfo = CaseInfo{
-				msg,
-				err,
-			}
+			msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
 		}
 	}
 }
@@ -270,7 +261,6 @@ func outputSummary(summary *Summary, total int) {
 
 // outputResult outputs the result of cases.
 func outputResult(outputInfo *OutputInfo, summary *Summary) {
-	spinnerLiveText, _ := pterm.DefaultSpinner.WithShowTimer(false).Start()
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
 		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
@@ -278,11 +268,11 @@ func outputResult(outputInfo *OutputInfo, summary *Summary) {
 	for _, caseInfo := range outputInfo.casesInfo {
 		if caseInfo.err == nil {
 			summary.successNum++
-			spinnerLiveText.Success(caseInfo.msg)
+			pterm.DefaultSpinner.Success(caseInfo.msg)
 		} else {
 			summary.errNum++
-			spinnerLiveText.Warning(caseInfo.msg)
-			spinnerLiveText.Fail(caseInfo.err)
+			pterm.DefaultSpinner.Warning(caseInfo.msg)
+			pterm.DefaultSpinner.Fail(caseInfo.err)
 		}
 	}
 }
