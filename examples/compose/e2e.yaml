@@ -59,9 +59,12 @@ verify:
 
 
   cases:
-    - actual: ../../test/verify/1.actual.yaml
+    - name: case-one
+      actual: ../../test/verify/1.actual.yaml
       expected: ../../test/verify/1.expected.yaml
-    - actual: ../../test/verify/2.actual.yaml
+    - name: case-two
+      actual: ../../test/verify/2.actual.yaml
       expected: ../../test/verify/2.expected.yaml
-    - query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
+    - name: case-three
+      query: swctl --display yaml --base-url=http://127.0.0.1:${oap_12800}/graphql service ls
       expected: ../../test/verify/3.expected.yaml
