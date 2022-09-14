@@ -73,8 +73,7 @@ func notEmpty(s interface{}) string {
 	if s == nil {
 		return fmt.Sprintf("<%q is empty, wanted is not empty>", s)
 	}
-	switch s := s.(type) {
-	case string:
+        if s, ok := v.(string); ok {
 		if len(strings.TrimSpace(s)) > 0 {
 			return s
 		}
