@@ -271,6 +271,31 @@ metrics:
 `,
 			},
 			wantErr: false,
+		},		{
+			name: "notEmpty with nil",
+			args: args{
+				actualData: `
+- key: 0
+  value:
+  - key: name
+    value: SET TIMESTAMP
+  - key: id
+    value: "123"
+  - key: refid
+    value: null
+      `,
+				expectedTemplate: `
+{{- contains . }}
+- key: 0
+  value:
+  {{- contains .value }}
+  - key: {{ notEmpty .key }}
+    value: {{ notEmpty .value }}
+  {{- end }}
+{{- end }}
+        `,
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
