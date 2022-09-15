@@ -69,11 +69,17 @@ func sha512encode(s string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func notEmpty(s string) string {
-	if len(strings.TrimSpace(s)) > 0 {
-		return s
+func notEmpty(s interface{}) string {
+	if s == nil {
+		return fmt.Sprintf("<%q is empty, wanted is not empty>", s)
 	}
-	return fmt.Sprintf("<%q is empty, wanted is not empty>", s)
+	if s, ok := s.(string); ok {
+		if len(strings.TrimSpace(s)) > 0 {
+			return s
+		}
+		return fmt.Sprintf("<%q is empty, wanted is not empty>", s)
+	}
+	return fmt.Sprintf("notEmpty only supports nil or string type, but was %T", s)
 }
 
 func regexpMatch(s, pattern string) string {
