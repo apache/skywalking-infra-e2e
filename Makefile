@@ -33,6 +33,10 @@ GO_BUILD_LDFLAGS = -X github.com/apache/skywalking-$(PROJECT)/commands.version=$
 PLATFORMS := windows linux darwin
 os = $(word 1, $@)
 
+artifact_linux := $(PROJECT)
+artifact_darwin := $(PROJECT)
+artifact_windows := $(PROJECT).exe
+
 RELEASE_BIN = skywalking-$(PROJECT)-$(VERSION)-bin
 RELEASE_SRC = skywalking-$(PROJECT)-$(VERSION)-src
 
@@ -55,7 +59,7 @@ test: clean
 .PHONY: $(PLATFORMS)
 $(PLATFORMS):
 	mkdir -p $(OUT_DIR)
-	GOOS=$(os) GOARCH=$(GOARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT) cmd/e2e/main.go
+	GOOS=$(os) GOARCH=$(GOARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(artifact_$(os)) cmd/main.go
 
 .PHONY: build
 build: windows linux darwin
