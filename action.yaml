@@ -38,7 +38,7 @@ runs:
       shell: bash
       run: |
         WORK_DIR="${{ runner.temp }}/skywalking-infra-e2e"
-        echo "::set-output name=work::$WORK_DIR"
+        echo "name=work::$WORK_DIR" >> $GITHUB_OUTPUT
 
         LOG_DIR=""
         LOG_JOB_DIR=""
@@ -67,8 +67,8 @@ runs:
           LOG_DIR="$WORK_DIR/${{ inputs.log-dir }}"
           LOG_JOB_DIR="$WORK_DIR/${{ inputs.log-dir }}"
         fi
-        echo "::set-output name=log::$LOG_DIR"
-        echo "::set-output name=log-case::$LOG_JOB_DIR"
+        echo "name=log::$LOG_DIR" >> $GITHUB_OUTPUT
+        echo "name=log-case::$LOG_JOB_DIR" >> $GITHUB_OUTPUT
         echo "SW_INFRA_E2E_LOG_DIR=$LOG_DIR" >> $GITHUB_ENV
     - shell: bash
       run: |
