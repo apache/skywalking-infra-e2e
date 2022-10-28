@@ -20,6 +20,7 @@ package setup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -226,7 +227,7 @@ func exposeComposeLog(cli *client.Client, service *ComposeService, containerID s
 
 	go func() {
 		defer writer.Close()
-		if _, err := stdcopy.StdCopy(writer, writer, logs); err != nil {
+		if _, err := stdcopy.StdCopy(writer, writer, logs); err != nil && !errors.Is(err, context.Canceled) {
 			logger.Log.Warnf("write %s std log error: %v", service.Name, err)
 		}
 	}()
