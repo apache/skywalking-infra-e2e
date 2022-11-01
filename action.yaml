@@ -33,7 +33,6 @@ runs:
         go-version: 1.18
     - if: runner.os == 'Linux'
       uses: actions/cache@v3
-      working-directory: ${{ github.action_path}}
       with:
         path: |
           ~/.cache/go-build
