@@ -24,21 +24,45 @@ inputs:
   log-dir:
     description: The container logs directory
     required: false
-
 runs:
   using: "composite"
   steps:
+    - name: Set up Go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.18
+    - if: runner.os == 'Linux'
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: skywalking-infra-e2e-${{ runner.os }}-go-${{ hashFiles(format('{0}/{1}', github.action_path, 'go.sum')) }}
+        restore-keys: skywalking-infra-e2e-${{ runner.os }}-go-
+    - if: runner.os == 'macOS'
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/Library/Caches/go-build
+          ~/go/pkg/mod
+        key: skywalking-infra-e2e-${{ runner.os }}-go-${{ hashFiles(format('{0}/{1}', github.action_path, 'go.sum')) }}
+        restore-keys: skywalking-infra-e2e-${{ runner.os }}-go-
+    - if: runner.os == 'Windows'
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~\AppData\Local\go-build
+          ~\go\pkg\mod
+        key: skywalking-infra-e2e-${{ runner.os }}-go-${{ hashFiles(format('{0}/{1}', github.action_path, 'go.sum')) }}
+        restore-keys: skywalking-infra-e2e-${{ runner.os }}-go-
     - shell: bash
-      run: |
-        make -C $GITHUB_ACTION_PATH docker
-        docker run -v $(pwd):/tmp -w /tmp --entrypoint=sh docker.io/apache/e2e:latest -c "cp /usr/local/bin/e2e /tmp/e2e"
-        install ./e2e /usr/local/bin
+      run: make -C $GITHUB_ACTION_PATH install DESTDIR=/usr/local/bin
     - name: E2E Dir Generator
       id: 'e2e-dir-generator'
       shell: bash
       run: |
         WORK_DIR="${{ runner.temp }}/skywalking-infra-e2e"
-        echo "::set-output name=work::$WORK_DIR"
+        echo "work=$WORK_DIR" >> $GITHUB_OUTPUT
 
         LOG_DIR=""
         LOG_JOB_DIR=""
@@ -67,8 +91,8 @@ runs:
           LOG_DIR="$WORK_DIR/${{ inputs.log-dir }}"
           LOG_JOB_DIR="$WORK_DIR/${{ inputs.log-dir }}"
         fi
-        echo "::set-output name=log::$LOG_DIR"
-        echo "::set-output name=log-case::$LOG_JOB_DIR"
+        echo "log=$LOG_DIR" >> $GITHUB_OUTPUT
+        echo "log-case=$LOG_JOB_DIR" >> $GITHUB_OUTPUT
         echo "SW_INFRA_E2E_LOG_DIR=$LOG_DIR" >> $GITHUB_ENV
     - shell: bash
       run: |
