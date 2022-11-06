@@ -214,8 +214,8 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) error {
 					printer.UpdateText(fmt.Sprintf("failed to verify %v, will continue retry:", caseName(v)))
 				} else {
 					printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
-					time.Sleep(verifyInfo.interval)
 				}
+				time.Sleep(verifyInfo.interval)
 			} else {
 				summary.errNum++
 				printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))

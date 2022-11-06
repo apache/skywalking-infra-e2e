@@ -24,7 +24,6 @@ var _ Printer = &printer{}
 
 func NewPrinter(batchOutput bool) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
-	spinner.MessageStyle = &pterm.Style{pterm.FgCyan}
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
 		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
