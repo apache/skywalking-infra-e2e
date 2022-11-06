@@ -23,8 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
-
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
 	"github.com/apache/skywalking-infra-e2e/commands/run"
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
@@ -32,6 +30,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 )
 

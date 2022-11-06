@@ -32,18 +32,16 @@ import (
 )
 
 var (
-	query       string
-	actual      string
-	expected    string
-	batchOutput bool
-	printer     output.Printer
+	query    string
+	actual   string
+	expected string
+	printer  output.Printer
 )
 
 func init() {
 	Verify.Flags().StringVarP(&query, "query", "q", "", "the query to get the actual data, the result of the query should in YAML format")
 	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
-	Verify.Flags().BoolVarP(&batchOutput, "batchOutput", "b", false, "output the result of each case in batch, it's recommended to enable this in CI")
 }
 
 // Verify verifies that the actual data satisfies the expected data pattern.
@@ -54,6 +52,7 @@ var Verify = &cobra.Command{
 		if expected != "" {
 			return verifySingleCase(expected, actual, query)
 		}
+
 		// If there is no given flags.
 		return DoVerifyAccordingConfig()
 	},
@@ -308,7 +307,7 @@ func DoVerifyAccordingConfig() error {
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(batchOutput)
+	printer = output.NewPrinter(e2eConfig.Verify.BatchOutput)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 
