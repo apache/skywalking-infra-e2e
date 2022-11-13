@@ -1,4 +1,3 @@
-//
 // Licensed to Apache Software Foundation (ASF) under one or more contributor
 // license agreements. See the NOTICE file distributed with
 // this work for additional information regarding copyright
@@ -15,6 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 package output
 
 import (
@@ -23,13 +23,20 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// CaseResult represents the result of a verification case.
+type CaseResult struct {
+	Msg  string
+	Err  error
+	Skip bool
+}
+
 type Printer interface {
 	Start(...string)
 	Success(string)
 	Warning(string)
 	Fail(string)
 	UpdateText(string)
-	PrintSummary(pass, fail, skip int)
+	PrintResult([]*CaseResult) (int, int, int)
 }
 
 type printer struct {
@@ -61,14 +68,26 @@ func (p *printer) Start(msg ...string) {
 }
 
 func (p *printer) Success(msg string) {
+	if p.batchOutput {
+		return
+	}
+
 	p.spinner.Success(msg)
 }
 
 func (p *printer) Warning(msg string) {
+	if p.batchOutput {
+		return
+	}
+
 	p.spinner.Warning(msg)
 }
 
 func (p *printer) Fail(msg string) {
+	if p.batchOutput {
+		return
+	}
+
 	p.spinner.Fail(msg)
 }
 
@@ -80,20 +99,43 @@ func (p *printer) UpdateText(text string) {
 	p.spinner.UpdateText(text)
 }
 
-// PrintSummary outputs a summary of verify result.
-// The summary shows the number of the successful, failed and skipped cases.
-func (p *printer) PrintSummary(pass, fail, skip int) {
+// PrintResult prints the result of verification and the summary.
+// If bathOutput is false, will only print the summary.
+func (p *printer) PrintResult(caseRes []*CaseResult) (passNum, failNum, skipNum int) {
+	// Count the number of passed and failed.
+	// If batchOutput is true, print the result of all cases in a batch.
+	for _, cr := range caseRes {
+		if !cr.Skip {
+			if cr.Err == nil {
+				passNum++
+				if p.batchOutput {
+					p.spinner.Success(cr.Msg)
+				}
+			} else {
+				failNum++
+				if p.batchOutput {
+					p.spinner.Warning(cr.Msg)
+					p.spinner.Fail(cr.Err.Error())
+				}
+			}
+		} else {
+			skipNum++
+		}
+	}
+
+	// Print the summary.
 	pterm.Info.Prefix = pterm.Prefix{
 		Text:  "SUMMARY",
 		Style: &pterm.ThemeDefault.InfoPrefixStyle,
 	}
-	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgGreen}).Println(fmt.Sprintf("%d passed", pass))
-
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgGreen}).Println(fmt.Sprintf("%d passed", passNum))
 	pterm.Info.Prefix = pterm.Prefix{
 		Text:  "       ",
 		Style: &pterm.ThemeDefault.InfoPrefixStyle,
 	}
-	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgLightRed}).Println(fmt.Sprintf("%d failed", fail))
-	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgYellow}).Println(fmt.Sprintf("%d skipped", skip))
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgLightRed}).Println(fmt.Sprintf("%d failed", failNum))
+	pterm.Info.WithMessageStyle(&pterm.Style{pterm.FgYellow}).Println(fmt.Sprintf("%d skipped", skipNum))
 	fmt.Println()
+
+	return passNum, failNum, skipNum
 }

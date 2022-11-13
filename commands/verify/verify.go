@@ -18,6 +18,7 @@
 package verify
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -66,21 +67,6 @@ type verifyInfo struct {
 	failFast   bool
 }
 
-type Summary struct {
-	errNum     int
-	successNum int
-}
-
-type CaseInfo struct {
-	msg string
-	err error
-}
-
-type OutputInfo struct {
-	writeLock sync.Mutex
-	casesInfo []CaseInfo
-}
-
 func verifySingleCase(expectedFile, actualFile, query string) error {
 	expectedData, err := util.ReadFileContent(expectedFile)
 	if err != nil {
@@ -111,103 +97,133 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
-func concurrentlyVerifySingleCase(v *config.VerifyCase, verifyInfo *verifyInfo, wg *sync.WaitGroup, outputInfo *OutputInfo, stopChan chan bool) {
-	var msg string
-	var err error
-	var caseInfo CaseInfo
+func concurrentlyVerifySingleCase(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	v *config.VerifyCase,
+	verifyInfo *verifyInfo,
+) (res *output.CaseResult) {
+	res = &output.CaseResult{}
 	defer func() {
-		caseInfo = CaseInfo{
-			msg,
-			err,
+		if res.Err != nil && verifyInfo.failFast {
+			cancel()
 		}
-		outputInfo.writeLock.Lock()
-		outputInfo.casesInfo = append(outputInfo.casesInfo, caseInfo)
-		outputInfo.writeLock.Unlock()
-		if verifyInfo.failFast {
-			if err != nil {
-				stopChan <- true
-			} else {
-				stopChan <- false
-			}
-		}
-		wg.Done()
 	}()
 
 	if v.GetExpected() == "" {
-		msg = fmt.Sprintf("failed to verify %v:", caseName(v))
-		err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
-		return
+		res.Msg = fmt.Sprintf("failed to verify %v:", caseName(v))
+		res.Err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
+		return res
 	}
 
 	for current := 0; current <= verifyInfo.retryCount; current++ {
-		if err = verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-			if current == 0 {
-				msg = fmt.Sprintf("verified %v\n", caseName(v))
+		select {
+		case <-ctx.Done():
+			res.Skip = true
+			return res
+		default:
+			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+				if current == 0 {
+					res.Msg = fmt.Sprintf("verified %v\n", caseName(v))
+				} else {
+					res.Msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current)
+				}
+				return res
+			} else if current != verifyInfo.retryCount {
+				time.Sleep(verifyInfo.interval)
 			} else {
-				msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current)
+				res.Msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
+				res.Err = err
 			}
-			return
-		} else if current != verifyInfo.retryCount {
-			time.Sleep(verifyInfo.interval)
-		} else {
-			msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
 		}
 	}
+
+	return res
 }
 
 // verifyCasesConcurrently verifies the cases concurrently.
 func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) error {
-	summary := Summary{}
-	var waitGroup sync.WaitGroup
-	stopChan := make(chan bool)
-	waitGroup.Add(verifyInfo.caseNumber)
-	outputInfo := OutputInfo{}
-	for idx := range verify.Cases {
-		go concurrentlyVerifySingleCase(&verify.Cases[idx], verifyInfo, &waitGroup, &outputInfo, stopChan)
-	}
+	res := make([]*output.CaseResult, len(verify.Cases))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	if verifyInfo.failFast {
-		if shouldExit(stopChan, verifyInfo.caseNumber) {
-			outputResult(printer, &outputInfo, &summary)
-			printer.PrintSummary(summary.successNum, summary.errNum, verifyInfo.caseNumber-summary.successNum-summary.errNum)
-			return fmt.Errorf("failed to verify one case")
+	var wg sync.WaitGroup
+	for idx := range verify.Cases {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+
+			// Check if the context is canceled before verifying the case.
+			select {
+			case <-ctx.Done():
+				res[i].Skip = true
+				return
+			default:
+				// It's safe to do this, since each goroutine only modifies a single, different, designated slice element.
+				res[i] = concurrentlyVerifySingleCase(ctx, cancel, &verify.Cases[i], verifyInfo)
+			}
+		}(idx)
+	}
+	wg.Wait()
+
+	printer.PrintResult(res)
+	errNum := 0
+	for _, r := range res {
+		if !r.Skip && r.Err != nil {
+			errNum++
 		}
 	}
-	waitGroup.Wait()
-	outputResult(printer, &outputInfo, &summary)
-	printer.PrintSummary(summary.successNum, summary.errNum, verifyInfo.caseNumber-summary.successNum-summary.errNum)
-	if summary.errNum > 0 {
-		return fmt.Errorf("failed to verify %d case(s)", summary.errNum)
+	if errNum > 0 {
+		return fmt.Errorf("failed to verify %d case(s)", errNum)
 	}
+
 	return nil
 }
 
 // verifyCasesSerially verifies the cases serially.
-func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) error {
-	summary := Summary{}
+func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err error) {
+	res := make([]*output.CaseResult, len(verify.Cases))
+	for i := range res {
+		res[i] = &output.CaseResult{
+			Skip: true,
+		}
+	}
+	errNum := 0
+
+	defer func() {
+		printer.PrintResult(res)
+		if errNum > 0 {
+			err = fmt.Errorf("failed to verify %d case(s)", errNum)
+		}
+	}()
+
 	for idx := range verify.Cases {
-		v := &verify.Cases[idx]
 		printer.Start()
+		v := &verify.Cases[idx]
+
 		if v.GetExpected() == "" {
-			errMsg := fmt.Sprintf("failed to verify %v", caseName(v))
-			printer.Warning(errMsg)
-			printer.Fail(fmt.Sprintf("the expected data file for %v is not specified\n", caseName(v)))
-			summary.errNum++
+			res[idx].Skip = false
+			res[idx].Msg = fmt.Sprintf("failed to verify %v", caseName(v))
+			res[idx].Err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
+
+			errNum++
+			printer.Warning(res[idx].Msg)
+			printer.Fail(res[idx].Err.Error())
 			if verifyInfo.failFast {
-				printer.PrintSummary(summary.successNum, summary.errNum, verifyInfo.caseNumber-summary.successNum-summary.errNum)
-				return fmt.Errorf("failed to verify one case")
+				return
 			}
 			continue
 		}
 
 		for current := 0; current <= verifyInfo.retryCount; current++ {
-			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
-				summary.successNum++
+			if e := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); e == nil {
 				if current == 0 {
-					printer.Success(fmt.Sprintf("verified %v \n", caseName(v)))
+					res[idx].Msg = fmt.Sprintf("verified %v \n", caseName(v))
 				} else {
-					printer.Success(fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current))
+					res[idx].Msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current)
 				}
+				res[idx].Skip = false
+				printer.Success(res[idx].Msg)
 				break
 			} else if current != verifyInfo.retryCount {
 				if current == 0 {
@@ -217,37 +233,21 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) error {
 				}
 				time.Sleep(verifyInfo.interval)
 			} else {
-				summary.errNum++
+				errNum++
+				res[idx].Msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
+				res[idx].Err = e
+				res[idx].Skip = false
 				printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
-				printer.Warning(fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current))
-				printer.Fail(err.Error())
+				printer.Warning(res[idx].Msg)
+				printer.Fail(res[idx].Err.Error())
 				if verifyInfo.failFast {
-					printer.PrintSummary(summary.successNum, summary.errNum, verifyInfo.caseNumber-summary.successNum-summary.errNum)
-					return fmt.Errorf("failed to verify one case, an error occurred")
+					return
 				}
 			}
 		}
 	}
 
-	printer.PrintSummary(summary.successNum, summary.errNum, verifyInfo.caseNumber-summary.successNum-summary.errNum)
-	if summary.errNum > 0 {
-		return fmt.Errorf("failed to verify %d case(s)", summary.errNum)
-	}
 	return nil
-}
-
-// outputResult outputs the result of cases.
-func outputResult(p output.Printer, outputInfo *OutputInfo, summary *Summary) {
-	for _, caseInfo := range outputInfo.casesInfo {
-		if caseInfo.err == nil {
-			summary.successNum++
-			p.Success(caseInfo.msg)
-		} else {
-			summary.errNum++
-			p.Warning(caseInfo.msg)
-			p.Fail(caseInfo.err.Error())
-		}
-	}
 }
 
 func caseName(v *config.VerifyCase) string {
@@ -258,22 +258,6 @@ func caseName(v *config.VerifyCase) string {
 		return fmt.Sprintf("case[%s]", v.Query)
 	}
 	return v.Name
-}
-
-func shouldExit(stopChan chan bool, goroutineNum int) bool {
-	count := 0
-	for shouldExit := range stopChan {
-		count++
-
-		if shouldExit {
-			return true
-		}
-
-		if count == goroutineNum {
-			break
-		}
-	}
-	return false
 }
 
 // DoVerifyAccordingConfig reads cases from the config file and verifies them.
@@ -307,7 +291,7 @@ func DoVerifyAccordingConfig() error {
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(e2eConfig.Verify.BatchOutput)
+	printer = output.NewPrinter(util.BatchOutput)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 
