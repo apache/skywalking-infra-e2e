@@ -90,7 +90,6 @@ type Verify struct {
 	Cases         []VerifyCase        `yaml:"cases"`
 	FailFast      bool                `yaml:"fail-fast"`
 	Concurrency   bool                `yaml:"concurrency"`
-	BatchOutput   bool                `yaml:"batchOutput"`
 }
 
 func (s *Setup) GetFile() string {

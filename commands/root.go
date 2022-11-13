@@ -93,6 +93,8 @@ func Execute() error {
 	Root.PersistentFlags().StringVarP(&util.WorkDir, "work-dir", "w", "~/.skywalking-infra-e2e", "the working directory for skywalking-infra-e2e")
 	Root.PersistentFlags().StringVarP(&util.LogDir, "log-dir", "l", "~/.skywalking-infra-e2e/logs", "the container logs directory for environment")
 	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
+	Root.PersistentFlags().BoolVarP(&util.BatchOutput, "batchOutput", "b", true,
+		"whether to output in batch mode, if false, the output will be printed in real time")
 
 	return Root.Execute()
 }

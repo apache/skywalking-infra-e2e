@@ -46,7 +46,6 @@ func init() {
 	}
 
 	GlobalConfig.E2EConfig.Verify.FailFast = true
-	GlobalConfig.E2EConfig.Verify.BatchOutput = true
 }
 
 func ReadGlobalConfigFile() {
