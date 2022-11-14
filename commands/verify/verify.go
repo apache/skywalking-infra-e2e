@@ -97,6 +97,8 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 	return nil
 }
 
+// concurrentlyVerifySingleCase verifies a single case in concurrency mode,
+// it will call the cancel function if the case fails and the fail-fast is enabled.
 func concurrentlyVerifySingleCase(
 	ctx context.Context,
 	cancel context.CancelFunc,
@@ -144,6 +146,9 @@ func concurrentlyVerifySingleCase(
 // verifyCasesConcurrently verifies the cases concurrently.
 func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) error {
 	res := make([]*output.CaseResult, len(verify.Cases))
+	for i := range res {
+		res[i] = &output.CaseResult{}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -166,13 +171,7 @@ func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) erro
 	}
 	wg.Wait()
 
-	printer.PrintResult(res)
-	errNum := 0
-	for _, r := range res {
-		if !r.Skip && r.Err != nil {
-			errNum++
-		}
-	}
+	_, errNum, _ := printer.PrintResult(res)
 	if errNum > 0 {
 		return fmt.Errorf("failed to verify %d case(s)", errNum)
 	}
@@ -182,16 +181,16 @@ func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) erro
 
 // verifyCasesSerially verifies the cases serially.
 func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err error) {
+	// A case may be skipped in fail-fast mode, so set it in advance.
 	res := make([]*output.CaseResult, len(verify.Cases))
 	for i := range res {
 		res[i] = &output.CaseResult{
 			Skip: true,
 		}
 	}
-	errNum := 0
 
 	defer func() {
-		printer.PrintResult(res)
+		_, errNum, _ := printer.PrintResult(res)
 		if errNum > 0 {
 			err = fmt.Errorf("failed to verify %d case(s)", errNum)
 		}
@@ -206,7 +205,6 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 			res[idx].Msg = fmt.Sprintf("failed to verify %v", caseName(v))
 			res[idx].Err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
 
-			errNum++
 			printer.Warning(res[idx].Msg)
 			printer.Fail(res[idx].Err.Error())
 			if verifyInfo.failFast {
@@ -233,7 +231,6 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				}
 				time.Sleep(verifyInfo.interval)
 			} else {
-				errNum++
 				res[idx].Msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
 				res[idx].Err = e
 				res[idx].Skip = false
@@ -291,7 +288,7 @@ func DoVerifyAccordingConfig() error {
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(util.BatchOutput)
+	printer = output.NewPrinter(util.BatchMode)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 
