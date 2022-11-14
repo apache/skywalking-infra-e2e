@@ -26,9 +26,10 @@ import (
 )
 
 var (
-	CfgFile string
-	WorkDir string
-	LogDir  string
+	CfgFile   string
+	WorkDir   string
+	LogDir    string
+	BatchMode bool
 )
 
 // ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
