@@ -24,6 +24,10 @@ inputs:
   log-dir:
     description: The container logs directory
     required: false
+  batch-mode:
+    description: Whether to run in batch mode, all interactive operations are disabled
+    required: false
+    default: 'true'
 runs:
   using: "composite"
   steps:
@@ -98,5 +102,6 @@ runs:
       run: |
         e2e run \
           -c "${{ inputs.e2e-file }}" \
+          --batch-mode "${{ inputs.batch-mode }}" \
           -w "${{ steps.e2e-dir-generator.outputs.work }}" \
           -l "${{ steps.e2e-dir-generator.outputs.log-case }}"
