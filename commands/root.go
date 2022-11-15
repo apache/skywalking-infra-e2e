@@ -93,8 +93,9 @@ func Execute() error {
 	Root.PersistentFlags().StringVarP(&util.WorkDir, "work-dir", "w", "~/.skywalking-infra-e2e", "the working directory for skywalking-infra-e2e")
 	Root.PersistentFlags().StringVarP(&util.LogDir, "log-dir", "l", "~/.skywalking-infra-e2e/logs", "the container logs directory for environment")
 	Root.PersistentFlags().StringVarP(&util.CfgFile, "config", "c", constant.E2EDefaultFile, "the config file")
-	Root.PersistentFlags().BoolVarP(&util.BatchMode, "batch-mode", "B", true,
-		"whether to output in batch mode, if false, the output will be printed in real time. This option is not valid in concurrency mode.")
+	Root.PersistentFlags().BoolVarP(&util.BatchMode, "batch-mode", "B", false,
+		`whether to run in batch mode, if true, all interactive operations are disabled, including real-time progress bar.
+This option is always enabled in concurrency mode and in our GitHub Actions.`)
 
 	return Root.Execute()
 }
