@@ -73,6 +73,7 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
+//nolint:gocyclo
 // KindSetup sets up environment according to e2e.yaml.
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
