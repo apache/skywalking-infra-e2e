@@ -55,7 +55,7 @@ Support two ways to set up the environment:
   1. Wait until all services are ready according to the interval, etc.
   1. Execute command to set up the testing environment or help verify, such as `yq` help to eval the YAML format.
 - **kind**:
-  1. Start the `KinD` cluster according to the config files.
+  1. Start the `KinD` cluster according to the config files or Start on an existing kubernetes cluster.
   1. Apply the resources files (`--manifests`) or/and run the custom init command (`--commands`).
   1. Check the pods' readiness.
   1. Wait until all pods are ready according to the `interval`, etc.

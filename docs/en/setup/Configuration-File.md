@@ -25,6 +25,7 @@ Support two kinds of the environment to set up the system.
 setup:
   env: kind
   file: path/to/kind.yaml               # Specified kinD manifest file path
+  kubeconfig: path/.kube/config         # The path of kubeconfig
   timeout: 20m                          # timeout duration
   init-system-environment: path/to/env  # Import environment file
   steps:                                # customize steps for prepare the environment
@@ -46,8 +47,11 @@ setup:
           port:                         # Want to expose port from resource
 ```
 
+> **_NOTE:_** The fields `file` and `kubeconfig` are mutually exclusive.
+
 The `KinD` environment follow these steps:
-1. Start the `KinD` cluster according to the config file, expose `KUBECONFIG` to environment for help execute `kubectl` in the steps.
+1. [optional]Start the `KinD` cluster according to the config file, expose `KUBECONFIG` to environment for help execute `kubectl` in the next steps.
+1. [optional]Setup the kubeconfig field for help execute `kubectl` in the next steps.
 1. Load docker images from `kind.import-images` if needed.
 1. Apply the resources files (`--manifests`) or/and run the custom init command (`--commands`) by steps.
 1. Wait until all steps are finished and all services are ready with the timeout(second).
