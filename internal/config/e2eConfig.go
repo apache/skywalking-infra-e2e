@@ -39,6 +39,7 @@ type E2EConfig struct {
 type Setup struct {
 	Env                   string    `yaml:"env"`
 	File                  string    `yaml:"file"`
+	Kubeconfig            string    `yaml:"kubeconfig"`
 	Steps                 []Step    `yaml:"steps"`
 	Timeout               any       `yaml:"timeout"`
 	InitSystemEnvironment string    `yaml:"init-system-environment"`
@@ -95,6 +96,13 @@ type Verify struct {
 func (s *Setup) GetFile() string {
 	// expand the file path with system environment
 	file := os.ExpandEnv(s.File)
+	file = util.ResolveAbs(file)
+	return file
+}
+
+func (s *Setup) GetKubeconfig() string {
+	// expand the file path with system environment
+	file := os.ExpandEnv(s.Kubeconfig)
 	file = util.ResolveAbs(file)
 	return file
 }

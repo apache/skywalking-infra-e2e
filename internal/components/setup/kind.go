@@ -73,12 +73,19 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
+//nolint:gocyclo // skip the cyclomatic complexity check here
 // KindSetup sets up environment according to e2e.yaml.
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
 
-	if kindConfigPath == "" {
-		return fmt.Errorf("no kind config file was provided")
+	kubeConfigPath = e2eConfig.Setup.GetKubeconfig()
+
+	if kindConfigPath == "" && kubeConfigPath == "" {
+		return fmt.Errorf("no kind config file and kubeconfig file was provided")
+	}
+
+	if kindConfigPath != "" && kubeConfigPath != "" {
+		return fmt.Errorf("the kind config file and kubeconfig file cannot be provided at the same time")
 	}
 
 	steps := e2eConfig.Setup.Steps
@@ -94,8 +101,11 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		util.ExportEnvVars(profilePath)
 	}
 
-	if err := createKindCluster(kindConfigPath, e2eConfig); err != nil {
-		return err
+	// if there is an existing cluster, don't create a new kind cluster here.
+	if kubeConfigPath == "" {
+		if err := createKindCluster(kindConfigPath, e2eConfig); err != nil {
+			return err
+		}
 	}
 
 	// import images

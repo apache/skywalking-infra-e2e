@@ -46,9 +46,13 @@ func DoCleanupAccordingE2E() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 
 	if e2eConfig.Setup.Env == constant.Kind {
-		err := cleanup.KindCleanUp(&e2eConfig)
-		if err != nil {
-			return err
+		kubeConfigPath := e2eConfig.Setup.GetKubeconfig()
+		// if there is an existing kubernetes cluster, don't delete the kind cluster.
+		if kubeConfigPath == "" {
+			err := cleanup.KindCleanUp(&e2eConfig)
+			if err != nil {
+				return err
+			}
 		}
 	} else if e2eConfig.Setup.Env == constant.Compose {
 		err := cleanup.ComposeCleanUp(&e2eConfig)

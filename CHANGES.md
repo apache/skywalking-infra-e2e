@@ -8,6 +8,7 @@ Release Notes.
 * Support `sha256enc` and `sha512enc` encoding in verify case.
 * Support `hasPrefix` and `hasSuffix` string verifier in verify case.
 * Bump up `kind` to v0.14.0.
+* Add a field `kubeconfig` to support running e2e test on an existing kubernetes cluster.
 
 #### Bug Fixes
 
