@@ -106,6 +106,13 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		if err := createKindCluster(kindConfigPath, e2eConfig); err != nil {
 			return err
 		}
+	} else {
+		// export the kubeconfig path for command line
+		err := os.Setenv("KUBECONFIG", kubeConfigPath)
+		if err != nil {
+			return fmt.Errorf("could not export kubeconfig file path, %v", err)
+		}
+		logger.Log.Infof("export KUBECONFIG=%s", kubeConfigPath)
 	}
 
 	// import images
