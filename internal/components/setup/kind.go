@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,6 +46,8 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	ctlutil "k8s.io/kubectl/pkg/util"
 
+	"github.com/docker/docker/api/types"
+	docker "github.com/docker/docker/client"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
@@ -73,8 +76,29 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
-//nolint:gocyclo // skip the cyclomatic complexity check here
+// pullImages pull docker image from a private repository
+func pullImages(images []string) error {
+	cli, err := docker.NewClientWithOpts(docker.FromEnv)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	var out io.ReadCloser
+	for _, image := range images {
+		out, err = cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
+		if err != nil {
+			logger.Log.Warn("pull image [%s] error", image)
+			return err
+		}
+		out.Close()
+	}
+	return nil
+}
+
 // KindSetup sets up environment according to e2e.yaml.
+//
+//nolint:gocyclo // skip the cyclomatic complexity check here
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
 
@@ -113,6 +137,13 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 			return fmt.Errorf("could not export kubeconfig file path, %v", err)
 		}
 		logger.Log.Infof("export KUBECONFIG=%s", kubeConfigPath)
+	}
+
+	// pull images
+	if len(e2eConfig.Setup.Kind.PullImages) > 0 {
+		if err := pullImages(e2eConfig.Setup.Kind.PullImages); err != nil {
+			return err
+		}
 	}
 
 	// import images

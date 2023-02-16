@@ -76,6 +76,7 @@ type Step struct {
 }
 
 type KindSetup struct {
+	PullImages   []string         `yaml:"pull-images"`
 	ImportImages []string         `yaml:"import-images"`
 	ExposePorts  []KindExposePort `yaml:"expose-ports"`
 }
