@@ -22,14 +22,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	apiv1 "k8s.io/api/admission/v1"
@@ -84,14 +85,23 @@ func pullImages(images []string) error {
 	}
 	defer cli.Close()
 
-	var out io.ReadCloser
+	var count atomic.Int32
+	var wg sync.WaitGroup
 	for _, image := range images {
-		out, err = cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
-		if err != nil {
-			logger.Log.Warn("pull image [%s] error", image)
-			return err
-		}
-		out.Close()
+		wg.Add(1)
+		go func(image string) {
+			defer wg.Done()
+			out, err := cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
+			if err != nil {
+				logger.Log.Error("pull image error", "name", image, "error", err)
+			}
+			count.Add(1)
+			out.Close()
+		}(image)
+	}
+	wg.Wait()
+	if int(count.Load()) != len(images) {
+		return errors.New("can not pull all images")
 	}
 	return nil
 }
@@ -139,15 +149,13 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		logger.Log.Infof("export KUBECONFIG=%s", kubeConfigPath)
 	}
 
-	// pull images
-	if len(e2eConfig.Setup.Kind.PullImages) > 0 {
-		if err := pullImages(e2eConfig.Setup.Kind.PullImages); err != nil {
-			return err
-		}
-	}
-
 	// import images
 	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
+		// pull images if this image not exist
+		if err := pullImages(e2eConfig.Setup.Kind.ImportImages); err != nil {
+			return err
+		}
+
 		for _, image := range e2eConfig.Setup.Kind.ImportImages {
 			image = os.ExpandEnv(image)
 			args := []string{"load", "docker-image", image}
