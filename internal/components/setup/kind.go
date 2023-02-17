@@ -94,6 +94,7 @@ func pullImages(images []string) error {
 			out, err := cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
 			if err != nil {
 				logger.Log.Error("pull image error", "name", image, "error", err)
+				return
 			}
 			atomic.AddInt32(&count, 1)
 			out.Close()
