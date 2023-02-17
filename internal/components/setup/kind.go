@@ -22,6 +22,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	apiv1 "k8s.io/api/admission/v1"
@@ -45,6 +47,8 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	ctlutil "k8s.io/kubectl/pkg/util"
 
+	"github.com/docker/docker/api/types"
+	docker "github.com/docker/docker/client"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
@@ -73,8 +77,39 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
-//nolint:gocyclo // skip the cyclomatic complexity check here
+// pullImages pull docker images from remote before loading them into KinD cluster
+func pullImages(images []string) error {
+	cli, err := docker.NewClientWithOpts(docker.FromEnv)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	var count int32
+	var wg sync.WaitGroup
+	for _, image := range images {
+		wg.Add(1)
+		go func(image string) {
+			defer wg.Done()
+			out, err := cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
+			if err != nil {
+				logger.Log.Error("pull image error", "name", image, "error", err)
+				return
+			}
+			atomic.AddInt32(&count, 1)
+			out.Close()
+		}(image)
+	}
+	wg.Wait()
+	if int(count) != len(images) {
+		return errors.New("can not pull all images")
+	}
+	return nil
+}
+
 // KindSetup sets up environment according to e2e.yaml.
+//
+//nolint:gocyclo // skip the cyclomatic complexity check here
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
 
@@ -117,6 +152,11 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 
 	// import images
 	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
+		// pull images if this image not exist
+		if err := pullImages(e2eConfig.Setup.Kind.ImportImages); err != nil {
+			return err
+		}
+
 		for _, image := range e2eConfig.Setup.Kind.ImportImages {
 			image = os.ExpandEnv(image)
 			args := []string{"load", "docker-image", image}
