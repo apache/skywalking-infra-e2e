@@ -77,7 +77,7 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
-// pullImages pull docker image from a private repository
+// pullImages pull docker images from remote before loading them into KinD cluster
 func pullImages(images []string) error {
 	cli, err := docker.NewClientWithOpts(docker.FromEnv)
 	if err != nil {
