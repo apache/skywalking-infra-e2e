@@ -85,7 +85,7 @@ func pullImages(images []string) error {
 	}
 	defer cli.Close()
 
-	var count atomic.Int32
+	var count int32
 	var wg sync.WaitGroup
 	for _, image := range images {
 		wg.Add(1)
@@ -95,12 +95,12 @@ func pullImages(images []string) error {
 			if err != nil {
 				logger.Log.Error("pull image error", "name", image, "error", err)
 			}
-			count.Add(1)
+			atomic.AddInt32(&count, 1)
 			out.Close()
 		}(image)
 	}
 	wg.Wait()
-	if int(count.Load()) != len(images) {
+	if int(count) != len(images) {
 		return errors.New("can not pull all images")
 	}
 	return nil
