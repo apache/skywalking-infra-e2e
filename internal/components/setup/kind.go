@@ -77,21 +77,58 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
+func listLocalImages(ctx context.Context, cli *docker.Client) (map[string]struct{}, error) {
+	summary, err := cli.ImageList(ctx, types.ImageListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]struct{}, len(summary))
+	for i := 0; i < len(summary); i++ {
+		tags := summary[i].RepoTags
+		for j := 0; j < len(tags); j++ {
+			res[tags[j]] = struct{}{}
+		}
+	}
+	return res, nil
+}
+
 // pullImages pull docker image from a private repository
-func pullImages(images []string) error {
+func pullImages(ctx context.Context, images []string) error {
 	cli, err := docker.NewClientWithOpts(docker.FromEnv)
 	if err != nil {
 		return err
 	}
 	defer cli.Close()
 
+	localImages, err := listLocalImages(ctx, cli)
+	if err != nil {
+		logger.Log.Error("list local images error", "error", err)
+		return fmt.Errorf("list local images error")
+	}
+
+	// filter local image
+	filter := func(tags []string) []string {
+		res := make([]string, 0)
+		for _, tag := range tags {
+			if _, ok := localImages[tag]; !ok {
+				res = append(res, tag)
+			}
+		}
+		return res
+	}
+
+	filterResult := filter(images)
+	if len(filterResult) == 0 {
+		return nil
+	}
+
 	var count int32
 	var wg sync.WaitGroup
-	for _, image := range images {
+	for _, image := range filterResult {
 		wg.Add(1)
 		go func(image string) {
 			defer wg.Done()
-			out, err := cli.ImagePull(context.Background(), image, types.ImagePullOptions{})
+			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 			if err != nil {
 				logger.Log.Error("pull image error", "name", image, "error", err)
 				return
@@ -153,7 +190,7 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	// import images
 	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
 		// pull images if this image not exist
-		if err := pullImages(e2eConfig.Setup.Kind.ImportImages); err != nil {
+		if err := pullImages(context.Background(), e2eConfig.Setup.Kind.ImportImages); err != nil {
 			return err
 		}
 
