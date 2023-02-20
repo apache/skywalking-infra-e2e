@@ -102,8 +102,7 @@ func pullImages(ctx context.Context, images []string) error {
 
 	localImages, err := listLocalImages(ctx, cli)
 	if err != nil {
-		logger.Log.Error("list local images error", "error", err)
-		return fmt.Errorf("list local images error")
+		return fmt.Errorf("list local images error: %w", err)
 	}
 
 	// filter local image
