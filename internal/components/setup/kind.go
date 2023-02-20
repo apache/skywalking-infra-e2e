@@ -189,13 +189,16 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 
 	// import images
 	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
+		images := make([]string, 0, len(e2eConfig.Setup.Kind.ImportImages))
+		for _, image := range e2eConfig.Setup.Kind.ImportImages {
+			images = append(images, os.ExpandEnv(image))
+		}
 		// pull images if this image not exist
-		if err := pullImages(context.Background(), e2eConfig.Setup.Kind.ImportImages); err != nil {
+		if err := pullImages(context.Background(), images); err != nil {
 			return err
 		}
 
-		for _, image := range e2eConfig.Setup.Kind.ImportImages {
-			image = os.ExpandEnv(image)
+		for _, image := range images {
 			args := []string{"load", "docker-image", image}
 
 			logger.Log.Infof("import docker images: %s", image)
