@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -127,17 +128,20 @@ func pullImages(ctx context.Context, images []string) error {
 		wg.Add(1)
 		go func(image string) {
 			defer wg.Done()
+			logger.Log.Infof("image %s does not exist, will pull from remote", image)
 			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 			if err != nil {
-				logger.Log.Error("pull image error", "name", image, "error", err)
+				logger.Log.Errorf("failed pull image: %s", image)
 				return
 			}
+			defer out.Close()
+
+			io.Copy(os.Stdout, out) //nolint:errcheck // ignore this error
 			atomic.AddInt32(&count, 1)
-			out.Close()
 		}(image)
 	}
 	wg.Wait()
-	if int(count) != len(images) {
+	if int(count) != len(filterResult) {
 		return errors.New("can not pull all images")
 	}
 	return nil
