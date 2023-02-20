@@ -92,7 +92,7 @@ func listLocalImages(ctx context.Context, cli *docker.Client) (map[string]struct
 	return res, nil
 }
 
-// pullImages pull docker image from a private repository
+// pullImages pulls docker image from a docker repository
 func pullImages(ctx context.Context, images []string) error {
 	cli, err := docker.NewClientWithOpts(docker.FromEnv)
 	if err != nil {
