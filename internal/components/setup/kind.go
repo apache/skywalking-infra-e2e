@@ -131,13 +131,17 @@ func pullImages(ctx context.Context, images []string) error {
 			logger.Log.Infof("image %s does not exist, will pull from remote", image)
 			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
 			if err != nil {
-				logger.Log.Errorf("failed pull image: %s", image)
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
 				return
 			}
 			defer out.Close()
 
-			io.Copy(os.Stdout, out) //nolint:errcheck // ignore this error
+			if _, err := io.ReadAll(out); err != nil {
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
+				return
+			}
 			atomic.AddInt32(&count, 1)
+			logger.Log.Infof("success pull image: %s", image)
 		}(image)
 	}
 	wg.Wait()
