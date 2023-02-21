@@ -22,13 +22,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	apiv1 "k8s.io/api/admission/v1"
@@ -45,6 +48,8 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	ctlutil "k8s.io/kubectl/pkg/util"
 
+	"github.com/docker/docker/api/types"
+	docker "github.com/docker/docker/client"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
@@ -73,8 +78,82 @@ type kindPort struct {
 	waitExpose string // Need to use when expose
 }
 
-//nolint:gocyclo // skip the cyclomatic complexity check here
+func listLocalImages(ctx context.Context, cli *docker.Client) (map[string]struct{}, error) {
+	summary, err := cli.ImageList(ctx, types.ImageListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]struct{}, len(summary))
+	for i := 0; i < len(summary); i++ {
+		tags := summary[i].RepoTags
+		for j := 0; j < len(tags); j++ {
+			res[tags[j]] = struct{}{}
+		}
+	}
+	return res, nil
+}
+
+// pullImages pulls docker image from a docker repository
+func pullImages(ctx context.Context, images []string) error {
+	cli, err := docker.NewClientWithOpts(docker.FromEnv)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	localImages, err := listLocalImages(ctx, cli)
+	if err != nil {
+		return fmt.Errorf("list local images error: %w", err)
+	}
+
+	// filter local image
+	filter := func(tags []string) []string {
+		res := make([]string, 0)
+		for _, tag := range tags {
+			if _, ok := localImages[tag]; !ok {
+				res = append(res, tag)
+			}
+		}
+		return res
+	}
+
+	filterResult := filter(images)
+	if len(filterResult) == 0 {
+		return nil
+	}
+
+	var count int32
+	var wg sync.WaitGroup
+	for _, image := range filterResult {
+		wg.Add(1)
+		go func(image string) {
+			defer wg.Done()
+			logger.Log.Infof("image %s does not exist, will pull from remote", image)
+			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+			if err != nil {
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
+				return
+			}
+			defer out.Close()
+
+			if _, err := io.ReadAll(out); err != nil {
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
+				return
+			}
+			atomic.AddInt32(&count, 1)
+			logger.Log.Infof("success pull image: %s", image)
+		}(image)
+	}
+	wg.Wait()
+	if int(count) != len(filterResult) {
+		return errors.New("can not pull all images")
+	}
+	return nil
+}
+
 // KindSetup sets up environment according to e2e.yaml.
+//
+//nolint:gocyclo // skip the cyclomatic complexity check here
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
 
@@ -117,8 +196,16 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 
 	// import images
 	if len(e2eConfig.Setup.Kind.ImportImages) > 0 {
+		images := make([]string, 0, len(e2eConfig.Setup.Kind.ImportImages))
 		for _, image := range e2eConfig.Setup.Kind.ImportImages {
-			image = os.ExpandEnv(image)
+			images = append(images, os.ExpandEnv(image))
+		}
+		// pull images if this image not exist
+		if err := pullImages(context.Background(), images); err != nil {
+			return err
+		}
+
+		for _, image := range images {
 			args := []string{"load", "docker-image", image}
 
 			logger.Log.Infof("import docker images: %s", image)
