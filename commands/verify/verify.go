@@ -33,16 +33,18 @@ import (
 )
 
 var (
-	query    string
-	actual   string
-	expected string
-	printer  output.Printer
+	query        string
+	actual       string
+	expected     string
+	printer      output.Printer
+	verifyResult output.VerifyResult
 )
 
 func init() {
 	Verify.Flags().StringVarP(&query, "query", "q", "", "the query to get the actual data, the result of the query should in YAML format")
 	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
+	Verify.Flags().BoolVarP(&util.Yaml, "yaml", "y", false, "whether to output the verify result in YAML format. If it is true, the interactive operations and summary of verify will be disabled")
 }
 
 // Verify verifies that the actual data satisfies the expected data pattern.
@@ -190,9 +192,15 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	}
 
 	defer func() {
-		_, errNum, _ := printer.PrintResult(res)
-		if errNum > 0 {
-			err = fmt.Errorf("failed to verify %d case(s)", errNum)
+		// if Yaml is true, output the verifyResult in YAML
+		// also, if Yaml is true, avoid to output the summary of verify
+		if util.Yaml {
+			verifyResult.OutputVerifyResultInYAML()
+		} else {
+			_, errNum, _ := printer.PrintResult(res)
+			if errNum > 0 {
+				err = fmt.Errorf("failed to verify %d case(s)", errNum)
+			}
 		}
 	}()
 
@@ -222,6 +230,8 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				}
 				res[idx].Skip = false
 				printer.Success(res[idx].Msg)
+				// add the passed cases to verifyResult
+				verifyResult.AddPassedCase(caseName(v))
 				break
 			} else if current != verifyInfo.retryCount {
 				if current == 0 {
@@ -237,7 +247,13 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
 				printer.Warning(res[idx].Msg)
 				printer.Fail(res[idx].Err.Error())
+				// add the failed cases to verifyResult
+				verifyResult.AddFailedCase(caseName(v))
 				if verifyInfo.failFast {
+					// add the skipped cases to verifyResult
+					for j := idx + 1; j < len(verify.Cases); j++ {
+						verifyResult.AddSkippedCase(caseName(&verify.Cases[j]))
+					}
 					return
 				}
 			}
@@ -284,11 +300,11 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 	if concurrency {
 		// enable batch output mode when concurrency is enabled
-		printer = output.NewPrinter(true)
+		printer = output.NewPrinter(true, false)
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(util.BatchMode)
+	printer = output.NewPrinter(util.BatchMode, util.Yaml)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 

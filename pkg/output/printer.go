@@ -42,11 +42,12 @@ type Printer interface {
 type printer struct {
 	spinner     *pterm.SpinnerPrinter
 	batchOutput bool
+	yamlOutput  bool
 }
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool) Printer {
+func NewPrinter(batchOutput bool, yamlOutput bool) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
@@ -56,11 +57,15 @@ func NewPrinter(batchOutput bool) Printer {
 	return &printer{
 		spinner:     spinner,
 		batchOutput: batchOutput,
+		yamlOutput:  yamlOutput,
 	}
 }
 
 func (p *printer) Start(msg ...string) {
 	if p.batchOutput {
+		return
+	}
+	if p.yamlOutput {
 		return
 	}
 
@@ -71,12 +76,18 @@ func (p *printer) Success(msg string) {
 	if p.batchOutput {
 		return
 	}
+	if p.yamlOutput {
+		return
+	}
 
 	p.spinner.Success(msg)
 }
 
 func (p *printer) Warning(msg string) {
 	if p.batchOutput {
+		return
+	}
+	if p.yamlOutput {
 		return
 	}
 
@@ -87,12 +98,18 @@ func (p *printer) Fail(msg string) {
 	if p.batchOutput {
 		return
 	}
+	if p.yamlOutput {
+		return
+	}
 
 	p.spinner.Fail(msg)
 }
 
 func (p *printer) UpdateText(text string) {
 	if p.batchOutput {
+		return
+	}
+	if p.yamlOutput {
 		return
 	}
 

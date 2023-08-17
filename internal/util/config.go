@@ -30,6 +30,7 @@ var (
 	WorkDir   string
 	LogDir    string
 	BatchMode bool
+	Yaml      bool
 )
 
 // ResolveAbs resolves the relative path (relative to CfgFile) to an absolute file path.
