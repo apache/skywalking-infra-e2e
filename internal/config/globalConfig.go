@@ -20,6 +20,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/apache/skywalking-infra-e2e/pkg/output"
 	"os"
 	"path/filepath"
 
@@ -76,7 +77,7 @@ func ReadGlobalConfigFile() {
 	}
 
 	GlobalConfig.Error = nil
-	if !util.Yaml {
+	if output.Output == "" {
 		logger.Log.Info("load the e2e config successfully")
 	}
 }

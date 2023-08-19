@@ -19,7 +19,6 @@ package output
 
 import (
 	"fmt"
-
 	"github.com/pterm/pterm"
 )
 
@@ -40,14 +39,15 @@ type Printer interface {
 }
 
 type printer struct {
-	spinner     *pterm.SpinnerPrinter
-	batchOutput bool
-	yamlOutput  bool
+	spinner        *pterm.SpinnerPrinter
+	batchOutput    bool
+	outputInFormat bool
+	simpleResult   bool
 }
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool, yamlOutput bool) Printer {
+func NewPrinter(batchOutput bool, outputInFormat bool, simpleResult bool) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
@@ -55,9 +55,10 @@ func NewPrinter(batchOutput bool, yamlOutput bool) Printer {
 	}
 
 	return &printer{
-		spinner:     spinner,
-		batchOutput: batchOutput,
-		yamlOutput:  yamlOutput,
+		spinner:        spinner,
+		batchOutput:    batchOutput,
+		outputInFormat: outputInFormat,
+		simpleResult:   simpleResult,
 	}
 }
 
@@ -65,7 +66,8 @@ func (p *printer) Start(msg ...string) {
 	if p.batchOutput {
 		return
 	}
-	if p.yamlOutput {
+
+	if p.outputInFormat {
 		return
 	}
 
@@ -73,10 +75,12 @@ func (p *printer) Start(msg ...string) {
 }
 
 func (p *printer) Success(msg string) {
+
 	if p.batchOutput {
 		return
 	}
-	if p.yamlOutput {
+
+	if p.outputInFormat {
 		return
 	}
 
@@ -87,7 +91,8 @@ func (p *printer) Warning(msg string) {
 	if p.batchOutput {
 		return
 	}
-	if p.yamlOutput {
+
+	if p.outputInFormat {
 		return
 	}
 
@@ -98,18 +103,24 @@ func (p *printer) Fail(msg string) {
 	if p.batchOutput {
 		return
 	}
-	if p.yamlOutput {
+
+	if p.outputInFormat {
 		return
 	}
 
-	p.spinner.Fail(msg)
+	if !p.simpleResult {
+		p.spinner.Fail(msg)
+	} else {
+		println()
+	}
 }
 
 func (p *printer) UpdateText(text string) {
 	if p.batchOutput {
 		return
 	}
-	if p.yamlOutput {
+
+	if p.outputInFormat {
 		return
 	}
 
@@ -132,7 +143,12 @@ func (p *printer) PrintResult(caseRes []*CaseResult) (passNum, failNum, skipNum 
 				failNum++
 				if p.batchOutput {
 					p.spinner.Warning(cr.Msg)
-					p.spinner.Fail(cr.Err.Error())
+					if !p.simpleResult {
+						p.spinner.Fail(cr.Err.Error())
+					} else {
+						fmt.Println()
+					}
+
 				}
 			}
 		} else {
