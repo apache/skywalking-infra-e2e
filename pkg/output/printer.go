@@ -42,12 +42,12 @@ type printer struct {
 	spinner        *pterm.SpinnerPrinter
 	batchOutput    bool
 	outputInFormat bool
-	simpleResult   bool
+	outputDiff     bool
 }
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool, outputInFormat bool, simpleResult bool) Printer {
+func NewPrinter(batchOutput bool, outputInFormat bool, outputDiff bool) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
@@ -58,7 +58,7 @@ func NewPrinter(batchOutput bool, outputInFormat bool, simpleResult bool) Printe
 		spinner:        spinner,
 		batchOutput:    batchOutput,
 		outputInFormat: outputInFormat,
-		simpleResult:   simpleResult,
+		outputDiff:     outputDiff,
 	}
 }
 
@@ -108,7 +108,7 @@ func (p *printer) Fail(msg string) {
 		return
 	}
 
-	if !p.simpleResult {
+	if !p.outputDiff {
 		p.spinner.Fail(msg)
 	} else {
 		println()
@@ -143,7 +143,7 @@ func (p *printer) PrintResult(caseRes []*CaseResult) (passNum, failNum, skipNum 
 				failNum++
 				if p.batchOutput {
 					p.spinner.Warning(cr.Msg)
-					if !p.simpleResult {
+					if !p.outputDiff {
 						p.spinner.Fail(cr.Err.Error())
 					} else {
 						fmt.Println()

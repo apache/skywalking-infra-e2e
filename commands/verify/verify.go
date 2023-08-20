@@ -33,12 +33,12 @@ import (
 )
 
 var (
-	query        string
-	actual       string
-	expected     string
-	simpleResult bool
-	printer      output.Printer
-	caseInfo     output.CaseInfo
+	query      string
+	actual     string
+	expected   string
+	outputDiff bool
+	printer    output.Printer
+	caseInfo   output.CaseInfo
 )
 
 func init() {
@@ -46,7 +46,7 @@ func init() {
 	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&output.Format, "output", "o", "", "output the verify summary in which format")
-	Verify.Flags().BoolVarP(&simpleResult, "simple-result", "", false, "")
+	Verify.Flags().BoolVarP(&outputDiff, "no-diff", "", false, "")
 }
 
 // Verify verifies that the actual data satisfies the expected data pattern.
@@ -307,7 +307,7 @@ func DoVerifyAccordingConfig() error {
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(util.BatchMode, output.Format != "", simpleResult)
+	printer = output.NewPrinter(util.BatchMode, output.Format != "", outputDiff)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 
