@@ -24,9 +24,10 @@ import (
 
 // CaseResult represents the result of a verification case.
 type CaseResult struct {
-	Msg  string
-	Err  error
-	Skip bool
+	CaseName string
+	Msg      string
+	Err      error
+	Skip     bool
 }
 
 type Printer interface {
@@ -42,12 +43,12 @@ type printer struct {
 	spinner        *pterm.SpinnerPrinter
 	batchOutput    bool
 	outputInFormat bool
-	outputDiff     bool
+	summaryOnly    bool
 }
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool, outputInFormat bool, outputDiff bool) Printer {
+func NewPrinter(batchOutput bool, outputInFormat bool, summaryOnly bool) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
@@ -58,16 +59,12 @@ func NewPrinter(batchOutput bool, outputInFormat bool, outputDiff bool) Printer 
 		spinner:        spinner,
 		batchOutput:    batchOutput,
 		outputInFormat: outputInFormat,
-		outputDiff:     outputDiff,
+		summaryOnly:    summaryOnly,
 	}
 }
 
 func (p *printer) Start(msg ...string) {
-	if p.batchOutput {
-		return
-	}
-
-	if p.outputInFormat {
+	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
 
@@ -76,11 +73,7 @@ func (p *printer) Start(msg ...string) {
 
 func (p *printer) Success(msg string) {
 
-	if p.batchOutput {
-		return
-	}
-
-	if p.outputInFormat {
+	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
 
@@ -88,11 +81,7 @@ func (p *printer) Success(msg string) {
 }
 
 func (p *printer) Warning(msg string) {
-	if p.batchOutput {
-		return
-	}
-
-	if p.outputInFormat {
+	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
 
@@ -100,27 +89,15 @@ func (p *printer) Warning(msg string) {
 }
 
 func (p *printer) Fail(msg string) {
-	if p.batchOutput {
+	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
 
-	if p.outputInFormat {
-		return
-	}
-
-	if !p.outputDiff {
-		p.spinner.Fail(msg)
-	} else {
-		println()
-	}
+	p.spinner.Fail(msg)
 }
 
 func (p *printer) UpdateText(text string) {
-	if p.batchOutput {
-		return
-	}
-
-	if p.outputInFormat {
+	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
 
@@ -143,11 +120,7 @@ func (p *printer) PrintResult(caseRes []*CaseResult) (passNum, failNum, skipNum 
 				failNum++
 				if p.batchOutput {
 					p.spinner.Warning(cr.Msg)
-					if !p.outputDiff {
-						p.spinner.Fail(cr.Err.Error())
-					} else {
-						fmt.Println()
-					}
+					p.spinner.Fail(cr.Err.Error())
 
 				}
 			}

@@ -33,12 +33,11 @@ import (
 )
 
 var (
-	query      string
-	actual     string
-	expected   string
-	outputDiff bool
-	printer    output.Printer
-	caseInfo   output.CaseInfo
+	query       string
+	actual      string
+	expected    string
+	summaryOnly bool
+	printer     output.Printer
 )
 
 func init() {
@@ -46,7 +45,7 @@ func init() {
 	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&output.Format, "output", "o", "", "output the verify summary in which format")
-	Verify.Flags().BoolVarP(&outputDiff, "no-diff", "", false, "")
+	Verify.Flags().BoolVarP(&summaryOnly, "summary-only", "", false, "")
 }
 
 // Verify verifies that the actual data satisfies the expected data pattern.
@@ -195,7 +194,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 
 	defer func() {
 		if output.Format != "" {
-			output.PrintTheOutput(caseInfo)
+			output.PrintResult(res)
 		} else {
 			_, errNum, _ := printer.PrintResult(res)
 			if errNum > 0 {
@@ -207,6 +206,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	for idx := range verify.Cases {
 		printer.Start()
 		v := &verify.Cases[idx]
+		res[idx].CaseName = caseName(v)
 
 		if v.GetExpected() == "" {
 			res[idx].Skip = false
@@ -230,8 +230,6 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				}
 				res[idx].Skip = false
 				printer.Success(res[idx].Msg)
-				// add the passed cases to caseInfo
-				caseInfo.AddPassedCase(caseName(v))
 				break
 			} else if current != verifyInfo.retryCount {
 				if current == 0 {
@@ -247,13 +245,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
 				printer.Warning(res[idx].Msg)
 				printer.Fail(res[idx].Err.Error())
-				// add the failed cases to verifyResult
-				caseInfo.AddFailedCase(caseName(v))
 				if verifyInfo.failFast {
-					// add the skipped cases to caseInfo
-					for j := idx + 1; j < len(verify.Cases); j++ {
-						caseInfo.AddSkippedCase(caseName(&verify.Cases[j]))
-					}
 					return
 				}
 			}
@@ -307,7 +299,7 @@ func DoVerifyAccordingConfig() error {
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 
-	printer = output.NewPrinter(util.BatchMode, output.Format != "", outputDiff)
+	printer = output.NewPrinter(util.BatchMode, output.Format != "", summaryOnly)
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 

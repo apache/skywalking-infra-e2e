@@ -10,7 +10,7 @@ var (
 	Formats = []string{"yaml"}
 )
 
-type CaseInfo struct {
+type YamlCaseResult struct {
 	Passed  []string
 	Failed  []string
 	Skipped []string
@@ -26,26 +26,27 @@ func FormatIsNotExist() bool {
 	return true
 }
 
-func PrintTheOutput(caseInfo CaseInfo) {
+func PrintResult(caseRes []*CaseResult) {
 	switch Format {
 	case "yaml":
-		caseInfo.PrintInYAML()
+		PrintResultInYAML(caseRes)
 	}
 }
 
-func (caseInfo *CaseInfo) PrintInYAML() {
-	yaml, _ := yaml.Marshal(caseInfo)
+func PrintResultInYAML(caseRes []*CaseResult) {
+	var yamlCaseResult YamlCaseResult
+	for _, cr := range caseRes {
+		if !cr.Skip {
+			if cr.Err == nil {
+				yamlCaseResult.Passed = append(yamlCaseResult.Passed, cr.CaseName)
+			} else {
+				yamlCaseResult.Failed = append(yamlCaseResult.Failed, cr.CaseName)
+			}
+		} else {
+			yamlCaseResult.Skipped = append(yamlCaseResult.Skipped, cr.CaseName)
+		}
+	}
+
+	yaml, _ := yaml.Marshal(yamlCaseResult)
 	fmt.Print(string(yaml))
-}
-
-func (caseInfo *CaseInfo) AddPassedCase(caseName string) {
-	caseInfo.Passed = append(caseInfo.Passed, caseName)
-}
-
-func (caseInfo *CaseInfo) AddFailedCase(caseName string) {
-	caseInfo.Failed = append(caseInfo.Failed, caseName)
-}
-
-func (caseInfo *CaseInfo) AddSkippedCase(caseName string) {
-	caseInfo.Skipped = append(caseInfo.Skipped, caseName)
 }
