@@ -19,6 +19,7 @@ package output
 
 import (
 	"fmt"
+
 	"github.com/pterm/pterm"
 )
 
