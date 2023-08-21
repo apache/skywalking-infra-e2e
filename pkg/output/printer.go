@@ -24,10 +24,10 @@ import (
 
 // CaseResult represents the result of a verification case.
 type CaseResult struct {
-	CaseName string
-	Msg      string
-	Err      error
-	Skip     bool
+	Name string
+	Msg  string
+	Err  error
+	Skip bool
 }
 
 type Printer interface {
@@ -48,18 +48,41 @@ type printer struct {
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool, outputInFormat bool, summaryOnly bool) Printer {
+func NewPrinter(options ...Option) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
 		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
 	}
 
-	return &printer{
-		spinner:        spinner,
-		batchOutput:    batchOutput,
-		outputInFormat: outputInFormat,
-		summaryOnly:    summaryOnly,
+	p := &printer{
+		spinner: spinner,
+	}
+
+	for _, option := range options {
+		option(p)
+	}
+
+	return p
+}
+
+type Option func(*printer)
+
+func WithBatchOutput(batchOutput bool) Option {
+	return func(p *printer) {
+		p.batchOutput = batchOutput
+	}
+}
+
+func WithOutputInFormat(outputInFormat bool) Option {
+	return func(p *printer) {
+		p.outputInFormat = outputInFormat
+	}
+}
+
+func WithSummaryOnly(summaryOnly bool) Option {
+	return func(p *printer) {
+		p.summaryOnly = summaryOnly
 	}
 }
 

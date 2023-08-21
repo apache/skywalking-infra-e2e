@@ -26,7 +26,9 @@ import (
 
 var (
 	Format  string
-	Formats = []string{"yaml"}
+	Formats = map[string]struct{}{
+		"yaml": {},
+	}
 )
 
 type YamlCaseResult struct {
@@ -35,19 +37,13 @@ type YamlCaseResult struct {
 	Skipped []string
 }
 
-func FormatIsNotExist() bool {
-	for _, format := range Formats {
-		if Format == format {
-			return false
-		}
-	}
-
-	return true
+func HasFormat() bool {
+	_, ok := Formats[Format]
+	return ok
 }
 
 func PrintResult(caseRes []*CaseResult) {
-	switch Format {
-	case "yaml":
+	if Format == "yaml" {
 		PrintResultInYAML(caseRes)
 	}
 }
@@ -57,15 +53,15 @@ func PrintResultInYAML(caseRes []*CaseResult) {
 	for _, cr := range caseRes {
 		if !cr.Skip {
 			if cr.Err == nil {
-				yamlCaseResult.Passed = append(yamlCaseResult.Passed, cr.CaseName)
+				yamlCaseResult.Passed = append(yamlCaseResult.Passed, cr.Name)
 			} else {
-				yamlCaseResult.Failed = append(yamlCaseResult.Failed, cr.CaseName)
+				yamlCaseResult.Failed = append(yamlCaseResult.Failed, cr.Name)
 			}
 		} else {
-			yamlCaseResult.Skipped = append(yamlCaseResult.Skipped, cr.CaseName)
+			yamlCaseResult.Skipped = append(yamlCaseResult.Skipped, cr.Name)
 		}
 	}
 
-	yaml, _ := yaml.Marshal(yamlCaseResult)
-	fmt.Print(string(yaml))
+	yamlData, _ := yaml.Marshal(yamlCaseResult)
+	fmt.Print(string(yamlData))
 }

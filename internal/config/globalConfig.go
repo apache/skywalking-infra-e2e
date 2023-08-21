@@ -20,7 +20,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/apache/skywalking-infra-e2e/pkg/output"
 	"os"
 	"path/filepath"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
+	"github.com/apache/skywalking-infra-e2e/pkg/output"
 )
 
 // GlobalE2EConfig stores E2EConfig which can be used globally.
