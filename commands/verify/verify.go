@@ -295,10 +295,10 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 	if concurrency {
 		// enable batch output mode when concurrency is enabled
-		printer = output.NewPrinter(output.WithBatchOutput(true))
+		printer = output.NewPrinter(output.WithBatchMod(true))
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
-	printer = output.NewPrinter(output.WithBatchOutput(util.BatchMode), output.WithOutputInFormat(output.Format != ""), output.WithSummaryOnly(summaryOnly))
+	printer = output.NewPrinter(output.WithBatchMod(util.BatchMode), output.WithFormat(output.Format != ""), output.WithSummaryOnly(summaryOnly))
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 

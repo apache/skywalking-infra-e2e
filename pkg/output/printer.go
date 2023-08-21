@@ -68,13 +68,13 @@ func NewPrinter(options ...Option) Printer {
 
 type Option func(*printer)
 
-func WithBatchOutput(batchOutput bool) Option {
+func WithBatchMod(batchOutput bool) Option {
 	return func(p *printer) {
 		p.batchOutput = batchOutput
 	}
 }
 
-func WithOutputInFormat(outputInFormat bool) Option {
+func WithFormat(outputInFormat bool) Option {
 	return func(p *printer) {
 		p.outputInFormat = outputInFormat
 	}
@@ -95,7 +95,6 @@ func (p *printer) Start(msg ...string) {
 }
 
 func (p *printer) Success(msg string) {
-
 	if p.batchOutput || p.outputInFormat || p.summaryOnly {
 		return
 	}
@@ -144,7 +143,6 @@ func (p *printer) PrintResult(caseRes []*CaseResult) (passNum, failNum, skipNum 
 				if p.batchOutput {
 					p.spinner.Warning(cr.Msg)
 					p.spinner.Fail(cr.Err.Error())
-
 				}
 			}
 		} else {
