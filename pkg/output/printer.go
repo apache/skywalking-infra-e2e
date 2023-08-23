@@ -25,6 +25,7 @@ import (
 
 // CaseResult represents the result of a verification case.
 type CaseResult struct {
+	Name string
 	Msg  string
 	Err  error
 	Skip bool
@@ -42,25 +43,45 @@ type Printer interface {
 type printer struct {
 	spinner     *pterm.SpinnerPrinter
 	batchOutput bool
+	summaryOnly bool
 }
 
 var _ Printer = &printer{}
 
-func NewPrinter(batchOutput bool) Printer {
+func NewPrinter(options ...Option) Printer {
 	spinner := pterm.DefaultSpinner.WithShowTimer(false)
 	pterm.Error.Prefix = pterm.Prefix{
 		Text:  "DETAILS",
 		Style: &pterm.ThemeDefault.ErrorPrefixStyle,
 	}
 
-	return &printer{
-		spinner:     spinner,
-		batchOutput: batchOutput,
+	p := &printer{
+		spinner: spinner,
+	}
+
+	for _, option := range options {
+		option(p)
+	}
+
+	return p
+}
+
+type Option func(*printer)
+
+func WithBatchOutput(batchOutput bool) Option {
+	return func(p *printer) {
+		p.batchOutput = batchOutput
+	}
+}
+
+func WithSummaryOnly(summaryOnly bool) Option {
+	return func(p *printer) {
+		p.summaryOnly = summaryOnly
 	}
 }
 
 func (p *printer) Start(msg ...string) {
-	if p.batchOutput {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -68,7 +89,7 @@ func (p *printer) Start(msg ...string) {
 }
 
 func (p *printer) Success(msg string) {
-	if p.batchOutput {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -76,7 +97,7 @@ func (p *printer) Success(msg string) {
 }
 
 func (p *printer) Warning(msg string) {
-	if p.batchOutput {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -84,7 +105,7 @@ func (p *printer) Warning(msg string) {
 }
 
 func (p *printer) Fail(msg string) {
-	if p.batchOutput {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -92,7 +113,7 @@ func (p *printer) Fail(msg string) {
 }
 
 func (p *printer) UpdateText(text string) {
-	if p.batchOutput {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
