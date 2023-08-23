@@ -77,7 +77,7 @@ func ReadGlobalConfigFile() {
 	}
 
 	GlobalConfig.Error = nil
-	if output.Format == "" {
+	if !output.SummaryOnly {
 		logger.Log.Info("load the e2e config successfully")
 	}
 }

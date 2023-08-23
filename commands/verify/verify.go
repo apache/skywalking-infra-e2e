@@ -33,19 +33,18 @@ import (
 )
 
 var (
-	query       string
-	actual      string
-	expected    string
-	summaryOnly bool
-	printer     output.Printer
+	query    string
+	actual   string
+	expected string
+	printer  output.Printer
 )
 
 func init() {
 	Verify.Flags().StringVarP(&query, "query", "q", "", "the query to get the actual data, the result of the query should in YAML format")
 	Verify.Flags().StringVarP(&actual, "actual", "a", "", "the actual data file, only YAML file format is supported")
 	Verify.Flags().StringVarP(&expected, "expected", "e", "", "the expected data file, only YAML file format is supported")
-	Verify.Flags().StringVarP(&output.Format, "output", "o", "", "output the verify summary in which format. Currently, only 'yaml' is supported. ")
-	Verify.Flags().BoolVarP(&summaryOnly, "summary-only", "", false, "if true, only 'SUMMARY' part of the verify result will be outputted")
+	Verify.Flags().StringVarP(&output.Format, "output", "o", "yaml", "output the verify summary in which format. Currently, only 'yaml' is supported. ")
+	Verify.Flags().BoolVarP(&output.SummaryOnly, "summary-only", "", false, "if true, only 'SUMMARY' part of the verify result will be outputted")
 }
 
 // Verify verifies that the actual data satisfies the expected data pattern.
@@ -193,7 +192,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	}
 
 	defer func() {
-		if output.Format != "" {
+		if output.SummaryOnly {
 			output.PrintResult(res)
 		} else {
 			_, errNum, _ := printer.PrintResult(res)
@@ -267,7 +266,7 @@ func caseName(v *config.VerifyCase) string {
 
 // DoVerifyAccordingConfig reads cases from the config file and verifies them.
 func DoVerifyAccordingConfig() error {
-	if output.Format != "" && !output.HasFormat() {
+	if output.SummaryOnly && !output.HasFormat() && output.Format != "yaml" {
 		return fmt.Errorf(" '%s' format doesn't exist", output.Format)
 	}
 	if config.GlobalConfig.Error != nil {
@@ -295,10 +294,10 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 	if concurrency {
 		// enable batch output mode when concurrency is enabled
-		printer = output.NewPrinter(output.WithBatchMod(true))
+		printer = output.NewPrinter(output.WithBatchOutput(true))
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
-	printer = output.NewPrinter(output.WithBatchMod(util.BatchMode), output.WithFormat(output.Format != ""), output.WithSummaryOnly(summaryOnly))
+	printer = output.NewPrinter(output.WithBatchOutput(util.BatchMode), output.WithSummaryOnly(output.SummaryOnly))
 	return verifyCasesSerially(&e2eConfig.Verify, &VerifyInfo)
 }
 

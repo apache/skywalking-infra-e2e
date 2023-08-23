@@ -41,10 +41,9 @@ type Printer interface {
 }
 
 type printer struct {
-	spinner        *pterm.SpinnerPrinter
-	batchOutput    bool
-	outputInFormat bool
-	summaryOnly    bool
+	spinner     *pterm.SpinnerPrinter
+	batchOutput bool
+	summaryOnly bool
 }
 
 var _ Printer = &printer{}
@@ -69,15 +68,9 @@ func NewPrinter(options ...Option) Printer {
 
 type Option func(*printer)
 
-func WithBatchMod(batchOutput bool) Option {
+func WithBatchOutput(batchOutput bool) Option {
 	return func(p *printer) {
 		p.batchOutput = batchOutput
-	}
-}
-
-func WithFormat(outputInFormat bool) Option {
-	return func(p *printer) {
-		p.outputInFormat = outputInFormat
 	}
 }
 
@@ -88,7 +81,7 @@ func WithSummaryOnly(summaryOnly bool) Option {
 }
 
 func (p *printer) Start(msg ...string) {
-	if p.batchOutput || p.outputInFormat || p.summaryOnly {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -96,7 +89,7 @@ func (p *printer) Start(msg ...string) {
 }
 
 func (p *printer) Success(msg string) {
-	if p.batchOutput || p.outputInFormat || p.summaryOnly {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -104,7 +97,7 @@ func (p *printer) Success(msg string) {
 }
 
 func (p *printer) Warning(msg string) {
-	if p.batchOutput || p.outputInFormat || p.summaryOnly {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -112,7 +105,7 @@ func (p *printer) Warning(msg string) {
 }
 
 func (p *printer) Fail(msg string) {
-	if p.batchOutput || p.outputInFormat || p.summaryOnly {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 
@@ -120,7 +113,7 @@ func (p *printer) Fail(msg string) {
 }
 
 func (p *printer) UpdateText(text string) {
-	if p.batchOutput || p.outputInFormat || p.summaryOnly {
+	if p.batchOutput || p.summaryOnly {
 		return
 	}
 

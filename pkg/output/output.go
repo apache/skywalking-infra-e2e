@@ -25,8 +25,9 @@ import (
 )
 
 var (
-	Format  string
-	Formats = map[string]struct{}{
+	SummaryOnly      bool
+	Format           string
+	SupportedFormats = map[string]struct{}{
 		"yaml": {},
 	}
 )
@@ -38,17 +39,17 @@ type YamlCaseResult struct {
 }
 
 func HasFormat() bool {
-	_, ok := Formats[Format]
+	_, ok := SupportedFormats[Format]
 	return ok
 }
 
 func PrintResult(caseRes []*CaseResult) {
 	if Format == "yaml" {
-		PrintResultInYAML(caseRes)
+		printResultInYAML(caseRes)
 	}
 }
 
-func PrintResultInYAML(caseRes []*CaseResult) {
+func printResultInYAML(caseRes []*CaseResult) {
 	var yamlCaseResult YamlCaseResult
 	for _, cr := range caseRes {
 		if !cr.Skip {
@@ -63,5 +64,5 @@ func PrintResultInYAML(caseRes []*CaseResult) {
 	}
 
 	yamlData, _ := yaml.Marshal(yamlCaseResult)
-	fmt.Print(string(yamlData))
+	fmt.Println(string(yamlData))
 }
