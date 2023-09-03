@@ -39,6 +39,3 @@ verify:
     - name: case-3
       query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
       expected: ./expected.yaml
-#    - name: case-4
-#      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-#      expected: ./expected.yaml
