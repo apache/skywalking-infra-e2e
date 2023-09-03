@@ -1,0 +1,6 @@
+passed:
+- case-1
+- case-2
+failed:
+- case-3
+skipped: []
