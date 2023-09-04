@@ -40,9 +40,9 @@ verify:
 
   cases:
     - name: fail-fast
-      query: './bin/linux/e2e verify -c  ./test/e2e/fail-fast/verify.yaml --summary-only -o yaml'
-      expected: ./fail-fast/internal/expected.yaml
+      query: './bin/linux/e2e verify -c  ./test/e2e/fail-fast/internal/verify.yaml --summary-only -o yaml'
+      expected: ./fail-fast/expected.yaml
 
     - name: non-fail-fast
-      query: './bin/linux/e2e verify -c  ./test/e2e/non-fail-fast/verify.yaml --summary-only -o yaml'
-      expected: ./non-fail-fast/internal/expected.yaml
+      query: './bin/linux/e2e verify -c  ./test/e2e/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
+      expected: ./non-fail-fast/expected.yaml
