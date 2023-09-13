@@ -1,0 +1,54 @@
+# Licensed to Apache Software Foundation (ASF) under one or more contributor
+# license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright
+# ownership. Apache Software Foundation (ASF) licenses this file to you under
+# the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+passed:
+{{- contains .passed}}
+- passed-case-1
+- passed-case-2
+- passed-case-4
+- passed-case-5
+- passed-case-7
+- passed-case-8
+- passed-case-10
+- passed-case-11
+- passed-case-12
+- passed-case-14
+- passed-case-15
+- passed-case-17
+- passed-case-18
+- passed-case-20
+- passed-case-21
+- passed-case-22
+- passed-case-24
+- passed-case-25
+- passed-case-27
+- passed-case-28
+- passed-case-30
+{{- end}}
+failed:
+{{- contains .failed }}
+- failed-case-3
+- failed-case-6
+- failed-case-9
+- failed-case-13
+- failed-case-16
+- failed-case-19
+- failed-case-23
+- failed-case-26
+- failed-case-29
+{{- end }}
+skipped: []

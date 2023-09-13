@@ -16,9 +16,16 @@
 # under the License.
 
 passed:
-- case-1
-- case-2
-- case-4
+  - passed-case-1
+  - passed-case-2
+  - passed-case-3
+  - passed-case-4
+  - passed-case-5
+  - passed-case-7
 failed:
-- case-3
+  - failed-case-6
+  - failed-case-8
+  - failed-case-9
 skipped: []
+
+

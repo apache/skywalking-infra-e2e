@@ -39,10 +39,18 @@ verify:
 
 
   cases:
-    - name: fail-fast
-      query: './bin/linux/e2e verify -c  ./test/e2e/fail-fast/internal/verify.yaml --summary-only -o yaml'
-      expected: ./fail-fast/expected.yaml
+    - name: non-currency & fail-fast mode
+      query: './bin/linux/e2e verify -c  ./test/e2e/non-concurrency/fail-fast/internal/verify.yaml --summary-only -o yaml'
+      expected: ./non-concurrency/fail-fast/expected.yaml
 
-    - name: non-fail-fast-test
-      query: './bin/linux/e2e verify -c  ./test/e2e/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
-      expected: ./non-fail-fast/expected.yaml
+    - name: non-currency & non-fail-fast mode
+      query: './bin/linux/e2e verify -c  ./test/e2e/non-concurrency/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
+      expected: ./non-concurrency/non-fail-fast/expected.yaml
+
+#    - name: currency & fail-fast mode
+#      query: './bin/linux/e2e verify -c  ./test/e2e/concurrency/fail-fast/internal/verify.yaml --summary-only -o yaml'
+#      expected: ./concurrency/fail-fast/expected.yaml
+#
+#    - name: currency & non-fail-fast mode
+#      query: './bin/linux/e2e verify -c  ./test/e2e/concurrency/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
+#      expected: ./concurrency/non-fail-fast/expected.yaml

@@ -19,7 +19,7 @@ verify:
   # verify with retry strategy
   retry:
     # max retry count
-    count: 5
+    count: 1
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 1s
 
@@ -30,15 +30,30 @@ verify:
 
 
   cases:
-    - name: case-1
+    - name: passed-case-1
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
-    - name: case-2
+    - name: passed-case-2
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
-    - name: case-3
+    - name: passed-case-3
+      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: passed-case-4
+      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: passed-case-5
+      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: failed-case-6
       query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
       expected: ./expected.yaml
-    - name: case-4
+    - name: passed-case-7
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: failed-case-8
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: failed-case-9
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
       expected: ./expected.yaml
