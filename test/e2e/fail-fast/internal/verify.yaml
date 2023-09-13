@@ -15,43 +15,27 @@
 
 # This file is used to show how to write configuration files and can be used to test.
 
-setup:
-  env: compose
-  file: docker-compose.yml
-  timeout: 20m
-
-cleanup:
-  # always never success failure
-  on: always
-
 verify:
   # verify with retry strategy
   retry:
     # max retry count
-    count: 1
+    count: 5
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 1s
 
   # when a case fails, whether to stop verifying other cases. This property defaults to true.
-  fail-fast: false
+  fail-fast: true
   # Whether to verify cases concurrently. This property defaults to false.
   concurrency: false
 
 
   cases:
-    - name: non-currency & fail-fast mode
-      query: './bin/linux/e2e verify -c  ./test/e2e/non-concurrency/fail-fast/internal/verify.yaml --summary-only -o yaml'
-      expected: ./non-concurrency/fail-fast/expected.yaml
-
-    - name: non-currency & non-fail-fast mode
-      query: './bin/linux/e2e verify -c  ./test/e2e/non-concurrency/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
-      expected: ./non-concurrency/non-fail-fast/expected.yaml
-
-#    - name: currency & fail-fast mode
-#      query: './bin/linux/e2e verify -c  ./test/e2e/concurrency/fail-fast/internal/verify.yaml --summary-only -o yaml'
-#      expected: ./concurrency/fail-fast/expected.yaml
-#
-#    - name: currency & non-fail-fast mode
-#      query: './bin/linux/e2e verify -c  ./test/e2e/concurrency/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
-#      expected: ./concurrency/non-fail-fast/expected.yaml
-
+    - name: case-1
+      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: case-2
+      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      expected: ./expected.yaml
+    - name: case-3
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
+      expected: ./expected.yaml
