@@ -43,6 +43,6 @@ verify:
       query: './bin/linux/e2e verify -c  ./test/e2e/fail-fast/internal/verify.yaml --summary-only -o yaml'
       expected: ./fail-fast/expected.yaml
 
-    - name: non-fail-fast
+    - name: non-fail-fast-test
       query: './bin/linux/e2e verify -c  ./test/e2e/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
       expected: ./non-fail-fast/expected.yaml
