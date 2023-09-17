@@ -51,6 +51,9 @@ var customFuncMap = map[string]any{
 
 	// Regex:
 	"regexp": regexpMatch,
+
+	// Calculation:
+	"subtractor": subtractor,
 }
 
 func base64encode(s string) string {
@@ -92,4 +95,11 @@ func regexpMatch(s, pattern string) string {
 		return fmt.Sprintf("<%s does not match the pattern %q>", s, pattern)
 	}
 	return s
+}
+
+func subtractor(a int, nums ...int) int {
+	for _, num := range nums {
+		a -= num
+	}
+	return a
 }
