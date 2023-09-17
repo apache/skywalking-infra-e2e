@@ -108,6 +108,7 @@ func concurrentlyVerifySingleCase(
 	verifyInfo *verifyInfo,
 ) (res *output.CaseResult) {
 	res = &output.CaseResult{}
+	res.Name = caseName(v)
 	defer func() {
 		if res.Err != nil && verifyInfo.failFast {
 			cancel()
@@ -164,6 +165,7 @@ func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) erro
 			select {
 			case <-ctx.Done():
 				res[i].Skip = true
+				res[i].Name = caseName(&verify.Cases[i])
 				return
 			default:
 				// It's safe to do this, since each goroutine only modifies a single, different, designated slice element.
@@ -173,9 +175,13 @@ func verifyCasesConcurrently(verify *config.Verify, verifyInfo *verifyInfo) erro
 	}
 	wg.Wait()
 
-	_, errNum, _ := printer.PrintResult(res)
-	if errNum > 0 {
-		return fmt.Errorf("failed to verify %d case(s)", errNum)
+	if output.SummaryOnly {
+		output.PrintResult(res)
+	} else {
+		_, errNum, _ := printer.PrintResult(res)
+		if errNum > 0 {
+			return fmt.Errorf("failed to verify %d case(s)", errNum)
+		}
 	}
 
 	return nil
@@ -188,6 +194,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	for i := range res {
 		res[i] = &output.CaseResult{
 			Skip: true,
+			Name: caseName(&verify.Cases[i]),
 		}
 	}
 
@@ -205,7 +212,6 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	for idx := range verify.Cases {
 		printer.Start()
 		v := &verify.Cases[idx]
-		res[idx].Name = caseName(v)
 
 		if v.GetExpected() == "" {
 			res[idx].Skip = false
@@ -294,7 +300,7 @@ func DoVerifyAccordingConfig() error {
 	concurrency := e2eConfig.Verify.Concurrency
 	if concurrency {
 		// enable batch output mode when concurrency is enabled
-		printer = output.NewPrinter(output.WithBatchOutput(true))
+		printer = output.NewPrinter(output.WithBatchOutput(true), output.WithSummaryOnly(output.SummaryOnly))
 		return verifyCasesConcurrently(&e2eConfig.Verify, &VerifyInfo)
 	}
 	printer = output.NewPrinter(output.WithBatchOutput(util.BatchMode), output.WithSummaryOnly(output.SummaryOnly))
