@@ -97,9 +97,9 @@ func regexpMatch(s, pattern string) string {
 	return s
 }
 
-func subtractor(a int, nums ...int) int {
+func subtractor(total int, nums ...int) int {
 	for _, num := range nums {
-		a -= num
+		total -= num
 	}
-	return a
+	return total
 }
