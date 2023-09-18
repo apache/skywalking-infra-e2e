@@ -27,5 +27,8 @@ failed:
   - case-8
   - case-9
 skipped: []
+passedCount: 6
+failedCount: 3
+skippedCount: 0
 
 

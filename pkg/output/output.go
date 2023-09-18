@@ -33,9 +33,12 @@ var (
 )
 
 type YamlCaseResult struct {
-	Passed  []string
-	Failed  []string
-	Skipped []string
+	Passed       []string
+	Failed       []string
+	Skipped      []string
+	PassedCount  int `yaml:"passedCount"`
+	FailedCount  int `yaml:"failedCount"`
+	SkippedCount int `yaml:"skippedCount"`
 }
 
 func HasFormat() bool {
@@ -63,6 +66,10 @@ func printResultInYAML(caseRes []*CaseResult) {
 		}
 	}
 
-	yamlData, _ := yaml.Marshal(yamlCaseResult)
-	fmt.Println(string(yamlData))
+	yamlCaseResult.PassedCount = len(yamlCaseResult.Passed)
+	yamlCaseResult.FailedCount = len(yamlCaseResult.Failed)
+	yamlCaseResult.SkippedCount = len(yamlCaseResult.Skipped)
+
+	yamlCaseResultData, _ := yaml.Marshal(yamlCaseResult)
+	fmt.Println(string(yamlCaseResultData))
 }

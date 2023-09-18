@@ -27,3 +27,6 @@ skipped:
 {{range .skipped}}
 - {{.}}
 {{end}}
+passedCount: {{le .passedCount 4}}
+failedCount: {{le .failedCount 5}}
+skippedCount: {{.skippedCount}}

@@ -46,79 +46,14 @@ verify:
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
     - name: failed-case-6
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
-    - name: passed-case-7
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+    - name: failed-case-7
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
-    - name: passed-case-8
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+    - name: failed-case-8
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
     - name: failed-case-9
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-10
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-
-    - name: passed-case-11
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-12
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-13
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-14
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-15
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-16
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-17
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-18
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-19
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-20
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-
-    - name: passed-case-21
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-22
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-23
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-24
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-25
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-26
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-27
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-28
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: failed-case-29
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: passed-case-30
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
