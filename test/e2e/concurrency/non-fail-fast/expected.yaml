@@ -30,3 +30,4 @@ failed:
 - failed-case-6
 - failed-case-9
 {{- end }}
+skipped: []

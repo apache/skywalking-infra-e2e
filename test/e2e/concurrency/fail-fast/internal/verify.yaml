@@ -46,14 +46,14 @@ verify:
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
     - name: failed-case-6
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
-    - name: passed-case-7
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+    - name: failed-case-7
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
-    - name: passed-case-8
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
+    - name: failed-case-8
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
     - name: failed-case-9
-      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json"'
+      query: 'curl -s 127.0.0.1:8080/get?case=failure -H "accept: application/json" && sleep 5'
       expected: ./expected.yaml
