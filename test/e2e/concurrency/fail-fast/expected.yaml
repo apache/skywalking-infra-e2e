@@ -29,4 +29,4 @@ skipped:
 {{end}}
 passedCount: {{le .passedCount 4}}
 failedCount: {{le .failedCount 5}}
-skippedCount: {{subtractor 9 .passedCount .failedCount}}
+skippedCount: {{.skippedCount}}
