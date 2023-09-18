@@ -30,7 +30,3 @@ failed:
 - failed-case-6
 - failed-case-9
 {{- end }}
-skipped: []
-passedCount: 6
-failedCount: 3
-skippedCount: 0
