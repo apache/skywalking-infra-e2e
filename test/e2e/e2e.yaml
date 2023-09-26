@@ -17,6 +17,7 @@
 
 setup:
   env: compose
+  # Run a httpbin container, which can return YAML data
   file: docker-compose.yml
   timeout: 20m
 
@@ -32,9 +33,9 @@ verify:
     # the interval between two attempts, e.g. 10s, 1m.
     interval: 1s
 
-  # when a case fails, whether to stop verifying other cases. This property defaults to true.
+  # when a case fails, whether to stop verifying other cases. This property is recommended to false.
   fail-fast: false
-  # Whether to verify cases concurrently. This property defaults to false.
+  # Whether to verify cases concurrently. This property is recommended to false.
   concurrency: false
 
 
