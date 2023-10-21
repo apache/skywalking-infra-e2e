@@ -10,23 +10,23 @@ You can perform testing locally. And when you submit a pull request (PR), GitHub
       |- fail-fast (concurrency & fail-fast mode)
         |- internal
           |- expected.yaml 
-          |- verify.yaml (configuration file for the inner infra E2E(concurrency & fail-fast))
+          |- verify.yaml (configuration file)
         |- expected.yaml
       |- non-fail-fast (concurrency & non-fail-fast mode)
         |- internal
           |- expected.yaml
-          |- verify.yaml (configuration file for the inner infra E2E(concurrency & non-fail-fast))
+          |- verify.yaml (configuration file)
         |- expected.yaml
     |- non-concurrency 
       |- fail-fast (non-concurrency & fail-fast mode)
         |- internal
           |- expected.yaml
-          |- verify.yaml (configuration file for the inner infra E2E(non-concurrency & fail-fast))
+          |- verify.yaml (configuration file )
         |- expected.yaml
       |- non-fail-fast (non-concurrency & non-fail-fast mode)
         |- internal
           |- expected.yaml
-          |- verify.yaml (configuration file for the inner infra E2E(non-concurrency & non-fail-fast))
+          |- verify.yaml (configuration file)
         |- expected.yaml
   |- docker-compose.yaml (run a httpbin container, which can return YAML data)
   |- e2e.yaml (configuration file for the outer infra E2E)
