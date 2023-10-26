@@ -33,19 +33,18 @@ You can perform testing locally. And when you submit a pull request (PR), GitHub
 
 ```
 ### How it works
+#### USe E2E to test itself
+We use the E2E(released version) to test E2E(dev version) of each mode. The external E2E(released version) will compare the summary of the internal E2E(dev version) of each mode with the expected file. If the summary is as expected, the test of the E2E(dev version) of that mode is passed.
 #### Basic flow of SkyWalking Infra E2E
 1. Set up a environment for testing
 2. Spin up the system under test (SUT), prepare necessary dependencies
 3. Trigger or give inputs to SUT, get outputs from SUT
 4. Compare the actual outputs and the expected outputs
-#### Use 'httpbin' to test E2E
-We use the docker container of 'httpbin' as the SUT, which can receive the 'query' of E2E and return YAML data to E2E.After receiving the YAML data from 'httpbin', the E2E will compare the YAML data with the expected YAML file. At last, the E2E will generate a summary of the result.
-#### USe E2E to test itself
-We use the E2E(released version) to test E2E(dev version) of each mode. The E2E(released version) will compare the summary of E2E of each mode with the expected file. If the summary is as expected, the test of that mode is passed.
+#### Use 'httpbin' to test E2E(dev verison)
+From the view of the external E2E(released version), the internal E2E(dev verison) is the SUT. Also, from the view of each internal E2E(dev verison), the 'httpbin' is the SUT. We use the docker container of 'httpbin' as the SUT, which can receive the 'query' of E2E and return YAML data to E2E.After receiving the YAML data from 'httpbin', the E2E will compare the YAML data with the expected YAML file. At last, the E2E will generate a summary of the result.
 
 ## How to add new cases
 ### 1. add cases in '/internal/verify.yaml' of each mode
-before:
 ```
   cases:
     - name: case-1
@@ -57,19 +56,7 @@ before:
     - name: case-3
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
-```
-after(add a new case named 'case-4'):
-```
-  cases:
-    - name: case-1
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: case-2
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
-    - name: case-3
-      query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
-      expected: ./expected.yaml
+    # Add a new case named 'case-4'
     - name: case-4
       query: 'curl -s 127.0.0.1:8080/get?case=success -H "accept: application/json"'
       expected: ./expected.yaml
@@ -156,5 +143,27 @@ skippedCount: 0
 add the name of the cases to 'passed','failed' or 'skipped'. And add the number of cases on 'passedCount','failedCount' and 'skippedCount'.
 
 ## Tips
-- entered the 'skywalking-infra-e2e' directory, use 'make e2e-test' to run the test locally
+- You can use `make e2e-test` to run the test locally
 - you may need to split your PR to pass e2e tests in CI
+```
+# /internal/expected.yaml
+args:
+    case: success
+headers:
+    Accept: application/json
+    Host: 127.0.0.1:8080
+    # The 'curl' version in the testing environment may vary.
+    User-Agent: curl/7.81.0
+# The 'origin' in the testing environment may vary
+origin: 172.18.0.1
+url: http://127.0.0.1:8080/get?case=success
+```
+If the above issues prevent the e2e tests from being passed, you can follow these steps to address the problem:
+
+- Remove the '--summary-only -o yaml' from the 'query' in /test/e2e/e2e.yaml file.
+- Commit and push the changes to create a new commit.
+- Trigger the e2e tests in the CI environment.The detailed information of this test will be displayed in the CI.
+- Based on the relevant information, make the necessary modifications to the parameters in /internal/expected.yaml.
+- Revert the modifications made to /test/e2e/e2e.yaml.
+Commit and push the changes as a new commit.
+- The e2e tests should pass in the CI now.
