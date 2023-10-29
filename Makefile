@@ -106,3 +106,8 @@ install: $(GOOS)
 .PHONY: uninstall
 uninstall: $(GOOS)
 	-rm $(DESTDIR)/$(PROJECT)
+
+.PHONY: e2e-test
+e2e-test: $(GOOS)
+	- make build
+	- ./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/e2e.yaml

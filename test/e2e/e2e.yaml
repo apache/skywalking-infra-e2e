@@ -17,6 +17,7 @@
 
 setup:
   env: compose
+  # Run a httpbin container, which can return YAML data
   file: docker-compose.yml
   timeout: 20m
 
