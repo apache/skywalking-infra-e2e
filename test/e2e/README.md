@@ -144,7 +144,7 @@ add the name of the cases to 'passed','failed' or 'skipped'. And add the number 
 
 ## Tips
 - You can use `make e2e-test` to run the test locally
-- you may need to split your PR to pass e2e tests in CI
+- You may need to split your PR to pass e2e tests in CI
 ```
 # /internal/expected.yaml
 args:
