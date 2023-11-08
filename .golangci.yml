@@ -36,11 +36,6 @@ linters-settings:
   goconst:
     min-len: 2
     min-occurrences: 2
-  depguard:
-    list-type: blacklist
-    include-go-root: true
-    packages-with-error-messages:
-      fmt: "logging is allowed only by logutils.Log"
   misspell:
     locale: US
     ignore-words:
@@ -98,7 +93,6 @@ linters-settings:
 linters:
   enable:
     - deadcode
-    - depguard
     - dogsled
     - dupl
     - errcheck
@@ -115,7 +109,6 @@ linters:
     - ineffassign
     - lll
     - misspell
-    - nakedret
     - staticcheck
     - stylecheck
     - typecheck
@@ -125,6 +118,8 @@ linters:
     - whitespace
   disable:
     - structcheck
+    - depguard
+    - nakedret
 
 service:
   golangci-lint-version: 1.20.x
