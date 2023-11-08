@@ -31,7 +31,7 @@ import (
 
 // funcMap produces the custom function map.
 // Use this to pass the functions into the template engine:
-// 	tpl := template.New("foo").Funcs(funcMap()))
+// tpl := template.New("foo").Funcs(funcMap()))
 func funcMap() template.FuncMap {
 	fm := make(map[string]any, len(customFuncMap))
 	for k, v := range customFuncMap {
