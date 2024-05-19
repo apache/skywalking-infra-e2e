@@ -23,23 +23,19 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
+	"github.com/apache/skywalking-infra-e2e/internal/util"
 )
 
 const (
 	maxRetry      = 5
 	retryInterval = 2 // in seconds
 )
-
-type KindClusterNameConfig struct {
-	Name string
-}
 
 func KindCleanUp(e2eConfig *config.E2EConfig) error {
 	kindConfigFilePath := e2eConfig.Setup.GetFile()
@@ -61,27 +57,8 @@ func KindCleanUp(e2eConfig *config.E2EConfig) error {
 	return nil
 }
 
-func getKindClusterName(kindConfigFilePath string) (name string, err error) {
-	data, err := os.ReadFile(kindConfigFilePath)
-	if err != nil {
-		return "", err
-	}
-
-	nameConfig := KindClusterNameConfig{}
-	err = yaml.Unmarshal(data, &nameConfig)
-	if err != nil {
-		return "", err
-	}
-
-	if nameConfig.Name == "" {
-		nameConfig.Name = constant.KindClusterDefaultName
-	}
-
-	return nameConfig.Name, nil
-}
-
 func cleanKindCluster(kindConfigFilePath string) (err error) {
-	clusterName, err := getKindClusterName(kindConfigFilePath)
+	clusterName, err := util.GetKindClusterName(kindConfigFilePath)
 	if err != nil {
 		return err
 	}

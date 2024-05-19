@@ -37,6 +37,7 @@ Release Notes.
 
 * Fix deprecation warnings
 * Ignore cancel error when copying container logs
+* Fix kind load docker-image error
 
 #### Documentation
 
