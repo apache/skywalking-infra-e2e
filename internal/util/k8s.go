@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
@@ -49,6 +50,10 @@ type K8sClusterInfo struct {
 	Interface  dynamic.Interface
 	restConfig *rest.Config
 	namespace  string
+}
+
+type KindClusterNameConfig struct {
+	Name string `json:"name"`
 }
 
 // ConnectToK8sCluster gets clientSet and dynamic client from k8s config file.
@@ -223,4 +228,24 @@ func OperateManifest(c *kubernetes.Clientset, dc dynamic.Interface, manifest str
 	}
 
 	return nil
+}
+
+func GetKindClusterName(kindConfigFilePath string) (name string, err error) {
+	data, err := os.ReadFile(kindConfigFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	nameConfig := KindClusterNameConfig{}
+	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(data), 100)
+	err = decoder.Decode(&nameConfig)
+	if err != nil {
+		return "", err
+	}
+
+	if nameConfig.Name == "" {
+		nameConfig.Name = constant.KindClusterDefaultName
+	}
+
+	return nameConfig.Name, nil
 }

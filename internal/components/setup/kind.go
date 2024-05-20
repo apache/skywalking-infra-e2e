@@ -156,15 +156,9 @@ func pullImages(ctx context.Context, images []string) error {
 //nolint:gocyclo // skip the cyclomatic complexity check here
 func KindSetup(e2eConfig *config.E2EConfig) error {
 	kindConfigPath = e2eConfig.Setup.GetFile()
-
 	kubeConfigPath = e2eConfig.Setup.GetKubeconfig()
-
-	if kindConfigPath == "" && kubeConfigPath == "" {
-		return fmt.Errorf("no kind config file and kubeconfig file was provided")
-	}
-
-	if kindConfigPath != "" && kubeConfigPath != "" {
-		return fmt.Errorf("the kind config file and kubeconfig file cannot be provided at the same time")
+	if err := checkKubeConfig(kindConfigPath); err != nil {
+		return err
 	}
 
 	steps := e2eConfig.Setup.Steps
@@ -205,8 +199,12 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 			return err
 		}
 
+		clusterName, err := util.GetKindClusterName(kindConfigPath)
+		if err != nil {
+			return err
+		}
 		for _, image := range images {
-			args := []string{"load", "docker-image", image}
+			args := []string{"load", "docker-image", image, "--name", clusterName}
 
 			logger.Log.Infof("import docker images: %s", image)
 			if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
@@ -250,6 +248,17 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 	if err != nil {
 		logger.Log.Errorf("export ports error: %v", err)
 		return err
+	}
+	return nil
+}
+
+func checkKubeConfig(kindConfigPath string) error {
+	if kindConfigPath == "" && kubeConfigPath == "" {
+		return fmt.Errorf("no kind config file and kubeconfig file was provided")
+	}
+
+	if kindConfigPath != "" && kubeConfigPath != "" {
+		return fmt.Errorf("the kind config file and kubeconfig file cannot be provided at the same time")
 	}
 	return nil
 }
