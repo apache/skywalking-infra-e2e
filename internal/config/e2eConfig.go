@@ -78,6 +78,7 @@ type Step struct {
 type KindSetup struct {
 	ImportImages []string         `yaml:"import-images"`
 	ExposePorts  []KindExposePort `yaml:"expose-ports"`
+	NoWait       bool             `yaml:"no-wait"`
 }
 
 type KindExposePort struct {

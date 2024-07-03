@@ -4,6 +4,10 @@ Release Notes.
 
 1.4.0
 ------------------
+#### Features
+
+* Adding `setup.kind.no-wait` to support should wait for the kind cluster to be ready or not.
+
 #### Bug Fixes
 
 * Fix kind load docker-image error
