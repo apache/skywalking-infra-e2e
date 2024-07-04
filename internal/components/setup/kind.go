@@ -285,7 +285,9 @@ func createKindCluster(kindConfigPath string, e2eConfig *config.E2EConfig) error
 		"create", "cluster",
 		"--config", kindConfigPath,
 		"--kubeconfig", kubeConfigPath,
-		"--wait", e2eConfig.Setup.GetTimeout().String(),
+	}
+	if !e2eConfig.Setup.Kind.NoWait {
+		args = append(args, "--wait", e2eConfig.Setup.GetTimeout().String())
 	}
 
 	logger.Log.Info("creating kind cluster...")

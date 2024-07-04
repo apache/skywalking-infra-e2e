@@ -39,6 +39,7 @@ setup:
           label-selector:               # The resource label selector
           for:                          # The wait condition
   kind:
+     no-wait: false                     # Should wait the kind cluster resource ready, default is false, means wait for the cluster to be ready, otherwise it would not wait.
      import-images:                     # import docker images to KinD
         - image:version                 # support using env to expand image, such as `${env_key}` or `$env_key`
      expose-ports:                      # Expose resource for host access
