@@ -51,9 +51,7 @@ const (
 	SeparatorV2 = "-"
 )
 
-var (
-	containerNamePattern = regexp.MustCompile(`.*_(?P<containerNum>\d+)$`)
-)
+var containerNamePattern = regexp.MustCompile(`.*_(?P<containerNum>\d+)$`)
 
 // ComposeSetup sets up environment according to e2e.yaml.
 func ComposeSetup(e2eConfig *config.E2EConfig) error {
@@ -131,7 +129,8 @@ type ComposeService struct {
 }
 
 func exposeComposeService(services []*ComposeService, cli *client.Client,
-	identity string, e2eConfig *config.E2EConfig) error {
+	identity string, e2eConfig *config.E2EConfig,
+) error {
 	dockerProvider := &DockerProvider{client: cli}
 
 	// find exported port and build env
@@ -163,7 +162,8 @@ func (c *ComposeService) FindContainer(cli *client.Client, identity string) (*ty
 }
 
 func exposeComposePort(dockerProvider *DockerProvider, service *ComposeService, cli *client.Client, identity string,
-	e2eConfig *config.E2EConfig) error {
+	e2eConfig *config.E2EConfig,
+) error {
 	if len(service.waitStrategies) == 0 {
 		return nil
 	}
@@ -339,6 +339,7 @@ func waitPortUntilReady(e2eConfig *config.E2EConfig, container *types.Container,
 	target := &DockerContainer{
 		ID:         container.ID,
 		WaitingFor: wait.NewHostPortStrategy(waitPort),
-		provider:   dockerProvider}
+		provider:   dockerProvider,
+	}
 	return WaitPort(context.Background(), target, waitPort, waitTimeout)
 }

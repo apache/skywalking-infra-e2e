@@ -32,7 +32,7 @@ import (
 var Cleanup = &cobra.Command{
 	Use:   "cleanup",
 	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		err := DoCleanupAccordingE2E()
 		if err != nil {
 			err = fmt.Errorf("[Cleanup] %s", err)

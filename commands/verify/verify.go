@@ -51,7 +51,7 @@ func init() {
 var Verify = &cobra.Command{
 	Use:   "verify",
 	Short: "verify if the actual data match the expected data",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if expected != "" {
 			return verifySingleCase(expected, actual, query)
 		}

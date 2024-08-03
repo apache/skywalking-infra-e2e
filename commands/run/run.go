@@ -33,7 +33,7 @@ import (
 var Run = &cobra.Command{
 	Use:   "run",
 	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		err := runAccordingE2E()
 		if err != nil {
 			return err

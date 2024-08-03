@@ -33,7 +33,7 @@ import (
 var Setup = &cobra.Command{
 	Use:   "setup",
 	Short: "",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if err := util.CheckDockerDaemon(); err != nil {
 			return err
 		}

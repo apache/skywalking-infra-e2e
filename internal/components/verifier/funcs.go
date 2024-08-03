@@ -77,7 +77,7 @@ func notEmpty(s interface{}) string {
 		return fmt.Sprintf("<%q is empty, wanted is not empty>", s)
 	}
 	if s, ok := s.(string); ok {
-		if len(strings.TrimSpace(s)) > 0 {
+		if strings.TrimSpace(s) != "" {
 			return s
 		}
 		return fmt.Sprintf("<%q is empty, wanted is not empty>", s)

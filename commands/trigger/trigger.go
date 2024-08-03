@@ -32,7 +32,7 @@ import (
 
 var Trigger = &cobra.Command{
 	Use: "trigger",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		action, err := CreateTriggerAction()
 		if err != nil {
 			return fmt.Errorf("[Trigger] %v", err)

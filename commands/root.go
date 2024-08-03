@@ -34,9 +34,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 )
 
-var (
-	verbosity string
-)
+var verbosity string
 
 // Root represents the base command when called without any subcommands
 var Root = &cobra.Command{
@@ -45,7 +43,7 @@ var Root = &cobra.Command{
 	Version:       version,
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 		config.ReadGlobalConfigFile()
 
 		level, err := logrus.ParseLevel(verbosity)
