@@ -5,9 +5,9 @@
 # the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -32,7 +32,6 @@ jobs:
     name: E2E Test
     runs-on: ubuntu-latest
     steps:
-            
       - name: Set up Go 1.18
         uses: actions/setup-go@v4
         with:
@@ -45,10 +44,16 @@ jobs:
       - name: Build e2e
         run: make linux
 
+      - name: Install docker-compose
+        shell: bash
+        run: |
+          if ! command docker-compose 2>&1 > /dev/null; then
+            echo "Installing docker-compose"
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+
       - name: Run E2E Test
         uses: apache/skywalking-infra-e2e@main
         with:
-           e2e-file: ./test/e2e/e2e.yaml
-
-              
-       
+          e2e-file: ./test/e2e/e2e.yaml
