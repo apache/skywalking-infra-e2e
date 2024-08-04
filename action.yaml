@@ -27,10 +27,19 @@ inputs:
   batch-mode:
     description: Whether to run in batch mode, all interactive operations are disabled
     required: false
-    default: 'true'
+    default: "true"
 runs:
   using: "composite"
   steps:
+    - name: Install docker-compose
+      shell: bash
+      if: runner.os != 'Windows'
+      run: |
+        if ! command docker-compose 2>&1 > /dev/null; then
+          echo "Installing docker-compose"
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+        fi
     - name: Set up Go 1.18
       uses: actions/setup-go@v4
       with:
@@ -39,7 +48,7 @@ runs:
     - shell: bash
       run: make -C $GITHUB_ACTION_PATH install DESTDIR=/usr/local/bin
     - name: E2E Dir Generator
-      id: 'e2e-dir-generator'
+      id: "e2e-dir-generator"
       shell: bash
       run: |
         WORK_DIR="${{ runner.temp }}/skywalking-infra-e2e"
