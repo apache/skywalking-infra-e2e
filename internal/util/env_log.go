@@ -21,6 +21,7 @@ package util
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -35,6 +36,14 @@ type ResourceLogFollower struct {
 	following  map[string]bool
 }
 
+type Logger struct {
+	file *os.File
+}
+
+func (l *Logger) Printf(format string, v ...interface{}) {
+	fmt.Fprintf(l.file, format, v...)
+}
+
 func NewResourceLogFollower(ctx context.Context, basePath string) *ResourceLogFollower {
 	childCtx, cancelFunc := context.WithCancel(ctx)
 	return &ResourceLogFollower{
@@ -44,6 +53,23 @@ func NewResourceLogFollower(ctx context.Context, basePath string) *ResourceLogFo
 		followLock: &sync.RWMutex{},
 		following:  make(map[string]bool),
 	}
+}
+
+func (l *ResourceLogFollower) BuildLogger(path string) (*Logger, error) {
+	logFile := l.buildLogFilename(path)
+	if err := os.MkdirAll(filepath.Dir(logFile), os.ModePerm); err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(logFile); os.IsExist(err) {
+		if err := os.Remove(logFile); err != nil {
+			return nil, err
+		}
+	}
+	f, err := os.Create(logFile)
+	if err != nil {
+		return nil, err
+	}
+	return &Logger{file: f}, nil
 }
 
 func (l *ResourceLogFollower) BuildLogWriter(path string) (*os.File, error) {

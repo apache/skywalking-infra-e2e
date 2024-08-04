@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: '2.1'
 services:
   httpbin:
-    image: kennethreitz/httpbin
+    image: kong/httpbin:0.1.0
     ports:
       - "8080:80"
+

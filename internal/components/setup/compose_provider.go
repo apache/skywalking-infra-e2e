@@ -33,6 +33,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -188,7 +190,7 @@ func (c *DockerContainer) inspectContainer(ctx context.Context) (*types.Containe
 // Logs will fetch both STDOUT and STDERR from the current container. Returns a
 // ReadCloser and leaves it up to the caller to extract what it wants.
 func (c *DockerContainer) Logs(ctx context.Context) (io.ReadCloser, error) {
-	options := types.ContainerLogsOptions{
+	options := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	}
@@ -264,7 +266,7 @@ func (c *DockerContainer) NetworkAliases(ctx context.Context) (map[string][]stri
 
 func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 	cli := c.provider.client
-	response, err := cli.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
+	response, err := cli.ContainerExecCreate(ctx, c.ID, container.ExecOptions{
 		Cmd:    cmd,
 		Detach: false,
 	})
@@ -272,7 +274,7 @@ func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 		return 0, err
 	}
 
-	err = cli.ContainerExecStart(ctx, response.ID, types.ExecStartCheck{
+	err = cli.ContainerExecStart(ctx, response.ID, container.ExecStartOptions{
 		Detach: false,
 	})
 	if err != nil {
@@ -356,12 +358,12 @@ func (p *DockerProvider) daemonHost(ctx context.Context) (string, error) {
 }
 
 // GetNetwork returns the object representing the network identified by its name
-func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (types.NetworkResource, error) {
-	networkResource, err := p.client.NetworkInspect(ctx, req.Name, types.NetworkInspectOptions{
+func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (network.Inspect, error) {
+	networkResource, err := p.client.NetworkInspect(ctx, req.Name, network.InspectOptions{
 		Verbose: true,
 	})
 	if err != nil {
-		return types.NetworkResource{}, err
+		return network.Summary{}, err
 	}
 
 	return networkResource, err
@@ -418,7 +420,7 @@ func getDefaultGatewayIP() (string, error) {
 
 func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) {
 	// Get list of available networks
-	networkResources, err := cli.NetworkList(ctx, types.NetworkListOptions{})
+	networkResources, err := cli.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -439,14 +441,13 @@ func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) 
 
 	// Create a bridge network for the container communications
 	if !reaperNetworkExists {
-		_, err = cli.NetworkCreate(ctx, reaperNetwork, types.NetworkCreate{
+		_, err = cli.NetworkCreate(ctx, reaperNetwork, network.CreateOptions{
 			Driver:     Bridge,
 			Attachable: true,
 			Labels: map[string]string{
 				TestcontainerLabel: "true",
 			},
 		})
-
 		if err != nil {
 			return "", err
 		}
@@ -466,7 +467,7 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 		return
 	}
 
-	var waitInterval = 100 * time.Millisecond
+	waitInterval := 100 * time.Millisecond
 
 	port, err := findMappedPort(ctx, target, waitPort)
 
@@ -500,7 +501,7 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		exitCode, err := target.Exec(ctx, []string{"/bin/sh", "-c", command})
+		exitCode, _, err := target.Exec(ctx, []string{"/bin/sh", "-c", command})
 		if err != nil {
 			return err
 		}
@@ -516,11 +517,11 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 }
 
 func findMappedPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port) (nat.Port, error) {
-	var waitInterval = 100 * time.Millisecond
+	waitInterval := 100 * time.Millisecond
 
 	var port nat.Port
 	port, err := target.MappedPort(ctx, waitPort)
-	var i = 0
+	i := 0
 
 	for port == "" {
 		i++

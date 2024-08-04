@@ -48,7 +48,7 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	ctlutil "k8s.io/kubectl/pkg/util"
 
-	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	docker "github.com/docker/docker/client"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
@@ -79,7 +79,7 @@ type kindPort struct {
 }
 
 func listLocalImages(ctx context.Context, cli *docker.Client) (map[string]struct{}, error) {
-	summary, err := cli.ImageList(ctx, types.ImageListOptions{})
+	summary, err := cli.ImageList(ctx, dockerimage.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -126,22 +126,22 @@ func pullImages(ctx context.Context, images []string) error {
 	var wg sync.WaitGroup
 	for _, image := range filterResult {
 		wg.Add(1)
-		go func(image string) {
+		go func(img string) {
 			defer wg.Done()
-			logger.Log.Infof("image %s does not exist, will pull from remote", image)
-			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+			logger.Log.Infof("image %s does not exist, will pull from remote", img)
+			out, err := cli.ImagePull(ctx, img, dockerimage.PullOptions{})
 			if err != nil {
-				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
+				logger.Log.WithError(err).Errorf("failed pull image: %s", img)
 				return
 			}
 			defer out.Close()
 
 			if _, err := io.ReadAll(out); err != nil {
-				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
+				logger.Log.WithError(err).Errorf("failed pull image: %s", img)
 				return
 			}
 			atomic.AddInt32(&count, 1)
-			logger.Log.Infof("success pull image: %s", image)
+			logger.Log.Infof("success pull image: %s", img)
 		}(image)
 	}
 	wg.Wait()
@@ -435,7 +435,8 @@ func buildKindPort(port string, ro runtime.Object, pod *v1.Pod) (*kindPort, erro
 }
 
 func exposePerKindService(port config.KindExposePort, timeout time.Duration, cluster *util.K8sClusterInfo,
-	client *rest.RESTClient, roundTripper http.RoundTripper, upgrader spdy.Upgrader, forward *kindPortForwardContext) error {
+	client *rest.RESTClient, roundTripper http.RoundTripper, upgrader spdy.Upgrader, forward *kindPortForwardContext,
+) error {
 	// find resource
 	builder := resource.NewBuilder(cluster).
 		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
