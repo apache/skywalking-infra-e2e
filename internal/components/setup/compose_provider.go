@@ -34,7 +34,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -266,7 +265,7 @@ func (c *DockerContainer) NetworkAliases(ctx context.Context) (map[string][]stri
 
 func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 	cli := c.provider.client
-	response, err := cli.ContainerExecCreate(ctx, c.ID, container.ExecOptions{
+	response, err := cli.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
 		Cmd:    cmd,
 		Detach: false,
 	})
@@ -274,7 +273,7 @@ func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 		return 0, err
 	}
 
-	err = cli.ContainerExecStart(ctx, response.ID, container.ExecStartOptions{
+	err = cli.ContainerExecStart(ctx, response.ID, types.ExecStartCheck{
 		Detach: false,
 	})
 	if err != nil {
@@ -358,12 +357,12 @@ func (p *DockerProvider) daemonHost(ctx context.Context) (string, error) {
 }
 
 // GetNetwork returns the object representing the network identified by its name
-func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (network.Inspect, error) {
-	networkResource, err := p.client.NetworkInspect(ctx, req.Name, network.InspectOptions{
+func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (types.NetworkResource, error) {
+	networkResource, err := p.client.NetworkInspect(ctx, req.Name, types.NetworkInspectOptions{
 		Verbose: true,
 	})
 	if err != nil {
-		return network.Summary{}, err
+		return types.NetworkResource{}, err
 	}
 
 	return networkResource, err
@@ -420,7 +419,7 @@ func getDefaultGatewayIP() (string, error) {
 
 func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) {
 	// Get list of available networks
-	networkResources, err := cli.NetworkList(ctx, network.ListOptions{})
+	networkResources, err := cli.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -441,7 +440,7 @@ func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) 
 
 	// Create a bridge network for the container communications
 	if !reaperNetworkExists {
-		_, err = cli.NetworkCreate(ctx, reaperNetwork, network.CreateOptions{
+		_, err = cli.NetworkCreate(ctx, reaperNetwork, types.NetworkCreate{
 			Driver:     Bridge,
 			Attachable: true,
 			Labels: map[string]string{

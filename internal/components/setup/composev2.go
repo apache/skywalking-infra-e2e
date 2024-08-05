@@ -21,7 +21,6 @@ package setup
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
@@ -30,17 +29,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-const (
-	// SeparatorV1 is the separator used in docker-compose v1
-	// refer to https://github.com/docker/compose/blob/5becea4ca9f68875334c92f191a13482bcd6e5cf/compose/service.py#L1492-L1498
-	SeparatorV1 = "_"
-	// SeparatorV2 is the separator used in docker-compose v2
-	// refer to https://github.com/docker/compose/blob/981aea674d052ee1ab252f71c3ca1f9f8a7e32de/pkg/compose/convergence.go#L252-L257
-	SeparatorV2 = "-"
-)
-
-// ComposeSetup sets up environment according to e2e.yaml.
-func ComposeSetup(e2eConfig *config.E2EConfig) error {
+// ComposeV2Setup sets up environment according to e2e.yaml.
+func ComposeV2Setup(e2eConfig *config.E2EConfig) error {
 	composeConfigPath := e2eConfig.Setup.GetFile()
 	if composeConfigPath == "" {
 		return fmt.Errorf("no compose config file was provided")
@@ -83,6 +73,5 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 30)
 	return nil
 }

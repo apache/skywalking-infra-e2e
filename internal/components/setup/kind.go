@@ -126,22 +126,22 @@ func pullImages(ctx context.Context, images []string) error {
 	var wg sync.WaitGroup
 	for _, image := range filterResult {
 		wg.Add(1)
-		go func(img string) {
+		go func(image string) {
 			defer wg.Done()
-			logger.Log.Infof("image %s does not exist, will pull from remote", img)
-			out, err := cli.ImagePull(ctx, img, dockerimage.PullOptions{})
+			logger.Log.Infof("image %s does not exist, will pull from remote", image)
+			out, err := cli.ImagePull(ctx, image, dockerimage.PullOptions{})
 			if err != nil {
-				logger.Log.WithError(err).Errorf("failed pull image: %s", img)
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
 				return
 			}
 			defer out.Close()
 
 			if _, err := io.ReadAll(out); err != nil {
-				logger.Log.WithError(err).Errorf("failed pull image: %s", img)
+				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
 				return
 			}
 			atomic.AddInt32(&count, 1)
-			logger.Log.Infof("success pull image: %s", img)
+			logger.Log.Infof("success pull image: %s", image)
 		}(image)
 	}
 	wg.Wait()
