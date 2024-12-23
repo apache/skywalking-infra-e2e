@@ -7,6 +7,7 @@ Release Notes.
 #### Features
 
 * Adding `setup.kind.no-wait` to support should wait for the kind cluster to be ready or not.
+* Support importing external variables in the `setup.init-system-environment` file.
 
 #### Bug Fixes
 
