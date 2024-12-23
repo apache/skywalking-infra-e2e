@@ -20,6 +20,6 @@ args:
 headers:
     Accept: application/json
     Host: 127.0.0.1:8080
-    User-Agent: curl/7.81.0
-origin: 172.18.0.1
+    User-Agent: {{ notEmpty (index .headers "User-Agent") }}
+origin: {{ notEmpty .origin }}
 url: http://127.0.0.1:8080/get?case=success

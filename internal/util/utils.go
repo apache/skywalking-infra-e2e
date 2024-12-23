@@ -25,11 +25,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
+
+var EnvRegularRegex = regexp.MustCompile(`\${(?P<ENV>[_A-Z0-9]+):(?P<DEF>.*)}`)
 
 // PathExist checks if a file/directory is exist.
 func PathExist(_path string) bool {
@@ -117,10 +120,23 @@ func ExportEnvVars(envFile string) {
 		if len(kv) != 2 {
 			continue
 		}
-		key, val := kv[0], kv[1]
+		key, val := kv[0], envOverwrite(kv[1])
 		// should only export env vars that are not already exist in parent process (Go process)
 		if err := os.Setenv(key, val); err != nil {
 			logger.Log.Warnf("failed to export environment variable %v=%v, %v", key, val, err)
 		}
 	}
+}
+
+// envOverwrite replaces the environment variable with the value from the parent process
+func envOverwrite(val string) string {
+	groups := EnvRegularRegex.FindStringSubmatch(val)
+	if len(groups) == 0 {
+		return val
+	}
+
+	if v := os.Getenv(groups[1]); v != "" {
+		return v
+	}
+	return groups[2]
 }
