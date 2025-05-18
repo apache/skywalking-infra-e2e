@@ -226,7 +226,11 @@ func exposeComposeLog(cli *client.Client, service *ComposeService, containerID s
 	}
 
 	go func() {
-		defer writer.Close()
+		defer func() {
+			if err := writer.Close(); err != nil {
+				logger.Log.Warnf("failed to close writer for %s: %v", service.Name, err)
+			}
+		}()
 		if _, err := stdcopy.StdCopy(writer, writer, logs); err != nil && !errors.Is(err, context.Canceled) {
 			logger.Log.Warnf("write %s std log error: %v", service.Name, err)
 		}

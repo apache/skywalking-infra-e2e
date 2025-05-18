@@ -25,6 +25,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
 
 type ResourceLogFollower struct {
@@ -68,7 +70,9 @@ func (l *ResourceLogFollower) ConsumeLog(logWriter *os.File, stream io.ReadClose
 	finished := make(chan struct{}, 1)
 	go func() {
 		defer func() {
-			stream.Close()
+			if err := stream.Close(); err != nil {
+				logger.Log.Warnf("failed to close stream: %v", err)
+			}
 			close(finished)
 		}()
 

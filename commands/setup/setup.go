@@ -63,18 +63,18 @@ func DoSetupAccordingE2E() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 
 	setup.InitLogFollower()
-	if e2eConfig.Setup.Env == constant.Kind {
+	switch e2eConfig.Setup.Env {
+	case constant.Kind:
 		err := setup.KindSetup(&e2eConfig)
 		if err != nil {
 			return err
 		}
-	} else if e2eConfig.Setup.Env == constant.Compose {
+	case constant.Compose:
 		err := setup.ComposeSetup(&e2eConfig)
 		if err != nil {
 			return err
 		}
-		return nil
-	} else {
+	default:
 		return fmt.Errorf("no such env for setup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
 	}
 
