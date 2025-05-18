@@ -45,7 +45,8 @@ var Cleanup = &cobra.Command{
 func DoCleanupAccordingE2E() error {
 	e2eConfig := config.GlobalConfig.E2EConfig
 
-	if e2eConfig.Setup.Env == constant.Kind {
+	switch e2eConfig.Setup.Env {
+	case constant.Kind:
 		kubeConfigPath := e2eConfig.Setup.GetKubeconfig()
 		// if there is an existing kubernetes cluster, don't delete the kind cluster.
 		if kubeConfigPath == "" {
@@ -54,12 +55,12 @@ func DoCleanupAccordingE2E() error {
 				return err
 			}
 		}
-	} else if e2eConfig.Setup.Env == constant.Compose {
+	case constant.Compose:
 		err := cleanup.ComposeCleanUp(&e2eConfig)
 		if err != nil {
 			return err
 		}
-	} else {
+	default:
 		return fmt.Errorf("no such env for cleanup: [%s]. should use kind or compose instead", e2eConfig.Setup.Env)
 	}
 

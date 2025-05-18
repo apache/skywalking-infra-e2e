@@ -143,7 +143,7 @@ func (c *DockerContainer) MappedPort(ctx context.Context, port nat.Port) (nat.Po
 	if err != nil {
 		return "", err
 	}
-	if inspect.ContainerJSONBase.HostConfig.NetworkMode == "host" {
+	if inspect.HostConfig.NetworkMode == "host" {
 		return port, nil
 	}
 	ports, err := c.Ports(ctx)
@@ -490,7 +490,9 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 			}
 			return err
 		}
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			return err
+		}
 		break
 	}
 

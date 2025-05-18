@@ -99,7 +99,11 @@ func pullImages(ctx context.Context, images []string) error {
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() {
+		if err := cli.Close(); err != nil {
+			logger.Log.Warnf("failed to close docker client: %v", err)
+		}
+	}()
 
 	localImages, err := listLocalImages(ctx, cli)
 	if err != nil {
@@ -134,7 +138,11 @@ func pullImages(ctx context.Context, images []string) error {
 				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
 				return
 			}
-			defer out.Close()
+			defer func() {
+				if err := out.Close(); err != nil {
+					logger.Log.Warnf("failed to close image pull output: %v", err)
+				}
+			}()
 
 			if _, err := io.ReadAll(out); err != nil {
 				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
@@ -612,7 +620,9 @@ func exposePerContainerLog(clientGetter *util.K8sClusterInfo, pod *v1.Pod, timeo
 
 	go func() {
 		wg.Wait()
-		writer.Close()
+		if err := writer.Close(); err != nil {
+			logger.Log.Warnf("failed to close writer for %s: %v", pod.Name, err)
+		}
 	}()
 
 	return nil
