@@ -53,7 +53,8 @@ var Verify = &cobra.Command{
 	Short: "verify if the actual data match the expected data",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if expected != "" {
-			return verifySingleCase(expected, actual, query)
+			_, err := verifySingleCase(expected, actual, query)
+			return err
 		}
 
 		// If there is no given flags.
@@ -69,10 +70,10 @@ type verifyInfo struct {
 	failFast   bool
 }
 
-func verifySingleCase(expectedFile, actualFile, query string) error {
+func verifySingleCase(expectedFile, actualFile, query string) (string, error) {
 	expectedData, err := util.ReadFileContent(expectedFile)
 	if err != nil {
-		return fmt.Errorf("failed to read the expected data file: %v", err)
+		return "", fmt.Errorf("failed to read the expected data file: %v", err)
 	}
 
 	var actualData, sourceName, stderr string
@@ -80,23 +81,23 @@ func verifySingleCase(expectedFile, actualFile, query string) error {
 		sourceName = actualFile
 		actualData, err = util.ReadFileContent(actualFile)
 		if err != nil {
-			return fmt.Errorf("failed to read the actual data file: %v", err)
+			return "", fmt.Errorf("failed to read the actual data file: %v", err)
 		}
 	} else if query != "" {
 		sourceName = query
 		actualData, stderr, err = util.ExecuteCommand(query)
 		if err != nil {
-			return fmt.Errorf("failed to execute the query: %s, output: %s, error: %v", query, actualData, stderr)
+			return "", fmt.Errorf("failed to execute the query: %s, output: %s, error: %v", query, actualData, stderr)
 		}
 	}
 
 	if err = verifier.Verify(actualData, expectedData); err != nil {
 		if me, ok := err.(*verifier.MismatchError); ok {
-			return fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, me.Error())
+			return actualData, fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, me.Error())
 		}
-		return fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, err)
+		return actualData, fmt.Errorf("failed to verify the output: %s, error:\n%v", sourceName, err)
 	}
-	return nil
+	return actualData, nil
 }
 
 // concurrentlyVerifySingleCase verifies a single case in concurrency mode,
@@ -127,7 +128,7 @@ func concurrentlyVerifySingleCase(
 			res.Skip = true
 			return res
 		default:
-			if err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
+			if d, err := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); err == nil {
 				if current == 0 {
 					res.Msg = fmt.Sprintf("verified %v\n", caseName(v))
 				} else {
@@ -138,6 +139,9 @@ func concurrentlyVerifySingleCase(
 				time.Sleep(verifyInfo.interval)
 			} else {
 				res.Msg = fmt.Sprintf("failed to verify %v, retried %d time(s):", caseName(v), current)
+				if d != "" {
+					res.Msg += fmt.Sprintf(" the actual data is:\n%s\n", d)
+				}
 				res.Err = err
 			}
 		}
@@ -227,7 +231,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 		}
 
 		for current := 0; current <= verifyInfo.retryCount; current++ {
-			if e := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); e == nil {
+			if d, e := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); e == nil {
 				if current == 0 {
 					res[idx].Msg = fmt.Sprintf("verified %v \n", caseName(v))
 				} else {
@@ -245,6 +249,9 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				time.Sleep(verifyInfo.interval)
 			} else {
 				res[idx].Msg = fmt.Sprintf("failed to verify %v, retried %d time(s)", caseName(v), current)
+				if d != "" {
+					res[idx].Msg += fmt.Sprintf(", the actual data is:\n%s\n", d)
+				}
 				res[idx].Err = e
 				res[idx].Skip = false
 				printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
