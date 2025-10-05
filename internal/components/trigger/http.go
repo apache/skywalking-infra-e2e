@@ -86,6 +86,10 @@ func (h *httpAction) Do() chan error {
 					result <- err
 					sent = true
 				}
+				if h.times == h.executedCount {
+					t.Stop()
+					return
+				}
 			case <-h.stopCh:
 				t.Stop()
 				result <- nil
