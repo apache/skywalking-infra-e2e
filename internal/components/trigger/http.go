@@ -62,7 +62,7 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 		body:          body,
 		headers:       headers,
 		executedCount: 0,
-		stopCh:        make(chan struct{}),
+		stopCh:        make(chan struct{}, 1),
 		client:        &http.Client{},
 	}, nil
 }
@@ -75,6 +75,7 @@ func (h *httpAction) Do() chan error {
 	result := make(chan error)
 	sent := false
 	go func() {
+		defer t.Stop()
 		for {
 			select {
 			case <-t.C:
@@ -87,12 +88,9 @@ func (h *httpAction) Do() chan error {
 					sent = true
 				}
 				if h.times == h.executedCount {
-					t.Stop()
 					return
 				}
 			case <-h.stopCh:
-				t.Stop()
-				result <- nil
 				return
 			}
 		}
