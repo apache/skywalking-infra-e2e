@@ -21,6 +21,7 @@ package trigger
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -51,6 +52,12 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 		return nil, fmt.Errorf("trigger interval should be > 0, but was %s", interval)
 	}
 
+	if times <= 0 {
+		logger.Log.Warnf("trigger times (%d) is invalid (<=0). It has been set to a large number (%d) to simulate infinite runs. "+
+			"consider using a positive value.", times, math.MaxInt32)
+		times = math.MaxInt32
+	}
+
 	// there can be env variables in url, say, "http://${GATEWAY_HOST}:${GATEWAY_PORT}/test"
 	url = os.ExpandEnv(url)
 
@@ -70,7 +77,13 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 func (h *httpAction) Do() chan error {
 	t := time.NewTicker(h.interval)
 
-	logger.Log.Infof("trigger will request URL %s %d times with interval %s.", h.url, h.times, h.interval)
+	var timesInfo string
+	if h.times == math.MaxInt32 {
+		timesInfo = "a very large number of times (practically until stopped)"
+	} else {
+		timesInfo = fmt.Sprintf("%d times", h.times)
+	}
+	logger.Log.Infof("trigger will request URL %s %s with interval %s.", h.url, timesInfo, h.interval)
 
 	result := make(chan error)
 	sent := false
@@ -87,10 +100,12 @@ func (h *httpAction) Do() chan error {
 					result <- err
 					sent = true
 				}
-				if h.times == h.executedCount {
+				if h.times != math.MaxInt32 && h.executedCount >= h.times {
+					logger.Log.Infof("trigger has completed %d requests and will stop.", h.executedCount)
 					return
 				}
 			case <-h.stopCh:
+				logger.Log.Infof("trigger was stopped manually after %d executions.", h.executedCount)
 				return
 			}
 		}
