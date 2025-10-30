@@ -91,7 +91,7 @@ func runAccordingE2E() error {
 		if err != nil {
 			return err
 		}
-		logger.Log.Infof("trigger part finished successfully")
+		logger.Log.Infof("trigger part started successfully")
 	} else {
 		logger.Log.Infof("no trigger need to execute")
 	}
