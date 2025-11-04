@@ -32,7 +32,9 @@ func init() {
 	Log.Level = logrus.InfoLevel
 	Log.SetOutput(os.Stdout)
 	Log.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp:       true,
+		DisableTimestamp:       false,
+		FullTimestamp:          true,
+		TimestampFormat:        "2006-01-02 15:04:05",
 		DisableLevelTruncation: true,
 		ForceColors:            true,
 	})

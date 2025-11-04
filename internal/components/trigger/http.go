@@ -99,6 +99,7 @@ func (h *httpAction) Do() chan error {
 				if !sent && (err == nil || h.times == h.executedCount) {
 					result <- err
 					sent = true
+					logger.Log.Infof("trigger has sent result after executed %d requests with err: %v", h.executedCount, err)
 				}
 				if h.times != math.MaxInt32 && h.executedCount >= h.times {
 					logger.Log.Infof("trigger has completed %d requests and will stop.", h.executedCount)
@@ -134,7 +135,7 @@ func (h *httpAction) request() (*http.Request, error) {
 func (h *httpAction) execute() error {
 	req, err := h.request()
 	if err != nil {
-		logger.Log.Errorf("failed to create new request %v", err)
+		logger.Log.Errorf("failed to create new request  %v", err)
 		return err
 	}
 	logger.Log.Debugf("request URL %s the %d time.", h.url, h.executedCount)

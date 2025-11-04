@@ -219,7 +219,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 
 		if v.GetExpected() == "" {
 			res[idx].Skip = false
-			res[idx].Msg = fmt.Sprintf("failed to verify %v", caseName(v))
+			res[idx].Msg = fmt.Sprintf("%s failed to verify %v", formatedVerifyTime(), caseName(v))
 			res[idx].Err = fmt.Errorf("the expected data file for %v is not specified", caseName(v))
 
 			printer.Warning(res[idx].Msg)
@@ -233,9 +233,9 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 		for current := 0; current <= verifyInfo.retryCount; current++ {
 			if d, e := verifySingleCase(v.GetExpected(), v.GetActual(), v.Query); e == nil {
 				if current == 0 {
-					res[idx].Msg = fmt.Sprintf("verified %v \n", caseName(v))
+					res[idx].Msg = fmt.Sprintf("%s verified %v \n", formatedVerifyTime(), caseName(v))
 				} else {
-					res[idx].Msg = fmt.Sprintf("verified %v, retried %d time(s)\n", caseName(v), current)
+					res[idx].Msg = fmt.Sprintf("%s verified %v, retried %d time(s)\n", formatedVerifyTime(), caseName(v), current)
 				}
 				res[idx].Skip = false
 				printer.Success(res[idx].Msg)
@@ -244,11 +244,12 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 				if current == 0 {
 					printer.UpdateText(fmt.Sprintf("failed to verify %v, will continue retry:", caseName(v)))
 				} else {
-					printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current, verifyInfo.retryCount))
+					printer.UpdateText(fmt.Sprintf("failed to verify %v, retry [%d/%d]", caseName(v), current,
+						verifyInfo.retryCount))
 				}
 				time.Sleep(verifyInfo.interval)
 			} else {
-				res[idx].Msg = fmt.Sprintf("failed to verify %v, retried %d time(s)", caseName(v), current)
+				res[idx].Msg = fmt.Sprintf("%s failed to verify %v, retried %d time(s)", formatedVerifyTime(), caseName(v), current)
 				if d != "" {
 					res[idx].Msg += fmt.Sprintf(", the actual data is:\n%s\n", d)
 				}
@@ -265,6 +266,10 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 	}
 
 	return nil
+}
+
+func formatedVerifyTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }
 
 func caseName(v *config.VerifyCase) string {
