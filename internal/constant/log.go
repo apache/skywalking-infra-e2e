@@ -14,29 +14,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+//
 
-package logger
+package constant
 
-import (
-	"github.com/apache/skywalking-infra-e2e/internal/constant"
-	"os"
-
-	"github.com/sirupsen/logrus"
+const (
+	LogTimestampFormat = "2006-01-02 15:04:05"
 )
-
-var Log *logrus.Logger
-
-func init() {
-	if Log == nil {
-		Log = logrus.New()
-	}
-	Log.Level = logrus.InfoLevel
-	Log.SetOutput(os.Stdout)
-	Log.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp:       false,
-		FullTimestamp:          true,
-		TimestampFormat:        constant.LogTimestampFormat,
-		DisableLevelTruncation: true,
-		ForceColors:            true,
-	})
-}

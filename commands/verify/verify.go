@@ -20,6 +20,7 @@ package verify
 import (
 	"context"
 	"fmt"
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"sync"
 	"time"
 
@@ -269,7 +270,7 @@ func verifyCasesSerially(verify *config.Verify, verifyInfo *verifyInfo) (err err
 }
 
 func formatVerificationTime() string {
-	return time.Now().Format("2006-01-02 15:04:05")
+	return time.Now().Format(constant.LogTimestampFormat)
 }
 
 func caseName(v *config.VerifyCase) string {
