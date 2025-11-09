@@ -99,6 +99,7 @@ func (h *httpAction) Do() chan error {
 				if !sent && (err == nil || h.times == h.executedCount) {
 					result <- err
 					sent = true
+					logger.Log.Infof("trigger has sent result after executed %d requests with err: %v", h.executedCount, err)
 				}
 				if h.times != math.MaxInt32 && h.executedCount >= h.times {
 					logger.Log.Infof("trigger has completed %d requests and will stop.", h.executedCount)
