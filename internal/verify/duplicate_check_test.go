@@ -37,3 +37,20 @@ func TestCheckForDuplicates(t *testing.T) {
 		}
 	}
 }
+
+func TestRunListVerification_NoDuplicatesFails(t *testing.T) {
+    cfg := ListVerification{NoDuplicates: true}
+    items := []string{"a", "b", "a"}
+    err := (&Verifier{}).RunListVerification(cfg, items)
+    if err == nil {
+        t.Fatalf("expected duplicate check to fail but got nil")
+    }
+}
+
+func TestRunListVerification_NoDuplicatesPassesForUnique(t *testing.T) {
+    cfg := ListVerification{NoDuplicates: true}
+    items := []string{"a", "b", "c"}
+    if err := (&Verifier{}).RunListVerification(cfg, items); err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+}
