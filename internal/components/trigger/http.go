@@ -21,6 +21,7 @@ package trigger
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -51,6 +52,12 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 		return nil, fmt.Errorf("trigger interval should be > 0, but was %s", interval)
 	}
 
+	if times <= 0 {
+		logger.Log.Warnf("trigger times (%d) is invalid (<=0). It has been set to a large number (%d) to simulate infinite runs. "+
+			"consider using a positive value.", times, math.MaxInt32)
+		times = math.MaxInt32
+	}
+
 	// there can be env variables in url, say, "http://${GATEWAY_HOST}:${GATEWAY_PORT}/test"
 	url = os.ExpandEnv(url)
 
@@ -62,7 +69,7 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 		body:          body,
 		headers:       headers,
 		executedCount: 0,
-		stopCh:        make(chan struct{}),
+		stopCh:        make(chan struct{}, 1),
 		client:        &http.Client{},
 	}, nil
 }
@@ -70,11 +77,18 @@ func NewHTTPAction(intervalStr string, times int, url, method, body string, head
 func (h *httpAction) Do() chan error {
 	t := time.NewTicker(h.interval)
 
-	logger.Log.Infof("trigger will request URL %s %d times with interval %s.", h.url, h.times, h.interval)
+	var timesInfo string
+	if h.times == math.MaxInt32 {
+		timesInfo = "a very large number of times (practically until stopped)"
+	} else {
+		timesInfo = fmt.Sprintf("%d times", h.times)
+	}
+	logger.Log.Infof("trigger will request URL %s %s with interval %s.", h.url, timesInfo, h.interval)
 
 	result := make(chan error)
 	sent := false
 	go func() {
+		defer t.Stop()
 		for {
 			select {
 			case <-t.C:
@@ -85,10 +99,14 @@ func (h *httpAction) Do() chan error {
 				if !sent && (err == nil || h.times == h.executedCount) {
 					result <- err
 					sent = true
+					logger.Log.Infof("trigger has sent result after executed %d requests with err: %v", h.executedCount, err)
+				}
+				if h.times != math.MaxInt32 && h.executedCount >= h.times {
+					logger.Log.Infof("trigger has completed %d requests and will stop.", h.executedCount)
+					return
 				}
 			case <-h.stopCh:
-				t.Stop()
-				result <- nil
+				logger.Log.Infof("trigger was stopped manually after %d executions.", h.executedCount)
 				return
 			}
 		}
