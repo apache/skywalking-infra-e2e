@@ -12,6 +12,7 @@ Release Notes.
 #### Bug Fixes
 
 * Fix kind load docker-image error
+* Fix the wrong judgement when not all the range is including.
 
 #### Issues and PR
 - All issues are [here](https://github.com/apache/skywalking/milestone/148?closed=1)
