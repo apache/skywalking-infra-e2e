@@ -59,3 +59,10 @@ jobs:
         uses: apache/skywalking-infra-e2e@main
         with:
           e2e-file: ./test/e2e/e2e.yaml
+
+      - uses: engineerd/setup-kind@v0.6.2
+        with:
+          version: "v0.27.0"
+
+      - name: Run KinD E2E Test
+        run: make e2e-test-kind
