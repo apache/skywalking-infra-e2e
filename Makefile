@@ -111,3 +111,10 @@ uninstall: $(GOOS)
 e2e-test: $(GOOS)
 	- make build
 	- ./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/e2e.yaml
+
+.PHONY: e2e-test-kind
+# Run E2E test with KinD to verify import-images functionality
+e2e-test-kind:
+	$(MAKE) $(GOOS)
+	docker pull busybox:latest
+	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/e2e.yaml

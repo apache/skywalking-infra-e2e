@@ -9,7 +9,7 @@ You can perform testing locally. And when you submit a pull request (PR), GitHub
     |- concurrency
       |- fail-fast (concurrency & fail-fast mode)
         |- internal
-          |- expected.yaml 
+          |- expected.yaml
           |- verify.yaml (configuration file)
         |- expected.yaml
       |- non-fail-fast (concurrency & non-fail-fast mode)
@@ -17,7 +17,7 @@ You can perform testing locally. And when you submit a pull request (PR), GitHub
           |- expected.yaml
           |- verify.yaml (configuration file)
         |- expected.yaml
-    |- non-concurrency 
+    |- non-concurrency
       |- fail-fast (non-concurrency & fail-fast mode)
         |- internal
           |- expected.yaml
@@ -28,6 +28,11 @@ You can perform testing locally. And when you submit a pull request (PR), GitHub
           |- expected.yaml
           |- verify.yaml (configuration file)
         |- expected.yaml
+    |- kind (KinD import-images test)
+      |- kind-cluster.yaml (KinD cluster configuration)
+      |- e2e.yaml (E2E test configuration with import-images)
+      |- deployment.yaml (test Pod definition)
+      |- expected.yaml (expected result)
   |- docker-compose.yaml (run a httpbin container, which can return YAML data)
   |- e2e.yaml (configuration file for the outer infra E2E)
 
@@ -143,7 +148,8 @@ skippedCount: 0
 add the name of the cases to 'passed','failed' or 'skipped'. And add the number of cases on 'passedCount','failedCount' and 'skippedCount'.
 
 ## Tips
-- You can use `make e2e-test` to run the test locally
+- You can use `make e2e-test` to run the docker-compose test locally
+- You can use `make e2e-test-kind` to run the KinD import-images test locally
 - You may need to split your PR to pass e2e tests in CI
 ```
 # /internal/expected.yaml
