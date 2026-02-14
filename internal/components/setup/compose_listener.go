@@ -25,7 +25,6 @@ import (
 
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
@@ -53,7 +52,7 @@ func NewComposeContainerListener(ctx context.Context, cli *client.Client, servic
 }
 
 func (c *ComposeContainerListener) Listen(consumer func(container *ComposeContainer)) error {
-	containerEvents, errors := c.client.Events(c.ctx, types.EventsOptions{
+	containerEvents, errors := c.client.Events(c.ctx, events.ListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("type", "container"),
 			filters.Arg("event", "start"),
@@ -95,7 +94,7 @@ func (c *ComposeContainerListener) foundMessage(message *events.Message) *Compos
 		if service.Name == serviceName {
 			return &ComposeContainer{
 				Service: service,
-				ID:      message.ID,
+				ID:      message.Actor.ID,
 			}
 		}
 	}

@@ -28,18 +28,19 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/yaml.v3"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
+	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/compose"
 )
 
 const (
@@ -68,27 +69,43 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
-	// setup docker compose
-	composeFilePaths := []string{
-		composeConfigPath,
-	}
 	identifier := GetIdentity()
-	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
 
-	// bind wait port
-	services, err := buildComposeServices(e2eConfig, compose)
+	// parse compose file to get service configurations
+	composeServices, err := parseComposeFile(composeConfigPath)
+	if err != nil {
+		return fmt.Errorf("parse compose file error: %v", err)
+	}
+
+	// build wait port strategies
+	services, err := buildComposeServices(e2eConfig, composeServices)
 	if err != nil {
 		return fmt.Errorf("bind wait ports error: %v", err)
 	}
 
-	// build command
-	cmd := make([]string, 0)
+	// create compose stack
+	stack, err := compose.NewDockerComposeWith(
+		compose.WithStackFiles(composeConfigPath),
+		compose.StackIdentifier(identifier),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create compose stack: %w", err)
+	}
+
+	// load env file if specified
 	if e2eConfig.Setup.InitSystemEnvironment != "" {
 		profilePath := util.ResolveAbs(e2eConfig.Setup.InitSystemEnvironment)
-		cmd = append(cmd, "--env-file", profilePath)
 		util.ExportEnvVars(profilePath)
+		// also load env vars from file and pass to compose
+		envVars, err := loadEnvFromFile(profilePath)
+		if err != nil {
+			return fmt.Errorf("load env file error: %v", err)
+		}
+		stack.WithEnv(envVars)
 	}
-	cmd = append(cmd, "up", "-d")
+
+	// enable OS environment variables
+	stack.WithOsEnv()
 
 	// Listen container create
 	listener := NewComposeContainerListener(context.Background(), cli, services)
@@ -102,10 +119,10 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return err
 	}
 
-	// setup
-	execError := compose.WithCommand(cmd).Invoke()
-	if execError.Error != nil {
-		return execError.Error
+	// start compose stack
+	err = stack.Up(context.Background(), compose.Wait(true))
+	if err != nil {
+		return fmt.Errorf("failed to start compose stack: %w", err)
 	}
 
 	// find exported port and build env
@@ -157,7 +174,7 @@ func exposeComposeService(services []*ComposeService, cli *client.Client,
 	return nil
 }
 
-func (c *ComposeService) FindContainer(cli *client.Client, identity string) (*types.Container, error) {
+func (c *ComposeService) FindContainer(cli *client.Client, identity string) (*container.Summary, error) {
 	serviceName, num := getInstanceName(c.Name)
 	return findContainer(cli, identity, serviceName, num)
 }
@@ -211,7 +228,7 @@ func exposeComposePort(dockerProvider *DockerProvider, service *ComposeService, 
 
 // export container log to local path
 func exposeComposeLog(cli *client.Client, service *ComposeService, containerID string, logFollower *util.ResourceLogFollower) error {
-	logs, err := cli.ContainerLogs(logFollower.Ctx, containerID, types.ContainerLogsOptions{
+	logs, err := cli.ContainerLogs(logFollower.Ctx, containerID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
@@ -247,19 +264,70 @@ func exportComposeEnv(key, value, service string) error {
 	return nil
 }
 
-func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.LocalDockerCompose) ([]*ComposeService, error) {
+// composeFile represents the structure of a docker-compose file
+type composeFile struct {
+	Services map[string]map[string]any `yaml:"services"`
+}
+
+// parseComposeFile reads and parses a docker-compose file to extract service configurations
+func parseComposeFile(filePath string) (map[string]map[string]any, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("read compose file %q: %w", filePath, err)
+	}
+
+	var cf composeFile
+	if err := yaml.Unmarshal(data, &cf); err != nil {
+		return nil, fmt.Errorf("unmarshal compose file %q: %w", filePath, err)
+	}
+
+	return cf.Services, nil
+}
+
+// loadEnvFromFile loads environment variables from a file into a map
+func loadEnvFromFile(filePath string) (map[string]string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("read env file %q: %w", filePath, err)
+	}
+
+	envVars := make(map[string]string)
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			// Remove quotes if present
+			if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
+				(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
+				value = value[1 : len(value)-1]
+			}
+			envVars[key] = value
+		}
+	}
+	return envVars, nil
+}
+
+func buildComposeServices(e2eConfig *config.E2EConfig, composeServices map[string]map[string]any) ([]*ComposeService, error) {
 	waitTimeout := e2eConfig.Setup.GetTimeout()
 	services := make([]*ComposeService, 0)
-	for service, content := range compose.Services {
-		serviceConfig := content.(map[any]any)
+	for serviceName, serviceConfig := range composeServices {
 		ports := serviceConfig["ports"]
-		serviceContext := &ComposeService{Name: service}
+		serviceContext := &ComposeService{Name: serviceName}
 		services = append(services, serviceContext)
 		if ports == nil {
 			continue
 		}
 
-		portList := ports.([]any)
+		portList, ok := ports.([]any)
+		if !ok {
+			continue
+		}
 		for inx := range portList {
 			exportPort, err := getExpectPort(portList[inx])
 			if err != nil {
@@ -270,8 +338,6 @@ func buildComposeServices(e2eConfig *config.E2EConfig, compose *testcontainers.L
 				expectPort:       exportPort,
 				HostPortStrategy: *wait.NewHostPortStrategy(nat.Port(fmt.Sprintf("%d/tcp", exportPort))).WithStartupTimeout(waitTimeout),
 			}
-			// temporary don't use testcontainers-go framework wait strategy until fix docker-in-docker bug
-			// compose.WithExposedService(service, exportPort, strategy)
 			serviceContext.waitStrategies = append(serviceContext.waitStrategies, strategy)
 		}
 	}
@@ -292,14 +358,14 @@ func getExpectPort(portConfig any) (int, error) {
 	return 0, fmt.Errorf("unknown port information: %v", portConfig)
 }
 
-func findContainer(c *client.Client, projectName, serviceName string, number int) (*types.Container, error) {
+func findContainer(c *client.Client, projectName, serviceName string, number int) (*container.Summary, error) {
 	nameV1 := strings.Join([]string{projectName, serviceName, strconv.Itoa(number)}, SeparatorV1)
 	nameV2 := strings.Join([]string{projectName, serviceName, strconv.Itoa(number)}, SeparatorV2)
 	// filter either names
 	// 1) {project}_{service}_{number}
 	// 2) {project}-{service}-{number}
 	f := filters.NewArgs(filters.Arg("name", nameV1), filters.Arg("name", nameV2))
-	containerListOptions := types.ContainerListOptions{Filters: f}
+	containerListOptions := container.ListOptions{Filters: f}
 	containers, err := c.ContainerList(context.Background(), containerListOptions)
 	if err != nil {
 		return nil, err
@@ -336,12 +402,12 @@ func (hp *hostPortCachedStrategy) WaitUntilReady(ctx context.Context, target wai
 	return hp.HostPortStrategy.WaitUntilReady(ctx, target)
 }
 
-func waitPortUntilReady(e2eConfig *config.E2EConfig, container *types.Container, dockerProvider *DockerProvider, expectPort int) error {
+func waitPortUntilReady(e2eConfig *config.E2EConfig, cont *container.Summary, dockerProvider *DockerProvider, expectPort int) error {
 	// wait port
 	waitTimeout := e2eConfig.Setup.GetTimeout()
 	waitPort := nat.Port(fmt.Sprintf("%d/tcp", expectPort))
 	target := &DockerContainer{
-		ID:         container.ID,
+		ID:         cont.ID,
 		WaitingFor: wait.NewHostPortStrategy(waitPort),
 		provider:   dockerProvider}
 	return WaitPort(context.Background(), target, waitPort, waitTimeout)

@@ -26,15 +26,17 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
+	execpkg "os/exec"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/testcontainers/testcontainers-go/exec"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
@@ -176,7 +178,7 @@ func (c *DockerContainer) Ports(ctx context.Context) (nat.PortMap, error) {
 	return inspect.NetworkSettings.Ports, nil
 }
 
-func (c *DockerContainer) inspectContainer(ctx context.Context) (*types.ContainerJSON, error) {
+func (c *DockerContainer) inspectContainer(ctx context.Context) (*container.InspectResponse, error) {
 	inspect, err := c.provider.client.ContainerInspect(ctx, c.ID)
 	if err != nil {
 		return nil, err
@@ -185,10 +187,28 @@ func (c *DockerContainer) inspectContainer(ctx context.Context) (*types.Containe
 	return &inspect, nil
 }
 
+// Inspect implements wait.StrategyTarget
+func (c *DockerContainer) Inspect(ctx context.Context) (*container.InspectResponse, error) {
+	inspect, err := c.provider.client.ContainerInspect(ctx, c.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &inspect, nil
+}
+
+// State implements wait.StrategyTarget
+func (c *DockerContainer) State(ctx context.Context) (*container.State, error) {
+	inspect, err := c.Inspect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return inspect.State, nil
+}
+
 // Logs will fetch both STDOUT and STDERR from the current container. Returns a
 // ReadCloser and leaves it up to the caller to extract what it wants.
 func (c *DockerContainer) Logs(ctx context.Context) (io.ReadCloser, error) {
-	options := types.ContainerLogsOptions{
+	options := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 	}
@@ -241,7 +261,20 @@ func (c *DockerContainer) ContainerIP(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	return inspect.NetworkSettings.IPAddress, nil
+	// Use the bridge network as the default, or find the first available network
+	if inspect.NetworkSettings != nil && inspect.NetworkSettings.Networks != nil {
+		// Try bridge network first
+		if bridge, ok := inspect.NetworkSettings.Networks["bridge"]; ok {
+			return bridge.IPAddress, nil
+		}
+		// Fall back to the first network in the map
+		for _, net := range inspect.NetworkSettings.Networks {
+			return net.IPAddress, nil
+		}
+	}
+
+	// No networks found
+	return "", nil
 }
 
 // NetworkAliases gets the aliases of the container for the networks it is attached to.
@@ -262,28 +295,30 @@ func (c *DockerContainer) NetworkAliases(ctx context.Context) (map[string][]stri
 	return a, nil
 }
 
-func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
+func (c *DockerContainer) Exec(ctx context.Context, cmd []string, options ...exec.ProcessOption) (int, io.Reader, error) {
 	cli := c.provider.client
-	response, err := cli.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
-		Cmd:    cmd,
-		Detach: false,
+	response, err := cli.ContainerExecCreate(ctx, c.ID, container.ExecOptions{
+		Cmd:          cmd,
+		Detach:       false,
+		AttachStdout: true,
+		AttachStderr: true,
 	})
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
-	err = cli.ContainerExecStart(ctx, response.ID, types.ExecStartCheck{
+	err = cli.ContainerExecStart(ctx, response.ID, container.ExecStartOptions{
 		Detach: false,
 	})
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	var exitCode int
 	for {
 		execResp, err := cli.ContainerExecInspect(ctx, response.ID)
 		if err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 
 		if !execResp.Running {
@@ -294,7 +329,18 @@ func (c *DockerContainer) Exec(ctx context.Context, cmd []string) (int, error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return exitCode, nil
+	// Return a dummy reader since we're not capturing output
+	return exitCode, strings.NewReader(""), nil
+}
+
+// CopyFileFromContainer implements wait.StrategyTarget
+func (c *DockerContainer) CopyFileFromContainer(ctx context.Context, filePath string) (io.ReadCloser, error) {
+	cli := c.provider.client
+	content, _, err := cli.CopyFromContainer(ctx, c.ID, filePath)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
 }
 
 // DockerNetwork represents a network started using Docker
@@ -356,12 +402,12 @@ func (p *DockerProvider) daemonHost(ctx context.Context) (string, error) {
 }
 
 // GetNetwork returns the object representing the network identified by its name
-func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (types.NetworkResource, error) {
-	networkResource, err := p.client.NetworkInspect(ctx, req.Name, types.NetworkInspectOptions{
+func (p *DockerProvider) GetNetwork(ctx context.Context, req NetworkRequest) (network.Inspect, error) {
+	networkResource, err := p.client.NetworkInspect(ctx, req.Name, network.InspectOptions{
 		Verbose: true,
 	})
 	if err != nil {
-		return types.NetworkResource{}, err
+		return network.Inspect{}, err
 	}
 
 	return networkResource, err
@@ -404,7 +450,7 @@ func inAContainer() bool {
 
 // deprecated
 func getDefaultGatewayIP() (string, error) {
-	cmd := exec.Command("sh", "-c", "ip route|awk '/default/ { print $3 }'")
+	cmd := execpkg.Command("sh", "-c", "ip route|awk '/default/ { print $3 }'")
 	stdout, err := cmd.Output()
 	if err != nil {
 		return "", errors.New("failed to detect docker host")
@@ -418,7 +464,7 @@ func getDefaultGatewayIP() (string, error) {
 
 func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) {
 	// Get list of available networks
-	networkResources, err := cli.NetworkList(ctx, types.NetworkListOptions{})
+	networkResources, err := cli.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -439,7 +485,7 @@ func getDefaultNetwork(ctx context.Context, cli *client.Client) (string, error) 
 
 	// Create a bridge network for the container communications
 	if !reaperNetworkExists {
-		_, err = cli.NetworkCreate(ctx, reaperNetwork, types.NetworkCreate{
+		_, err = cli.NetworkCreate(ctx, reaperNetwork, network.CreateOptions{
 			Driver:     Bridge,
 			Attachable: true,
 			Labels: map[string]string{
@@ -502,7 +548,7 @@ func WaitPort(ctx context.Context, target wait.StrategyTarget, waitPort nat.Port
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		exitCode, err := target.Exec(ctx, []string{"/bin/sh", "-c", command})
+		exitCode, _, err := target.Exec(ctx, []string{"/bin/sh", "-c", command})
 		if err != nil {
 			return err
 		}

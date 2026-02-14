@@ -19,13 +19,14 @@
 package cleanup
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/testcontainers/testcontainers-go/modules/compose"
+
 	"github.com/apache/skywalking-infra-e2e/internal/components/setup"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
-
-	"github.com/testcontainers/testcontainers-go"
-
-	"fmt"
 )
 
 func ComposeCleanUp(conf *config.E2EConfig) error {
@@ -35,12 +36,19 @@ func ComposeCleanUp(conf *config.E2EConfig) error {
 	if composeFilePath == "" {
 		return fmt.Errorf("no compose config file was provided")
 	}
-	composeFilePaths := []string{composeFilePath}
 	identifier := setup.GetIdentity()
-	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
-	down := compose.Down()
-	if down.Error != nil {
-		return down.Error
+
+	stack, err := compose.NewDockerComposeWith(
+		compose.WithStackFiles(composeFilePath),
+		compose.StackIdentifier(identifier),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create compose stack: %w", err)
+	}
+
+	err = stack.Down(context.Background(), compose.RemoveVolumes(true), compose.RemoveOrphans(true))
+	if err != nil {
+		return fmt.Errorf("failed to down compose stack: %w", err)
 	}
 
 	return nil

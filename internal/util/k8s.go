@@ -118,7 +118,9 @@ func (c *K8sClusterInfo) ToRESTMapper() (meta.RESTMapper, error) {
 	}
 
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
-	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
+	expander := restmapper.NewShortcutExpander(mapper, discoveryClient, func(warning string) {
+		logger.Log.Warnf("RESTMapper shortcut expansion warning: %s", warning)
+	})
 	return expander, nil
 }
 
