@@ -17,16 +17,13 @@
 #
 
 name: E2E Test
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 on:
   pull_request:
     branches:
       - main
-
 jobs:
   build:
     name: E2E Test
@@ -35,17 +32,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.24
+          go-version: 1.25
           cache-dependency-path: |
             go.sum
         id: go
-
       - name: Check out code into the Go module directory
         uses: actions/checkout@v4
-
       - name: Build e2e
         run: make linux
-
       - name: Install docker-compose
         shell: bash
         run: |
@@ -54,15 +48,12 @@ jobs:
             sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
           fi
-
       - name: Run E2E Test
         uses: apache/skywalking-infra-e2e@main
         with:
           e2e-file: ./test/e2e/e2e.yaml
-
       - uses: engineerd/setup-kind@v0.6.2
         with:
-          version: "v0.27.0"
-
+          version: v0.27.0
       - name: Run KinD E2E Test
         run: make e2e-test-kind
