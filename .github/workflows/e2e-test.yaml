@@ -39,9 +39,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v4
       - name: Build e2e
-        run: make linux
-        env:
-          CGO_ENABLED: 1
+        run: CGO_ENABLED=1 make linux
       - name: Install docker-compose
         shell: bash
         run: |

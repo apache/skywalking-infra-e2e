@@ -21,11 +21,14 @@ VERSION ?= latest
 OUT_DIR = bin
 HUB ?= docker.io/apache
 
-GO := CGO_ENABLED=1 GO111MODULE=on go
+GO := GO111MODULE=on go
 GO_PATH = $(shell $(GO) env GOPATH)
 GOARCH ?= $(shell $(GO) env GOARCH)
 GOOS ?= $(shell $(GO) env GOOS)
-GO_BUILD = $(GO) build
+# Enable CGO only for native builds (Linux on Linux, Darwin on Darwin)
+# Cross-compilation (e.g., Darwin from Linux) requires target platform SDK
+CGO_ENABLED ?= $(shell if [ "$(GOOS)" = "$(shell $(GO) env GOOS)" ] && [ "$(GOARCH)" = "$(shell $(GO) env GOARCH)" ]; then echo 1; else echo 0; fi)
+GO_BUILD = CGO_ENABLED=$(CGO_ENABLED) $(GO) build
 GO_TEST = $(GO) test
 GO_LINT = $(GO_PATH)/bin/golangci-lint
 GO_BUILD_LDFLAGS = -X github.com/apache/skywalking-$(PROJECT)/commands.version=$(VERSION)
