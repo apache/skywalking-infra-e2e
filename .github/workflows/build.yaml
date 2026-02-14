@@ -50,9 +50,13 @@ jobs:
 
       - name: Test
         run: make test
+        env:
+          CGO_ENABLED: 1
 
       - name: Build
         run: make build
+        env:
+          CGO_ENABLED: 1
 
       - name: Build Docker Image
         run: make docker

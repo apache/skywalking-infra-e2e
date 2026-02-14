@@ -21,7 +21,7 @@ VERSION ?= latest
 OUT_DIR = bin
 HUB ?= docker.io/apache
 
-GO := GO111MODULE=on go
+GO := CGO_ENABLED=1 GO111MODULE=on go
 GO_PATH = $(shell $(GO) env GOPATH)
 GOARCH ?= $(shell $(GO) env GOARCH)
 GOOS ?= $(shell $(GO) env GOOS)

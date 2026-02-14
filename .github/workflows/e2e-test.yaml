@@ -40,6 +40,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Build e2e
         run: make linux
+        env:
+          CGO_ENABLED: 1
       - name: Install docker-compose
         shell: bash
         run: |
