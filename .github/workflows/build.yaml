@@ -5,9 +5,9 @@
 # the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -25,8 +25,8 @@ on:
       - main
 
 jobs:
-  build:
-    name: Build
+  lint-and-test:
+    name: Lint and Test
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
@@ -51,8 +51,28 @@ jobs:
       - name: Test
         run: CGO_ENABLED=1 make test
 
+  build:
+    name: Build
+    needs: lint-and-test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.25
+          cache-dependency-path: |
+            go.sum
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
       - name: Build
         run: make build
 
       - name: Build Docker Image
+        if: matrix.os == 'ubuntu-latest'
         run: make docker

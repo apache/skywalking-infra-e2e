@@ -64,7 +64,7 @@ $(PLATFORMS):
 	GOOS=$(os) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_FLAG) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT)$(PROJECT_SUFFIX) cmd/e2e/main.go
 
 .PHONY: build
-build: windows linux darwin
+build: $(GOOS)
 
 .PHONY: clean
 clean:
