@@ -16,15 +16,18 @@
 # under the License.
 #
 
-FROM golang:1.24 AS build
+FROM golang:1.25 AS build
 
 WORKDIR /e2e
 
 COPY . .
 
-RUN make linux
+# Install build dependencies for CGO
+RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 
-FROM golang:1.24 AS bin
+RUN CGO_ENABLED=1 make linux
+
+FROM golang:1.25 AS bin
 
 COPY --from=build /e2e/bin/linux/e2e /usr/local/bin/e2e
 

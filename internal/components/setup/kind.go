@@ -48,7 +48,7 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	ctlutil "k8s.io/kubectl/pkg/util"
 
-	"github.com/docker/docker/api/types"
+	dockerimage "github.com/docker/docker/api/types/image"
 	docker "github.com/docker/docker/client"
 	kind "sigs.k8s.io/kind/cmd/kind/app"
 	kindcmd "sigs.k8s.io/kind/pkg/cmd"
@@ -79,7 +79,7 @@ type kindPort struct {
 }
 
 func listLocalImages(ctx context.Context, cli *docker.Client) (map[string]struct{}, error) {
-	summary, err := cli.ImageList(ctx, types.ImageListOptions{})
+	summary, err := cli.ImageList(ctx, dockerimage.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func pullImages(ctx context.Context, images []string) error {
 		go func(image string) {
 			defer wg.Done()
 			logger.Log.Infof("image %s does not exist, will pull from remote", image)
-			out, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+			out, err := cli.ImagePull(ctx, image, dockerimage.PullOptions{})
 			if err != nil {
 				logger.Log.WithError(err).Errorf("failed pull image: %s", image)
 				return

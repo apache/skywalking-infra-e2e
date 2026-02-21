@@ -25,6 +25,10 @@ GO := GO111MODULE=on go
 GO_PATH = $(shell $(GO) env GOPATH)
 GOARCH ?= $(shell $(GO) env GOARCH)
 GOOS ?= $(shell $(GO) env GOOS)
+HOST_GOOS = $(shell $(GO) env GOOS)
+HOST_GOARCH = $(shell $(GO) env GOARCH)
+# CGO is enabled only for native builds; cross-compilation requires target SDK
+CGO_FLAG = $(shell if [ "$(os)" = "$(HOST_GOOS)" ] && [ "$(GOARCH)" = "$(HOST_GOARCH)" ]; then echo 1; else echo 0; fi)
 GO_BUILD = $(GO) build
 GO_TEST = $(GO) test
 GO_LINT = $(GO_PATH)/bin/golangci-lint
@@ -40,7 +44,7 @@ all: clean lint test build
 
 .PHONY: lint
 lint:
-	$(GO_LINT) version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_PATH)/bin -d "v2.1.6"
+	$(GO_LINT) version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GO_PATH)/bin -d "v2.9.0"
 	$(GO_LINT) run -v ./...
 
 .PHONY: fix-lint
@@ -57,10 +61,10 @@ windows: PROJECT_SUFFIX=.exe
 .PHONY: $(PLATFORMS)
 $(PLATFORMS):
 	mkdir -p $(OUT_DIR)
-	GOOS=$(os) GOARCH=$(GOARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT)$(PROJECT_SUFFIX) cmd/e2e/main.go
+	GOOS=$(os) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_FLAG) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(os)/$(PROJECT)$(PROJECT_SUFFIX) cmd/e2e/main.go
 
 .PHONY: build
-build: windows linux darwin
+build: $(GOOS)
 
 .PHONY: clean
 clean:
