@@ -1,0 +1,4 @@
+- name: Verify no duplicates in list
+  type: list
+  itemsPath: $.someList
+  noDuplicates: true
