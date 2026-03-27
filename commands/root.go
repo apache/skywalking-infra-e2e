@@ -67,8 +67,8 @@ var Root = &cobra.Command{
 			return err
 		}
 
-		// Finalize collect config after LogDir is expanded, so the default
-		// output-dir resolves to the real log directory (not a literal ~ path).
+		// Finalize collect config after LogDir is expanded, so any paths that
+		// depend on the log directory see the fully resolved value.
 		config.GlobalConfig.E2EConfig.Cleanup.Collect.Finalize()
 
 		return nil

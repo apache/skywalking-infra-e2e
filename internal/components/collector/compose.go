@@ -126,7 +126,9 @@ func collectContainerInspect(outputDir, service, containerID string) error {
 func collectContainerFile(outputDir, service, containerID, srcPath string) error {
 	// Preserve the full source path under the service directory to avoid collisions.
 	// e.g. /var/log/nginx/ -> outputDir/serviceName/var/log/nginx/
+	// Strip leading "/" so filepath.Join doesn't discard the prefix.
 	cleanPath := filepath.Clean(srcPath)
+	cleanPath = strings.TrimLeft(cleanPath, string(filepath.Separator))
 	destPath := filepath.Join(outputDir, service, cleanPath)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {

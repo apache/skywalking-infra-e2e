@@ -82,6 +82,7 @@ func (c *CollectConfig) Finalize() {
 	}
 	if c.OutputDir != "" {
 		c.OutputDir = os.ExpandEnv(c.OutputDir)
+		c.OutputDir = util.ExpandFilePath(c.OutputDir)
 		c.OutputDir = util.ResolveAbs(c.OutputDir)
 	}
 }

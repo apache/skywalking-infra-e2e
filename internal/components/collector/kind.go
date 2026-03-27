@@ -154,7 +154,9 @@ func collectPodDescribe(kubeConfigPath, outputDir, namespace, podName string) er
 func collectPodFile(kubeConfigPath, outputDir, namespace, podName, container, srcPath string) error {
 	// Preserve the full source path under the pod directory to avoid collisions.
 	// e.g. /skywalking/logs/ -> outputDir/namespace/podName/skywalking/logs/
+	// Strip leading "/" so filepath.Join doesn't discard the prefix.
 	cleanPath := filepath.Clean(srcPath)
+	cleanPath = strings.TrimLeft(cleanPath, string(filepath.Separator))
 	destPath := filepath.Join(outputDir, namespace, podName, cleanPath)
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {

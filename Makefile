@@ -131,6 +131,6 @@ e2e-test-kind-collect:
 	@echo "Verifying collected files..."
 	@test -d /tmp/e2e-collect-test/default && echo "PASS: output directory created" || (echo "FAIL: output directory not found" && exit 1)
 	@ls /tmp/e2e-collect-test/default/collect-test/describe.txt > /dev/null 2>&1 && echo "PASS: describe.txt collected" || (echo "FAIL: describe.txt not found" && exit 1)
-	@ls /tmp/e2e-collect-test/default/collect-test/logs > /dev/null 2>&1 && echo "PASS: logs/ collected" || (echo "FAIL: logs/ not found" && exit 1)
-	@ls /tmp/e2e-collect-test/default/collect-test/debug.txt > /dev/null 2>&1 && echo "PASS: debug.txt collected" || (echo "FAIL: debug.txt not found" && exit 1)
+	@ls /tmp/e2e-collect-test/default/collect-test/test-data/logs > /dev/null 2>&1 && echo "PASS: logs/ collected" || (echo "FAIL: logs/ not found" && exit 1)
+	@ls /tmp/e2e-collect-test/default/collect-test/test-data/debug.txt > /dev/null 2>&1 && echo "PASS: debug.txt collected" || (echo "FAIL: debug.txt not found" && exit 1)
 	@echo "All collect-on-failure checks passed."
