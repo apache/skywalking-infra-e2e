@@ -60,9 +60,11 @@ jobs:
         with:
           e2e-file: ./test/e2e/e2e.yaml
 
-      - uses: engineerd/setup-kind@v0.6.2
+      - name: Install KinD
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
           version: "v0.27.0"
+          install_only: true
 
       - name: Run KinD E2E Test
         run: make e2e-test-kind
