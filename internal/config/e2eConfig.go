@@ -65,7 +65,38 @@ func (s *Setup) GetTimeout() time.Duration {
 }
 
 type Cleanup struct {
-	On string `yaml:"on"`
+	On      string        `yaml:"on"`
+	Collect CollectConfig `yaml:"collect"`
+}
+
+type CollectConfig struct {
+	On        string        `yaml:"on"`         // always|failure|never, default: failure
+	OutputDir string        `yaml:"output-dir"`  // required when items are configured
+	Items     []CollectItem `yaml:"items"`
+}
+
+// Finalize sets default values for CollectConfig.
+func (c *CollectConfig) Finalize() {
+	if c.On == "" {
+		c.On = constant.CollectOnFailure
+	}
+	if c.OutputDir != "" {
+		c.OutputDir = os.ExpandEnv(c.OutputDir)
+		c.OutputDir = util.ExpandFilePath(c.OutputDir)
+		c.OutputDir = util.ResolveAbs(c.OutputDir)
+	}
+}
+
+type CollectItem struct {
+	// Kind mode fields
+	Namespace     string `yaml:"namespace"`
+	LabelSelector string `yaml:"label-selector"`
+	Resource      string `yaml:"resource"`  // e.g. pod/oap-xxx
+	Container     string `yaml:"container"` // optional, defaults to first container
+	// Compose mode fields
+	Service string `yaml:"service"`
+	// Common
+	Paths []string `yaml:"paths"`
 }
 
 type Step struct {

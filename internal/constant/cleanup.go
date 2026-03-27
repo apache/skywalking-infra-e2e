@@ -23,4 +23,8 @@ const (
 	CleanUpOnFailure = "failure"
 	CleanUpAlways    = "always"
 	CleanUpNever     = "never"
+
+	CollectOnFailure = "failure"
+	CollectAlways    = "always"
+	CollectNever     = "never"
 )

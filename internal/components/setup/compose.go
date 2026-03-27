@@ -72,7 +72,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	composeFilePaths := []string{
 		composeConfigPath,
 	}
-	identifier := GetIdentity()
+	identifier := util.GetIdentity()
 	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
 
 	// bind wait port

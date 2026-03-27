@@ -21,7 +21,6 @@ package setup
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -194,14 +193,6 @@ func NewTimeout(timeBefore time.Time, timeout time.Duration) time.Duration {
 	elapsed := time.Since(timeBefore)
 	newTimeout := timeout - elapsed
 	return newTimeout
-}
-
-func GetIdentity() string {
-	runID := os.Getenv("GITHUB_RUN_ID")
-	if runID == "" {
-		return "skywalking_e2e"
-	}
-	return runID
 }
 
 func InitLogFollower() {

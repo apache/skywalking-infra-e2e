@@ -55,6 +55,14 @@ func ReadFileContent(filename string) (string, error) {
 	return "", errors.New("the file does not exist")
 }
 
+func GetIdentity() string {
+	runID := os.Getenv("GITHUB_RUN_ID")
+	if runID == "" {
+		return "skywalking_e2e"
+	}
+	return runID
+}
+
 // ExecuteCommand executes the given command and returns the result.
 func ExecuteCommand(cmd string) (stdout, stderr string, err error) {
 	hookScript, err := hookScript()

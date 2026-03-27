@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/apache/skywalking-infra-e2e/commands/cleanup"
+	"github.com/apache/skywalking-infra-e2e/commands/collect"
 	"github.com/apache/skywalking-infra-e2e/commands/run"
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
@@ -66,6 +67,10 @@ var Root = &cobra.Command{
 			return err
 		}
 
+		// Finalize collect config after LogDir is expanded, so any paths that
+		// depend on the log directory see the fully resolved value.
+		config.GlobalConfig.E2EConfig.Cleanup.Collect.Finalize()
+
 		return nil
 	},
 }
@@ -88,6 +93,7 @@ func Execute() error {
 	Root.AddCommand(trigger.Trigger)
 	Root.AddCommand(verify.Verify)
 	Root.AddCommand(cleanup.Cleanup)
+	Root.AddCommand(collect.Collect)
 
 	Root.PersistentFlags().StringVarP(&verbosity, "verbosity", "v", logrus.InfoLevel.String(), "log level (debug, info, warn, error, fatal, panic")
 	Root.PersistentFlags().StringVarP(&util.WorkDir, "work-dir", "w", "~/.skywalking-infra-e2e", "the working directory for skywalking-infra-e2e")
