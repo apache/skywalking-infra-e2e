@@ -118,3 +118,19 @@ e2e-test-kind:
 	$(MAKE) $(GOOS)
 	docker pull busybox:latest
 	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/e2e.yaml
+
+.PHONY: e2e-test-kind-collect
+# Run E2E test with KinD to verify collect-on-failure functionality
+# This test intentionally fails verification to trigger file collection.
+# It succeeds if the collected files exist at the expected output directory.
+e2e-test-kind-collect:
+	$(MAKE) $(GOOS)
+	docker pull busybox:latest
+	rm -rf /tmp/e2e-collect-test
+	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/collect-on-failure/e2e.yaml || true
+	@echo "Verifying collected files..."
+	@test -d /tmp/e2e-collect-test/default && echo "PASS: output directory created" || (echo "FAIL: output directory not found" && exit 1)
+	@ls /tmp/e2e-collect-test/default/collect-test/describe.txt > /dev/null 2>&1 && echo "PASS: describe.txt collected" || (echo "FAIL: describe.txt not found" && exit 1)
+	@ls /tmp/e2e-collect-test/default/collect-test/logs > /dev/null 2>&1 && echo "PASS: logs/ collected" || (echo "FAIL: logs/ not found" && exit 1)
+	@ls /tmp/e2e-collect-test/default/collect-test/debug.txt > /dev/null 2>&1 && echo "PASS: debug.txt collected" || (echo "FAIL: debug.txt not found" && exit 1)
+	@echo "All collect-on-failure checks passed."

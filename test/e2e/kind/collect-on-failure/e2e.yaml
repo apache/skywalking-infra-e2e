@@ -1,0 +1,55 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file tests the collect-on-failure functionality with Kind.
+# It deploys a pod with known files, intentionally fails verification,
+# and expects the collect phase to copy files out before cleanup.
+
+setup:
+  env: kind
+  file: ../kind-cluster.yaml
+  timeout: 10m
+  kind:
+    import-images:
+      - busybox:latest
+  steps:
+    - name: deploy collect-test pod
+      command: kubectl apply -f test/e2e/kind/collect-on-failure/deployment.yaml
+      wait:
+        - namespace: default
+          resource: pod
+          label-selector: app=collect-test
+          for: condition=Ready
+
+cleanup:
+  on: always
+  collect:
+    on: failure
+    output-dir: /tmp/e2e-collect-test
+    items:
+      - namespace: default
+        label-selector: app=collect-test
+        paths:
+          - /test-data/logs/
+          - /test-data/debug.txt
+
+verify:
+  retry:
+    count: 1
+    interval: 1s
+  cases:
+    - name: intentionally-fail-to-trigger-collection
+      query: echo "actual-value"
+      expected: expected.yaml

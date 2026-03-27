@@ -261,13 +261,48 @@ After the E2E finished, how to clean up the environment.
 ```yaml
 cleanup:
    on: always     # Clean up strategy
+   collect:       # Collect files from pods/containers for debugging
+     on: failure  # When to collect: always|failure|never, default: failure
+     output-dir: /tmp/collect # Where to save the collected files (required)
+     items:
+       # For Kind environment
+       - namespace: default      # Pod namespace
+         label-selector: app=oap # Label selector to find pods
+         resource: pod/oap-0     # Specific pod resource (optional, instead of label-selector)
+         container: oap          # Container name (optional, defaults to first container)
+         paths:                  # Paths in the container to collect
+           - /skywalking/logs/
+       # For Compose environment
+       - service: ui-service     # Compose service name
+         paths:
+           - /var/log/nginx/
 ```
 
 If the `on` option under `cleanup` is not set, it will be automatically set to `always` if there is environment
 variable `CI=true`, which is present on many popular CI services, such as GitHub Actions, CircleCI, etc., otherwise it
 will be set to `success`, so the testing environment can be preserved when tests failed in your local machine.
 
-All available strategies:
+### Collect
+
+The `collect` section allows you to copy files from containers to the local machine before the environment is destroyed. This is useful for debugging failures in CI.
+
+* `on`: When to trigger collection.
+    * `always`: Always collect.
+    * `failure`: Only collect when any step (setup, trigger, verify) fails. Collection also attempts on setup failures — unreachable pods/containers are tolerated and logged.
+    * `never`: Never collect.
+* `output-dir`: **Required.** The local directory to save files. Supports environment variable expansion (e.g. `$SW_INFRA_E2E_LOG_DIR/collect`).
+* `items`: A list of collection tasks.
+    * For **Kind**: Specify `namespace` and either `label-selector` or `resource`. `container` is optional.
+    * For **Compose**: Specify `service`.
+    * `paths`: A list of file or directory paths inside the container.
+
+Collected files are organized by the full source path to avoid collisions:
+* Kind: `output-dir/<namespace>/<pod-name>/<source-path>`
+* Compose: `output-dir/<service-name>/<source-path>`
+
+Additionally, `kubectl describe` (for Kind) or `docker inspect` (for Compose) output is saved automatically alongside collected files.
+
+All available strategies for `cleanup.on`:
 1. `always`: No matter the execution result is success or failure, cleanup will be performed.
 1. `success`: Only when the execution succeeds.
 1. `failure`: Only when the execution failed.

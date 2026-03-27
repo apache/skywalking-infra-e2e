@@ -14,34 +14,29 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-//
 
-package cleanup
+package collect
 
 import (
 	"fmt"
 
-	"github.com/apache/skywalking-infra-e2e/internal/config"
-	"github.com/apache/skywalking-infra-e2e/internal/logger"
-	"github.com/apache/skywalking-infra-e2e/internal/util"
+	"github.com/spf13/cobra"
 
-	"github.com/testcontainers/testcontainers-go"
+	"github.com/apache/skywalking-infra-e2e/internal/components/collector"
+	"github.com/apache/skywalking-infra-e2e/internal/config"
 )
 
-func ComposeCleanUp(conf *config.E2EConfig) error {
-	composeFilePath := conf.Setup.GetFile()
-	logger.Log.Infof("deleting docker compose cluster...\n")
-
-	if composeFilePath == "" {
-		return fmt.Errorf("no compose config file was provided")
-	}
-	composeFilePaths := []string{composeFilePath}
-	identifier := util.GetIdentity()
-	compose := testcontainers.NewLocalDockerCompose(composeFilePaths, identifier)
-	down := compose.Down()
-	if down.Error != nil {
-		return down.Error
-	}
-
-	return nil
+var Collect = &cobra.Command{
+	Use:   "collect",
+	Short: "Collect files from pods/containers for debugging",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if config.GlobalConfig.Error != nil {
+			return config.GlobalConfig.Error
+		}
+		err := collector.DoCollect(&config.GlobalConfig.E2EConfig)
+		if err != nil {
+			return fmt.Errorf("[Collect] %s", err)
+		}
+		return nil
+	},
 }

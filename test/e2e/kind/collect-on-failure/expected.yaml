@@ -1,0 +1,3 @@
+# This expected value intentionally does NOT match the actual output,
+# so the verify phase fails and triggers collect-on-failure.
+expected-value-that-does-not-match

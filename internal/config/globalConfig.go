@@ -74,6 +74,7 @@ func ReadGlobalConfigFile() {
 
 	if err := GlobalConfig.E2EConfig.Setup.Finalize(); err != nil {
 		GlobalConfig.Error = err
+		return
 	}
 
 	GlobalConfig.Error = nil

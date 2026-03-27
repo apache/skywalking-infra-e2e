@@ -22,6 +22,7 @@ import (
 	"github.com/apache/skywalking-infra-e2e/commands/setup"
 	"github.com/apache/skywalking-infra-e2e/commands/trigger"
 	"github.com/apache/skywalking-infra-e2e/commands/verify"
+	"github.com/apache/skywalking-infra-e2e/internal/components/collector"
 	t "github.com/apache/skywalking-infra-e2e/internal/components/trigger"
 	"github.com/apache/skywalking-infra-e2e/internal/config"
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
@@ -43,7 +44,7 @@ var Run = &cobra.Command{
 	},
 }
 
-func runAccordingE2E() error {
+func runAccordingE2E() (err error) {
 	if config.GlobalConfig.Error != nil {
 		return config.GlobalConfig.Error
 	}
@@ -54,14 +55,24 @@ func runAccordingE2E() error {
 			action.Stop()
 		}
 	}
+
 	// If cleanup.on == Always and there is error in setup step, we should defer cleanup step right now.
 	cleanupOnCondition := config.GlobalConfig.E2EConfig.Cleanup.On
 	if cleanupOnCondition == constant.CleanUpAlways {
 		defer doCleanup(stopAction)
 	}
 
+	// Collection runs independently of cleanup — it has its own collect.on condition.
+	// Registered before setup so it fires even on partial setup failures.
+	// Registered AFTER the Always-cleanup defer so it runs BEFORE cleanup (LIFO),
+	// ensuring files are collected while pods/containers are still alive.
+	// Errors are tolerated — partial setup may leave some pods unreachable.
+	defer func() {
+		doCollect(err)
+	}()
+
 	// setup part
-	err := setup.DoSetupAccordingE2E()
+	err = setup.DoSetupAccordingE2E()
 	if err != nil {
 		return err
 	}
@@ -104,6 +115,22 @@ func runAccordingE2E() error {
 	logger.Log.Infof("verify part finished successfully")
 
 	return nil
+}
+
+// doCollect runs file collection independently of cleanup.
+// It evaluates collect.on against the run error to decide whether to collect.
+func doCollect(runErr error) {
+	collectCfg := config.GlobalConfig.E2EConfig.Cleanup.Collect
+	shouldCollect := (collectCfg.On == constant.CollectAlways) ||
+		(collectCfg.On == constant.CollectOnFailure && runErr != nil)
+	if !shouldCollect || len(collectCfg.Items) == 0 {
+		return
+	}
+	if err := collector.DoCollect(&config.GlobalConfig.E2EConfig); err != nil {
+		logger.Log.Warnf("collect files error: %s", err)
+	} else {
+		logger.Log.Infof("collect files finished successfully")
+	}
 }
 
 func doCleanup(stopAction func()) {
