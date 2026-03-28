@@ -75,8 +75,15 @@ func composeCollectItem(composeFile, projectName, outputDir string, item *config
 	// Collect specified files
 	var errs []string
 	for _, p := range item.Paths {
-		if err := collectContainerFile(outputDir, item.Service, containerID, p); err != nil {
+		paths, err := expandContainerGlob(containerID, item.Service, p)
+		if err != nil {
 			errs = append(errs, fmt.Sprintf("service %s path %s: %v", item.Service, p, err))
+			continue
+		}
+		for _, expanded := range paths {
+			if err := collectContainerFile(outputDir, item.Service, containerID, expanded); err != nil {
+				errs = append(errs, fmt.Sprintf("service %s path %s: %v", item.Service, expanded, err))
+			}
 		}
 	}
 
@@ -121,6 +128,41 @@ func collectContainerInspect(outputDir, service, containerID string) error {
 
 	logger.Log.Infof("collected inspect for service %s", service)
 	return nil
+}
+
+// expandContainerGlob expands a glob pattern inside a Docker container.
+// If the path has no glob characters it is returned as-is.
+func expandContainerGlob(containerID, service, pattern string) ([]string, error) {
+	if !containsGlob(pattern) {
+		return []string{pattern}, nil
+	}
+
+	if err := validateGlobPattern(pattern); err != nil {
+		return nil, err
+	}
+
+	cmd := fmt.Sprintf("docker exec %s sh -c 'ls -d -- %s 2>/dev/null || true'", containerID, pattern)
+	stdout, stderr, err := util.ExecuteCommand(cmd)
+	if err != nil {
+		logger.Log.Warnf("failed to expand glob %s in service %s: %v, stderr: %s", pattern, service, err, stderr)
+		return nil, fmt.Errorf("glob expansion failed for %s: %v, stderr: %s", pattern, err, stderr)
+	}
+
+	var paths []string
+	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			paths = append(paths, line)
+		}
+	}
+
+	if len(paths) == 0 {
+		logger.Log.Warnf("glob %s matched no files in service %s", pattern, service)
+		return nil, fmt.Errorf("glob %s matched no files", pattern)
+	}
+
+	logger.Log.Infof("glob %s expanded to %d path(s) in service %s", pattern, len(paths), service)
+	return paths, nil
 }
 
 func collectContainerFile(outputDir, service, containerID, srcPath string) error {

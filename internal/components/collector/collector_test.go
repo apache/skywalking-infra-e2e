@@ -122,6 +122,76 @@ func TestListPods_ResourceFormat(t *testing.T) {
 	}
 }
 
+func TestContainsGlob(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"/skywalking/logs/", false},
+		{"/tmp/dump.hprof", false},
+		{"/tmp/app[1].log", true},  // [1] is a valid shell character class
+		{"/tmp/app[].log", false},  // [] is not a valid character class
+		{"/skywalking/logs*", true},
+		{"/tmp/*.hprof", true},
+		{"/tmp/dump-[0-9].hprof", true},
+		{"/var/log/?oo", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := containsGlob(tt.path); got != tt.want {
+				t.Errorf("containsGlob(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateGlobPattern(t *testing.T) {
+	tests := []struct {
+		pattern string
+		wantErr bool
+	}{
+		{"/skywalking/logs*", false},
+		{"/tmp/*.hprof", false},
+		{"/tmp/dump-[0-9].hprof", false},
+		{"/var/log/app-?.log", false},
+		{"'; rm -rf /; '", true},
+		{"/path with spaces/*", true},
+		{"/tmp/$(whoami)", true},
+		{"/tmp/`id`", true},
+		{"/tmp/foo|bar", true},
+		{"/tmp/foo;bar", true},
+		{"/tmp/foo&bar", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			err := validateGlobPattern(tt.pattern)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateGlobPattern(%q) error = %v, wantErr %v", tt.pattern, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestExpandPodGlob_NoGlob(t *testing.T) {
+	paths, err := expandPodGlob("", "default", "pod-0", "", "/skywalking/logs/")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 1 || paths[0] != "/skywalking/logs/" {
+		t.Errorf("expected [/skywalking/logs/], got %v", paths)
+	}
+}
+
+func TestExpandContainerGlob_NoGlob(t *testing.T) {
+	paths, err := expandContainerGlob("abc123", "svc", "/var/log/app.log")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 1 || paths[0] != "/var/log/app.log" {
+		t.Errorf("expected [/var/log/app.log], got %v", paths)
+	}
+}
+
 func TestComposeCollectItem_NoService(t *testing.T) {
 	err := composeCollectItem("/fake/compose.yml", "test-project", t.TempDir(), &config.CollectItem{
 		Paths: []string{"/tmp"},
