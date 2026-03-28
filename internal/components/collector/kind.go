@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -163,6 +164,19 @@ func containsGlob(path string) bool {
 	return strings.ContainsAny(path, "*?[")
 }
 
+// validPathPattern matches paths that contain only safe characters for shell interpolation.
+// Allowed: alphanumeric, /, ., -, _, *, ?, [, ], and space.
+var validPathPattern = regexp.MustCompile(`^[a-zA-Z0-9/_.*?\[\]\- ]+$`)
+
+// validateGlobPattern checks that a glob pattern contains only safe characters
+// to prevent shell injection when interpolated into sh -c commands.
+func validateGlobPattern(pattern string) error {
+	if !validPathPattern.MatchString(pattern) {
+		return fmt.Errorf("glob pattern %q contains unsupported characters", pattern)
+	}
+	return nil
+}
+
 // expandPodGlob expands a glob pattern inside a pod. If the path has no glob
 // characters it is returned as-is. Otherwise kubectl exec runs sh to expand
 // the pattern and returns the matched paths.
@@ -171,11 +185,15 @@ func expandPodGlob(kubeConfigPath, namespace, podName, container, pattern string
 		return []string{pattern}, nil
 	}
 
+	if err := validateGlobPattern(pattern); err != nil {
+		return nil, err
+	}
+
 	cmd := fmt.Sprintf("kubectl --kubeconfig %s -n %s exec %s", kubeConfigPath, namespace, podName)
 	if container != "" {
 		cmd += fmt.Sprintf(" -c %s", container)
 	}
-	cmd += fmt.Sprintf(" -- sh -c 'ls -d %s 2>/dev/null'", pattern)
+	cmd += fmt.Sprintf(" -- sh -c 'ls -d -- %s 2>/dev/null || true'", pattern)
 
 	stdout, stderr, err := util.ExecuteCommand(cmd)
 	if err != nil {

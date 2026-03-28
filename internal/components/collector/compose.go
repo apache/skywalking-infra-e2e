@@ -137,7 +137,11 @@ func expandContainerGlob(containerID, service, pattern string) ([]string, error)
 		return []string{pattern}, nil
 	}
 
-	cmd := fmt.Sprintf("docker exec %s sh -c 'ls -d %s 2>/dev/null'", containerID, pattern)
+	if err := validateGlobPattern(pattern); err != nil {
+		return nil, err
+	}
+
+	cmd := fmt.Sprintf("docker exec %s sh -c 'ls -d -- %s 2>/dev/null || true'", containerID, pattern)
 	stdout, stderr, err := util.ExecuteCommand(cmd)
 	if err != nil {
 		logger.Log.Warnf("failed to expand glob %s in service %s: %v, stderr: %s", pattern, service, err, stderr)

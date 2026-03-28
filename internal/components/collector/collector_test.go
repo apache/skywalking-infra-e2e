@@ -143,6 +143,33 @@ func TestContainsGlob(t *testing.T) {
 	}
 }
 
+func TestValidateGlobPattern(t *testing.T) {
+	tests := []struct {
+		pattern string
+		wantErr bool
+	}{
+		{"/skywalking/logs*", false},
+		{"/tmp/*.hprof", false},
+		{"/tmp/dump-[0-9].hprof", false},
+		{"/var/log/app-?.log", false},
+		{"/path with spaces/*", false},
+		{"'; rm -rf /; '", true},
+		{"/tmp/$(whoami)", true},
+		{"/tmp/`id`", true},
+		{"/tmp/foo|bar", true},
+		{"/tmp/foo;bar", true},
+		{"/tmp/foo&bar", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			err := validateGlobPattern(tt.pattern)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateGlobPattern(%q) error = %v, wantErr %v", tt.pattern, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestExpandPodGlob_NoGlob(t *testing.T) {
 	paths, err := expandPodGlob("", "default", "pod-0", "", "/skywalking/logs/")
 	if err != nil {
