@@ -122,6 +122,47 @@ func TestListPods_ResourceFormat(t *testing.T) {
 	}
 }
 
+func TestContainsGlob(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"/skywalking/logs/", false},
+		{"/tmp/dump.hprof", false},
+		{"/skywalking/logs*", true},
+		{"/tmp/*.hprof", true},
+		{"/tmp/dump-[0-9].hprof", true},
+		{"/var/log/?oo", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := containsGlob(tt.path); got != tt.want {
+				t.Errorf("containsGlob(%q) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExpandPodGlob_NoGlob(t *testing.T) {
+	paths, err := expandPodGlob("", "default", "pod-0", "", "/skywalking/logs/")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 1 || paths[0] != "/skywalking/logs/" {
+		t.Errorf("expected [/skywalking/logs/], got %v", paths)
+	}
+}
+
+func TestExpandContainerGlob_NoGlob(t *testing.T) {
+	paths, err := expandContainerGlob("abc123", "svc", "/var/log/app.log")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(paths) != 1 || paths[0] != "/var/log/app.log" {
+		t.Errorf("expected [/var/log/app.log], got %v", paths)
+	}
+}
+
 func TestComposeCollectItem_NoService(t *testing.T) {
 	err := composeCollectItem("/fake/compose.yml", "test-project", t.TempDir(), &config.CollectItem{
 		Paths: []string{"/tmp"},

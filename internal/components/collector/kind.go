@@ -74,8 +74,15 @@ func kindCollectItem(kubeConfigPath, outputDir string, item *config.CollectItem)
 
 		// Collect specified files
 		for _, p := range item.Paths {
-			if err := collectPodFile(kubeConfigPath, outputDir, pod.namespace, pod.name, item.Container, p); err != nil {
+			paths, err := expandPodGlob(kubeConfigPath, pod.namespace, pod.name, item.Container, p)
+			if err != nil {
 				errs = append(errs, fmt.Sprintf("pod %s/%s path %s: %v", pod.namespace, pod.name, p, err))
+				continue
+			}
+			for _, expanded := range paths {
+				if err := collectPodFile(kubeConfigPath, outputDir, pod.namespace, pod.name, item.Container, expanded); err != nil {
+					errs = append(errs, fmt.Sprintf("pod %s/%s path %s: %v", pod.namespace, pod.name, expanded, err))
+				}
 			}
 		}
 	}
@@ -149,6 +156,48 @@ func collectPodDescribe(kubeConfigPath, outputDir, namespace, podName string) er
 
 	logger.Log.Infof("collected describe for pod %s/%s", namespace, podName)
 	return nil
+}
+
+// containsGlob reports whether the path contains glob metacharacters.
+func containsGlob(path string) bool {
+	return strings.ContainsAny(path, "*?[")
+}
+
+// expandPodGlob expands a glob pattern inside a pod. If the path has no glob
+// characters it is returned as-is. Otherwise kubectl exec runs sh to expand
+// the pattern and returns the matched paths.
+func expandPodGlob(kubeConfigPath, namespace, podName, container, pattern string) ([]string, error) {
+	if !containsGlob(pattern) {
+		return []string{pattern}, nil
+	}
+
+	cmd := fmt.Sprintf("kubectl --kubeconfig %s -n %s exec %s", kubeConfigPath, namespace, podName)
+	if container != "" {
+		cmd += fmt.Sprintf(" -c %s", container)
+	}
+	cmd += fmt.Sprintf(" -- sh -c 'ls -d %s 2>/dev/null'", pattern)
+
+	stdout, stderr, err := util.ExecuteCommand(cmd)
+	if err != nil {
+		logger.Log.Warnf("failed to expand glob %s in pod %s/%s: %v, stderr: %s", pattern, namespace, podName, err, stderr)
+		return nil, fmt.Errorf("glob expansion failed for %s: %v", pattern, err)
+	}
+
+	var paths []string
+	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			paths = append(paths, line)
+		}
+	}
+
+	if len(paths) == 0 {
+		logger.Log.Warnf("glob %s matched no files in pod %s/%s", pattern, namespace, podName)
+		return nil, fmt.Errorf("glob %s matched no files", pattern)
+	}
+
+	logger.Log.Infof("glob %s expanded to %d path(s) in pod %s/%s", pattern, len(paths), namespace, podName)
+	return paths, nil
 }
 
 func collectPodFile(kubeConfigPath, outputDir, namespace, podName, container, srcPath string) error {
