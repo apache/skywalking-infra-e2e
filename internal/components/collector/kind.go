@@ -161,12 +161,35 @@ func collectPodDescribe(kubeConfigPath, outputDir, namespace, podName string) er
 
 // containsGlob reports whether the path contains glob metacharacters.
 func containsGlob(path string) bool {
-	return strings.ContainsAny(path, "*?[")
+	if strings.ContainsAny(path, "*?") {
+		return true
+	}
+	// Only treat '[' as a glob when followed by a matching ']' with at least
+	// one character between them, so literal brackets (e.g. "app[1].log")
+	// that don't form a valid character class are not misidentified.
+	for i := 0; i < len(path); i++ {
+		if path[i] != '[' {
+			continue
+		}
+		for j := i + 1; j < len(path); j++ {
+			if path[j] != ']' {
+				continue
+			}
+			// Check there is at least one non-']' char between '[' and ']'.
+			for k := i + 1; k < j; k++ {
+				if path[k] != ']' {
+					return true
+				}
+			}
+			break
+		}
+	}
+	return false
 }
 
 // validPathPattern matches paths that contain only safe characters for shell interpolation.
-// Allowed: alphanumeric, /, ., -, _, *, ?, [, ], and space.
-var validPathPattern = regexp.MustCompile(`^[a-zA-Z0-9/_.*?\[\]\- ]+$`)
+// Allowed: alphanumeric, /, ., -, _, *, ?, [, ].
+var validPathPattern = regexp.MustCompile(`^[a-zA-Z0-9/_.*?\[\]\-]+$`)
 
 // validateGlobPattern checks that a glob pattern contains only safe characters
 // to prevent shell injection when interpolated into sh -c commands.
@@ -198,7 +221,7 @@ func expandPodGlob(kubeConfigPath, namespace, podName, container, pattern string
 	stdout, stderr, err := util.ExecuteCommand(cmd)
 	if err != nil {
 		logger.Log.Warnf("failed to expand glob %s in pod %s/%s: %v, stderr: %s", pattern, namespace, podName, err, stderr)
-		return nil, fmt.Errorf("glob expansion failed for %s: %v", pattern, err)
+		return nil, fmt.Errorf("glob expansion failed for %s: %v, stderr: %s", pattern, err, stderr)
 	}
 
 	var paths []string

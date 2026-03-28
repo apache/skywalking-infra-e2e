@@ -129,6 +129,8 @@ func TestContainsGlob(t *testing.T) {
 	}{
 		{"/skywalking/logs/", false},
 		{"/tmp/dump.hprof", false},
+		{"/tmp/app[1].log", true},  // [1] is a valid shell character class
+		{"/tmp/app[].log", false},  // [] is not a valid character class
 		{"/skywalking/logs*", true},
 		{"/tmp/*.hprof", true},
 		{"/tmp/dump-[0-9].hprof", true},
@@ -152,8 +154,8 @@ func TestValidateGlobPattern(t *testing.T) {
 		{"/tmp/*.hprof", false},
 		{"/tmp/dump-[0-9].hprof", false},
 		{"/var/log/app-?.log", false},
-		{"/path with spaces/*", false},
 		{"'; rm -rf /; '", true},
+		{"/path with spaces/*", true},
 		{"/tmp/$(whoami)", true},
 		{"/tmp/`id`", true},
 		{"/tmp/foo|bar", true},

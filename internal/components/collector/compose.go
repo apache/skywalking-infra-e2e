@@ -145,7 +145,7 @@ func expandContainerGlob(containerID, service, pattern string) ([]string, error)
 	stdout, stderr, err := util.ExecuteCommand(cmd)
 	if err != nil {
 		logger.Log.Warnf("failed to expand glob %s in service %s: %v, stderr: %s", pattern, service, err, stderr)
-		return nil, fmt.Errorf("glob expansion failed for %s: %v", pattern, err)
+		return nil, fmt.Errorf("glob expansion failed for %s: %v, stderr: %s", pattern, err, stderr)
 	}
 
 	var paths []string
