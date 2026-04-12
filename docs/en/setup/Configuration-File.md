@@ -220,14 +220,32 @@ Verify that the number fits the range.
 
 ##### List Matches
 
-Verify the data in the condition list, Currently, it is only supported when all the conditions in the list are executed, it is considered as successful.
+Two keywords are available for verifying lists: `contains` and `containsOnce`.
 
-Here is an example, It's means the list values must have value is greater than 0, also have value greater than 1, Otherwise verify is failure.
+**`contains`** checks that each expected entry matches a distinct actual item using greedy matching (first-come, first-served order).
+Each expected entry can only claim one actual item, and each actual item can only be claimed once.
+Extra actual items beyond the expected entries are allowed.
+
+Here is an example, it means the list values must have an item with value greater than 0 and another item with value greater than 1. Otherwise verification fails.
 ```yaml
 {{- contains .list }}
 - key: {{ gt .value 0 }}
 - key: {{ gt .value 1 }}
         {{- end }}
+```
+
+**`containsOnce`** provides the same semantics as `contains` but uses backtracking to find a valid assignment.
+This is useful when the greedy order of `contains` cannot find a valid match but one exists.
+For example, if a generic expected entry (e.g., `notEmpty`) appears before a specific one (e.g., a hardcoded value),
+`contains` might greedily claim the wrong actual item, while `containsOnce` will try all combinations to find a valid assignment.
+
+```yaml
+{{- containsOnce .list }}
+- name: {{ notEmpty .name }}
+  language: {{ notEmpty .language }}
+- name: {{ notEmpty .name }}
+  language: JAVA
+{{- end }}
 ```
 
 ##### Encoding

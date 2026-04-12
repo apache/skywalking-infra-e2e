@@ -70,7 +70,8 @@ const (
 	itemRange    // range keyword
 	itemTemplate // template keyword
 	itemWith     // with keyword
-	itemContains // contains keyword
+	itemContains     // contains keyword
+	itemContainsOnce // containsOnce keyword
 )
 
 var key = map[string]itemType{
@@ -84,7 +85,8 @@ var key = map[string]itemType{
 	"nil":      itemNil,
 	"template": itemTemplate,
 	"with":     itemWith,
-	"contains": itemContains,
+	"contains":     itemContains,
+	"containsOnce": itemContainsOnce,
 }
 
 const eof = -1

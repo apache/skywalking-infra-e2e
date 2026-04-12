@@ -279,6 +279,8 @@ func (s *state) walk(dot reflect.Value, node parse.Node) {
 		s.walkIfOrWith(parse.NodeWith, dot, node.Pipe, node.List, node.ElseList)
 	case *parse.ContainsNode:
 		s.walkContains(dot, node)
+	case *parse.ContainsOnceNode:
+		s.walkContainsOnce(dot, node)
 	default:
 		s.errorf("unknown node: %s", node)
 	}
@@ -440,6 +442,8 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		expectedSize := 0
 		// matched stores the matched pair of indices <expected index>: <actual index>
 		matched := make(map[int]int)
+		// claimedActual tracks which actual items have already been claimed by an expected entry
+		claimedActual := make(map[int]bool)
 		output := make([]any, val.Len())
 		notMatched := make(map[int]any)
 		for i := 0; i < val.Len(); i++ {
@@ -449,10 +453,17 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 			actual, _ := printableValue(val.Index(i))
 			for j, expected := range expectedArr {
 				if fmt.Sprint(actual) == fmt.Sprint(expected) {
-					matched[j] = i
-					output[i] = actual
+					if !claimedActual[i] {
+						if _, alreadyMatched := matched[j]; !alreadyMatched {
+							matched[j] = i
+							claimedActual[i] = true
+							output[i] = actual
+						}
+					}
 				} else {
-					notMatched[j] = expected
+					if _, alreadyMatched := matched[j]; !alreadyMatched {
+						notMatched[j] = expected
+					}
 					output[i] = expected
 				}
 			}
@@ -510,6 +521,157 @@ func (s *state) walkContains(dot reflect.Value, r *parse.ContainsNode) {
 		break // An invalid value is likely a nil map, etc. and acts like an empty map.
 	default:
 		s.errorf("contains can't iterate over %v", val)
+	}
+}
+
+func (s *state) walkContainsOnce(dot reflect.Value, r *parse.ContainsOnceNode) {
+	s.at(r)
+	defer s.pop(s.mark())
+	val, _ := indirect(s.evalPipeline(dot, r.Pipe))
+	// mark top of stack before any variables in the body are pushed.
+	mark := s.mark()
+	oneIteration := func(index, elem reflect.Value) []any {
+		var b bytes.Buffer
+		ob := s.wr
+		s.wr = &b
+
+		// Set top var (lexically the second if there are two) to the element.
+		if len(r.Pipe.Decl) > 0 {
+			s.setTopVar(1, elem)
+		}
+		// Set next var (lexically the first if there are two) to the index.
+		if len(r.Pipe.Decl) > 1 {
+			s.setTopVar(2, index)
+		}
+		s.walk(elem, r.List)
+		s.pop(mark)
+
+		s.wr = ob
+
+		// the contents inside `containsOnce` must be an array
+		var re []any
+		if err := yaml.Unmarshal(b.Bytes(), &re); err != nil {
+			logger.Log.Errorf("failed to unmarshal index: %v, %v", index, err)
+		}
+		return re
+	}
+	switch val.Kind() {
+	case reflect.Array, reflect.Slice:
+		if val.Len() == 0 {
+			break
+		}
+		expectedSize := 0
+		// Build match matrix: matchable[j][i] = true means expected[j] can match actual[i]
+		// Also store the rendered expected values for error reporting
+		type renderedEntry struct {
+			actual   any
+			expected []any
+		}
+		entries := make([]renderedEntry, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			expectedArr := oneIteration(reflect.ValueOf(i), val.Index(i))
+			expectedSize = len(expectedArr)
+			actual, _ := printableValue(val.Index(i))
+			entries[i] = renderedEntry{actual: actual, expected: expectedArr}
+		}
+
+		// matchable[j] contains the list of actual indices that can satisfy expected[j]
+		matchable := make([][]int, expectedSize)
+		// lastExpected[j] stores a rendered expected value for error reporting
+		lastExpected := make(map[int]any)
+		for j := 0; j < expectedSize; j++ {
+			for i := 0; i < val.Len(); i++ {
+				lastExpected[j] = entries[i].expected[j]
+				if fmt.Sprint(entries[i].actual) == fmt.Sprint(entries[i].expected[j]) {
+					matchable[j] = append(matchable[j], i)
+				}
+			}
+		}
+
+		// Backtracking to find a valid assignment: each expected[j] maps to a distinct actual[i]
+		assignment := make([]int, expectedSize) // assignment[j] = actual index for expected[j]
+		for j := range assignment {
+			assignment[j] = -1
+		}
+		claimedActual := make(map[int]bool)
+
+		var backtrack func(j int) bool
+		backtrack = func(j int) bool {
+			if j == expectedSize {
+				return true // all expected entries matched
+			}
+			for _, i := range matchable[j] {
+				if !claimedActual[i] {
+					claimedActual[i] = true
+					assignment[j] = i
+					if backtrack(j + 1) {
+						return true
+					}
+					claimedActual[i] = false
+					assignment[j] = -1
+				}
+			}
+			return false
+		}
+
+		var addRootIndent = func(b []byte, n int) []byte {
+			prefix := append([]byte("\n"), bytes.Repeat([]byte(" "), n)...)
+			b = append(prefix[1:], b...) // Indent first line
+			return bytes.ReplaceAll(b, []byte("\n"), prefix)
+		}
+		var marshal []byte
+		if backtrack(0) {
+			value, _ := printableValue(val)
+			marshal, _ = yaml.Marshal(value)
+		} else {
+			// Build output: actual items plus unmatched expected items for error reporting
+			output := make([]any, val.Len())
+			for i := 0; i < val.Len(); i++ {
+				output[i] = entries[i].actual
+			}
+			for j := 0; j < expectedSize; j++ {
+				if assignment[j] == -1 {
+					if exp, ok := lastExpected[j]; ok {
+						output = append(output, exp)
+					}
+				}
+			}
+			marshal, _ = yaml.Marshal(output)
+		}
+
+		listTokenIndex := strings.Index(strings.TrimPrefix(r.List.Nodes[0].String(), "\n"), "-")
+		marshal = addRootIndent(marshal, listTokenIndex)
+		_, _ = s.wr.Write(append([]byte("\n"), marshal...))
+		return
+	case reflect.Map:
+		if val.Len() == 0 {
+			break
+		}
+		om := fmtsort.Sort(val)
+		for i, key := range om.Key {
+			oneIteration(key, om.Value[i])
+		}
+		return
+	case reflect.Chan:
+		if val.IsNil() {
+			break
+		}
+		i := 0
+		for ; ; i++ {
+			elem, ok := val.Recv()
+			if !ok {
+				break
+			}
+			oneIteration(reflect.ValueOf(i), elem)
+		}
+		if i == 0 {
+			break
+		}
+		return
+	case reflect.Invalid:
+		break // An invalid value is likely a nil map, etc. and acts like an empty map.
+	default:
+		s.errorf("containsOnce can't iterate over %v", val)
 	}
 }
 
