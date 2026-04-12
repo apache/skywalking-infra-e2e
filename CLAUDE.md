@@ -153,3 +153,12 @@ verify:
 
 - `action.yaml` at project root defines the composite action
 - Inputs: e2e-file, log-dir, plus matrix vars for log isolation
+
+## GitHub Actions Allow List
+
+Apache enforces an allow list for third-party GitHub Actions. All third-party actions must be pinned to an approved SHA from:
+https://github.com/apache/infrastructure-actions/blob/main/approved_patterns.yml
+
+If a PR is blocked by "action is not allowed" errors, check the approved list and update `.github/workflows/` files to use the approved SHA pin instead of a version tag.
+
+Actions owned by `actions/*` (GitHub), `github/*`, and `apache/*` are always allowed (enterprise-owned).

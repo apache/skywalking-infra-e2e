@@ -367,6 +367,8 @@ func (t *Tree) action() (n Node) {
 		return t.withControl()
 	case itemContains:
 		return t.containsControl()
+	case itemContainsOnce:
+		return t.containsOnceControl()
 	}
 	t.backup()
 	token := t.peek()
@@ -511,6 +513,15 @@ func (t *Tree) withControl() Node {
 // If keyword is past.
 func (t *Tree) containsControl() Node {
 	return t.newContains(t.parseControl(false, "contains"))
+}
+
+// ContainsOnce:
+//
+//	{{containsOnce pipeline}} itemList {{end}}
+//
+// ContainsOnce keyword is past.
+func (t *Tree) containsOnceControl() Node {
+	return t.newContainsOnce(t.parseControl(false, "containsOnce"))
 }
 
 // End:

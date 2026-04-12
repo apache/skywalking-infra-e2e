@@ -71,6 +71,7 @@ const (
 	NodeVariable                   // A $ variable.
 	NodeWith                       // A with action.
 	NodeContains                   // A contains action.
+	NodeContainsOnce               // A containsOnce action.
 )
 
 // Nodes.
@@ -831,6 +832,8 @@ func (b *BranchNode) writeTo(sb *strings.Builder) {
 		name = "with"
 	case NodeContains:
 		name = "contains"
+	case NodeContainsOnce:
+		name = "containsOnce"
 	default:
 		panic("unknown branch type")
 	}
@@ -861,6 +864,8 @@ func (b *BranchNode) Copy() Node {
 		return b.tr.newWith(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
 	case NodeContains:
 		return b.tr.newContains(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
+	case NodeContainsOnce:
+		return b.tr.newContainsOnce(b.Pos, b.Line, b.Pipe, b.List, b.ElseList)
 	default:
 		panic("unknown branch type")
 	}
@@ -916,6 +921,21 @@ func (t *Tree) newContains(pos Pos, line int, pipe *PipeNode, list *ListNode, el
 
 func (w *ContainsNode) Copy() Node {
 	return w.tr.newContains(w.Pos, w.Line, w.Pipe.CopyPipe(), w.List.CopyList(), w.ElseList.CopyList())
+}
+
+// ContainsOnceNode represents a {{containsOnce}} action and its commands.
+// It uses backtracking to find a valid assignment where each expected entry
+// matches a distinct actual item.
+type ContainsOnceNode struct {
+	BranchNode
+}
+
+func (t *Tree) newContainsOnce(pos Pos, line int, pipe *PipeNode, list *ListNode, elseList *ListNode) *ContainsOnceNode {
+	return &ContainsOnceNode{BranchNode{tr: t, NodeType: NodeContainsOnce, Pos: pos, Line: line, Pipe: pipe, List: list}}
+}
+
+func (w *ContainsOnceNode) Copy() Node {
+	return w.tr.newContainsOnce(w.Pos, w.Line, w.Pipe.CopyPipe(), w.List.CopyList(), w.ElseList.CopyList())
 }
 
 // TemplateNode represents a {{template}} action.

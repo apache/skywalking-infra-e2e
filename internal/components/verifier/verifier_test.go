@@ -272,6 +272,236 @@ metrics:
 			},
 			wantErr: false,
 		},		{
+			name: "contains should require distinct actual items for each expected entry",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    id: abc
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+{{- end }}
+`,
+			},
+			wantErr: true, // expected 2 entries but actual only has 1
+		},
+		{
+			name: "contains should not pass when extra expected entries are added with echo-only conditions",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    id: abc
+  - name: service-B
+    id: def
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+{{- end }}
+`,
+			},
+			wantErr: true, // expected 3 entries but actual only has 2
+		},
+		{
+			name: "contains greedy cannot solve reordered assignment",
+			args: args{
+				actualData: `
+- name: service-A
+  language: JAVA
+- name: service-B
+  language: GO
+`,
+				expectedTemplate: `
+{{- contains . }}
+- name: {{ notEmpty .name }}
+  language: {{ notEmpty .language }}
+- name: {{ notEmpty .name }}
+  language: JAVA
+{{- end }}
+`,
+			},
+			wantErr: true, // greedy contains can't solve this; containsOnce with backtracking will
+		},
+		{
+			name: "containsOnce should backtrack to find valid assignment",
+			args: args{
+				actualData: `
+- name: service-A
+  language: JAVA
+- name: service-B
+  language: GO
+`,
+				expectedTemplate: `
+{{- containsOnce . }}
+- name: {{ notEmpty .name }}
+  language: {{ notEmpty .language }}
+- name: {{ notEmpty .name }}
+  language: JAVA
+{{- end }}
+`,
+			},
+			wantErr: false, // backtracking finds: expected[0]→actual[1], expected[1]→actual[0]
+		},
+		{
+			name: "containsOnce should require distinct actual items",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    id: abc
+`,
+				expectedTemplate: `
+metrics:
+{{- containsOnce .metrics }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+{{- end }}
+`,
+			},
+			wantErr: true, // 1 actual item cannot satisfy 2 expected entries
+		},
+		{
+			name: "containsOnce should pass when enough distinct items match",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    id: abc
+  - name: service-B
+    id: def
+  - name: service-C
+    id: ghi
+`,
+				expectedTemplate: `
+metrics:
+{{- containsOnce .metrics }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+  - name: {{ notEmpty .name }}
+    id: {{ notEmpty .id }}
+{{- end }}
+`,
+			},
+			wantErr: false, // 3 actual items, 2 expected → enough distinct matches
+		},
+		{
+			name: "containsOnce should fail when specific value missing",
+			args: args{
+				actualData: `
+- name: service-B
+  value: "200"
+- name: service-C
+  value: "300"
+`,
+				expectedTemplate: `
+{{- containsOnce . }}
+- name: service-A
+  value: "100"
+{{- end }}
+`,
+			},
+			wantErr: true, // service-A does not exist
+		},
+		{
+			name: "contains should match specific values in reversed order",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-B
+    value: "200"
+  - name: service-A
+    value: "100"
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: service-A
+    value: "100"
+  - name: service-B
+    value: "200"
+{{- end }}
+`,
+			},
+			wantErr: false, // both exist, order shouldn't matter
+		},
+		{
+			name: "contains should fail when one specific value is wrong",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    value: "100"
+  - name: service-B
+    value: "200"
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: service-A
+    value: "100"
+  - name: service-C
+    value: "300"
+{{- end }}
+`,
+			},
+			wantErr: true, // service-C does not exist in actual
+		},
+		{
+			name: "contains should match unordered actual data correctly",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-B
+    value: 200
+  - name: service-A
+    value: 100
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: service-A
+    value: 100
+{{- end }}
+`,
+			},
+			wantErr: false, // service-A exists in actual, order shouldn't matter
+		},
+		{
+			name: "contains should fail when specific expected value is missing from actual",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-B
+    value: 200
+  - name: service-C
+    value: 300
+`,
+				expectedTemplate: `
+metrics:
+{{- contains .metrics }}
+  - name: service-A
+    value: 100
+{{- end }}
+`,
+			},
+			wantErr: true, // service-A does not exist in actual
+		},
+		{
 			name: "notEmpty with nil",
 			args: args{
 				actualData: `
