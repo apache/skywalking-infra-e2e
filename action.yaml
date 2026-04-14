@@ -47,19 +47,10 @@ runs:
         docker version
         docker info
         echo "DOCKER_API_VERSION=$(docker version --format '{{.Server.APIVersion}}')" >> "$GITHUB_ENV"
-    - name: Install docker-compose
-      shell: bash
-      if: runner.os != 'Windows'
-      run: |
-        if ! command docker-compose 2>&1 > /dev/null; then
-          echo "Installing docker-compose"
-          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-        fi
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.24
+        go-version: 1.26
         cache-dependency-path: ${{ github.action_path }}/go.sum
     - shell: bash
       run: make -C $GITHUB_ACTION_PATH install DESTDIR=/usr/local/bin
