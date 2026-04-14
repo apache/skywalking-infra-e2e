@@ -21,13 +21,14 @@ package setup
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/compose"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"gopkg.in/yaml.v2"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
@@ -64,27 +65,17 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		return fmt.Errorf("create compose stack error: %v", err)
 	}
 
-	// register wait strategies for each service port
-	waitTimeout := e2eConfig.Setup.GetTimeout()
-	for _, svc := range services {
-		for _, port := range svc.ports {
-			stack.WaitForService(svc.name,
-				wait.ForListeningPort(fmt.Sprintf("%d/tcp", port)).
-					WithStartupTimeout(waitTimeout),
-			)
-		}
-	}
-
 	// pass current environment to compose
 	stack.WithOsEnv()
 
-	// bring up the compose stack
+	// bring up the compose stack (non-blocking, like docker compose up -d)
 	ctx := context.Background()
 	if err := stack.Up(ctx); err != nil {
 		return fmt.Errorf("compose up error: %v", err)
 	}
 
-	// expose ports and logs for each service
+	// wait for ports, expose env vars and logs for each service
+	waitTimeout := e2eConfig.Setup.GetTimeout()
 	for _, svc := range services {
 		ctr, err := stack.ServiceContainer(ctx, svc.name)
 		if err != nil {
@@ -106,9 +97,15 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 			return err
 		}
 
-		// export port mappings
+		// wait for each port to be ready, then export mappings
 		for _, port := range svc.ports {
 			portStr := fmt.Sprintf("%d/tcp", port)
+
+			// wait for port readiness
+			if err := waitForPort(ctx, ctr, portStr, waitTimeout); err != nil {
+				return fmt.Errorf("wait for port %d on %s error: %v", port, svc.name, err)
+			}
+
 			mappedPort, err := ctr.MappedPort(ctx, portStr)
 			if err != nil {
 				return fmt.Errorf("get mapped port %d for %s error: %v", port, svc.name, err)
@@ -209,6 +206,39 @@ func startLogStreaming(ctx context.Context, ctr *testcontainers.DockerContainer,
 	ctr.FollowOutput(consumer)
 	//nolint:staticcheck
 	return ctr.StartLogProducer(ctx)
+}
+
+// waitForPort waits until the container port is ready by polling with TCP dial.
+func waitForPort(ctx context.Context, ctr *testcontainers.DockerContainer, port string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	host, err := ctr.Host(ctx)
+	if err != nil {
+		return err
+	}
+	mappedPort, err := ctr.MappedPort(ctx, port)
+	if err != nil {
+		return err
+	}
+	address := net.JoinHostPort(host, strconv.Itoa(int(mappedPort.Num())))
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %s", address)
+		case <-ticker.C:
+			conn, err := net.DialTimeout("tcp", address, time.Second)
+			if err != nil {
+				continue
+			}
+			_ = conn.Close()
+			return nil
+		}
+	}
 }
 
 func exportComposeEnv(key, value, service string) error {
