@@ -80,7 +80,7 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 
 	// bring up the compose stack
 	ctx := context.Background()
-	if err := stack.Up(ctx, compose.Wait(true)); err != nil {
+	if err := stack.Up(ctx); err != nil {
 		return fmt.Errorf("compose up error: %v", err)
 	}
 
