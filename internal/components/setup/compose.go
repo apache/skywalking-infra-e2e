@@ -83,6 +83,11 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 			continue
 		}
 
+		// wait for container healthcheck if defined
+		if err := waitForHealthy(ctx, ctr, svc.name, waitTimeout); err != nil {
+			return fmt.Errorf("wait for %s healthy error: %v", svc.name, err)
+		}
+
 		// start log streaming
 		if err := startLogStreaming(ctx, ctr, svc.name); err != nil {
 			logger.Log.Warnf("could not start log streaming for %s: %v", svc.name, err)
@@ -211,7 +216,48 @@ func startLogStreaming(ctx context.Context, ctr *testcontainers.DockerContainer,
 	return ctr.StartLogProducer(ctx)
 }
 
-// waitForPort waits until the container port is ready by polling with TCP dial.
+// waitForHealthy waits for a container's Docker healthcheck to pass, if one is defined.
+// If the container has no healthcheck, this returns immediately.
+func waitForHealthy(ctx context.Context, ctr *testcontainers.DockerContainer, serviceName string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	inspect, err := ctr.Inspect(ctx)
+	if err != nil {
+		return err
+	}
+
+	// no healthcheck defined, skip
+	if inspect.Config == nil || inspect.Config.Healthcheck == nil || len(inspect.Config.Healthcheck.Test) == 0 {
+		return nil
+	}
+
+	logger.Log.Infof("waiting for service %s to become healthy...", serviceName)
+
+	pollInterval := 500 * time.Millisecond
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %s to become healthy", serviceName)
+		default:
+			state, err := ctr.State(ctx)
+			if err != nil {
+				return err
+			}
+			if state.Health != nil && state.Health.Status == "healthy" {
+				logger.Log.Infof("service %s is healthy", serviceName)
+				return nil
+			}
+			logger.Log.Debugf("service %s health status: %v", serviceName, state.Health)
+			time.Sleep(pollInterval)
+		}
+	}
+}
+
+// waitForPort waits until the container port is ready by:
+// 1. External TCP dial — poll until connection succeeds from host
+// 2. Internal container check — verify port is listening inside the container
+// This matches the old WaitPort behavior from compose_provider.go.
 func waitForPort(ctx context.Context, ctr *testcontainers.DockerContainer, port string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -228,32 +274,61 @@ func waitForPort(ctx context.Context, ctr *testcontainers.DockerContainer, port 
 
 	logger.Log.Infof("waiting for port %s -> %s to be ready...", port, address)
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	// try immediately first before waiting for ticker
-	conn, err := net.DialTimeout("tcp", address, time.Second)
-	if err == nil {
-		_ = conn.Close()
-		logger.Log.Infof("port %s -> %s is ready", port, address)
-		return nil
-	}
-
+	// step 1: external TCP dial check
+	waitInterval := 100 * time.Millisecond
 	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for %s (container port %s)", address, port)
-		case <-ticker.C:
-			conn, err := net.DialTimeout("tcp", address, time.Second)
-			if err != nil {
-				logger.Log.Debugf("port %s not ready yet: %v", address, err)
-				continue
-			}
-			_ = conn.Close()
-			logger.Log.Infof("port %s -> %s is ready", port, address)
-			return nil
+		if ctx.Err() != nil {
+			return fmt.Errorf("timeout waiting for external port %s (container port %s)", address, port)
 		}
+		conn, err := net.DialTimeout("tcp", address, time.Second)
+		if err != nil {
+			logger.Log.Debugf("port %s not ready yet: %v", address, err)
+			time.Sleep(waitInterval)
+			continue
+		}
+		_ = conn.Close()
+		break
 	}
+	logger.Log.Infof("external port %s -> %s is reachable", port, address)
+
+	// step 2: internal container check — verify port is listening inside the container
+	internalPort, _ := strconv.Atoi(strings.Split(port, "/")[0])
+	command := buildInternalCheckCommand(internalPort)
+	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("timeout waiting for internal port %d in container", internalPort)
+		}
+		exitCode, _, err := ctr.Exec(ctx, []string{"/bin/sh", "-c", command})
+		if err != nil {
+			logger.Log.Debugf("internal port check exec error: %v", err)
+			time.Sleep(waitInterval)
+			continue
+		}
+		if exitCode == 0 {
+			break
+		}
+		if exitCode == 126 {
+			// /bin/sh not executable, skip internal check
+			logger.Log.Debugf("internal port check skipped: /bin/sh not executable in container")
+			break
+		}
+		time.Sleep(waitInterval)
+	}
+
+	logger.Log.Infof("port %s -> %s is ready", port, address)
+	return nil
+}
+
+// buildInternalCheckCommand builds a shell command to check if a port is listening
+// inside the container, using multiple methods for compatibility.
+func buildInternalCheckCommand(internalPort int) string {
+	command := `(
+					cat /proc/net/tcp* | awk '{print $2}' | grep -i :%04x ||
+					nc -vz -w 1 localhost %d ||
+					/bin/sh -c '</dev/tcp/localhost/%d'
+				)
+				`
+	return "true && " + fmt.Sprintf(command, internalPort, internalPort, internalPort)
 }
 
 func exportComposeEnv(key, value, service string) error {
