@@ -31,6 +31,10 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Set Docker API version
+      shell: bash
+      run: |
+        echo "DOCKER_API_VERSION=$(docker version --format '{{.Server.APIVersion}}')" >> "$GITHUB_ENV"
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
