@@ -98,6 +98,9 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		}
 
 		// wait for each port to be ready, then export mappings
+		if len(svc.ports) == 0 {
+			logger.Log.Infof("service %s has no ports to wait for", svc.name)
+		}
 		for _, port := range svc.ports {
 			portStr := fmt.Sprintf("%d/tcp", port)
 
@@ -223,19 +226,31 @@ func waitForPort(ctx context.Context, ctr *testcontainers.DockerContainer, port 
 	}
 	address := net.JoinHostPort(host, strconv.Itoa(int(mappedPort.Num())))
 
+	logger.Log.Infof("waiting for port %s -> %s to be ready...", port, address)
+
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
+
+	// try immediately first before waiting for ticker
+	conn, err := net.DialTimeout("tcp", address, time.Second)
+	if err == nil {
+		_ = conn.Close()
+		logger.Log.Infof("port %s -> %s is ready", port, address)
+		return nil
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for %s", address)
+			return fmt.Errorf("timeout waiting for %s (container port %s)", address, port)
 		case <-ticker.C:
 			conn, err := net.DialTimeout("tcp", address, time.Second)
 			if err != nil {
+				logger.Log.Debugf("port %s not ready yet: %v", address, err)
 				continue
 			}
 			_ = conn.Close()
+			logger.Log.Infof("port %s -> %s is ready", port, address)
 			return nil
 		}
 	}
