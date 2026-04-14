@@ -502,6 +502,83 @@ metrics:
 			wantErr: true, // service-A does not exist in actual
 		},
 		{
+			name: "noDuplicates should pass when list has no duplicates",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    value: "100"
+  - name: service-B
+    value: "200"
+`,
+				expectedTemplate: `
+metrics:
+{{- contains (.metrics | noDuplicates) }}
+  - name: {{ notEmpty .name }}
+    value: {{ notEmpty .value }}
+{{- end }}
+`,
+			},
+			wantErr: false,
+		},
+		{
+			name: "noDuplicates should fail when list has duplicate items",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+    value: "100"
+  - name: service-A
+    value: "100"
+`,
+				expectedTemplate: `
+metrics:
+{{- contains (.metrics | noDuplicates) }}
+  - name: {{ notEmpty .name }}
+    value: {{ notEmpty .value }}
+{{- end }}
+`,
+			},
+			wantErr: true, // duplicate entry exists
+		},
+		{
+			name: "noDuplicates should work with containsOnce",
+			args: args{
+				actualData: `
+- name: service-A
+  value: "100"
+- name: service-B
+  value: "200"
+- name: service-A
+  value: "100"
+`,
+				expectedTemplate: `
+{{- containsOnce (. | noDuplicates) }}
+- name: {{ notEmpty .name }}
+  value: {{ notEmpty .value }}
+{{- end }}
+`,
+			},
+			wantErr: true, // duplicate entry exists even though containsOnce would pass
+		},
+		{
+			name: "noDuplicates should pass with range and no duplicates",
+			args: args{
+				actualData: `
+metrics:
+  - name: service-A
+  - name: service-B
+`,
+				expectedTemplate: `
+metrics:
+{{- range (.metrics | noDuplicates) }}
+  - name: {{ notEmpty .name }}
+{{- end }}
+`,
+			},
+			wantErr: false,
+		},
+		{
 			name: "notEmpty with nil",
 			args: args{
 				actualData: `

@@ -54,6 +54,9 @@ var customFuncMap = map[string]any{
 
 	// Calculation:
 	"subtractor": subtractor,
+
+	// List:
+	"noDuplicates": noDuplicates,
 }
 
 func base64encode(s string) string {
@@ -102,4 +105,19 @@ func subtractor(total int, nums ...int) int {
 		total -= num
 	}
 	return total
+}
+
+func noDuplicates(list any) any {
+	items, ok := list.([]any)
+	if !ok {
+		return list
+	}
+	for i := 0; i < len(items); i++ {
+		for j := i + 1; j < len(items); j++ {
+			if fmt.Sprint(items[i]) == fmt.Sprint(items[j]) {
+				return fmt.Sprintf("<duplicate found: %v>", items[i])
+			}
+		}
+	}
+	return list
 }

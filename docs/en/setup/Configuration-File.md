@@ -248,6 +248,19 @@ For example, if a generic expected entry (e.g., `notEmpty`) appears before a spe
 {{- end }}
 ```
 
+##### Duplicate Detection
+
+`noDuplicates` is a pipe function that verifies a list contains no duplicate items. Two items are considered duplicates when all their fields are equal. It can be combined with `contains`, `containsOnce`, or `range`.
+
+```yaml
+{{- contains (.metrics | noDuplicates) }}
+- name: {{ notEmpty .name }}
+  value: {{ notEmpty .value }}
+{{- end }}
+```
+
+When duplicates exist in the actual data, verification will fail with an error indicating the duplicated item.
+
 ##### Encoding
 
 In order to make the program easier for users to read and use, some code conversions are provided.
