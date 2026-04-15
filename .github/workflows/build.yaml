@@ -48,10 +48,13 @@ jobs:
     name: Build (${{ matrix.os }})
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: windows-latest
+            target: windows
+          - os: macos-latest
+            target: darwin
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
@@ -64,12 +67,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v4
       - name: Build
-        run: |
-          case "${{ matrix.os }}" in
-            ubuntu-*)  make linux ;;
-            macos-*)   make darwin ;;
-            windows-*) make windows ;;
-          esac
+        run: make ${{ matrix.target }}
       - name: Build Docker Image
         if: matrix.os == 'ubuntu-latest'
         run: make docker
