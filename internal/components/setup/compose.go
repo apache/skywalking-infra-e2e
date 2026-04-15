@@ -94,11 +94,6 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 			continue
 		}
 
-		// wait for container healthcheck if defined
-		if err := waitForHealthy(ctx, ctr, svc.name, waitTimeout); err != nil {
-			return fmt.Errorf("wait for %s healthy error: %v", svc.name, err)
-		}
-
 		// export host env
 		host, err := ctr.Host(ctx)
 		if err != nil {
@@ -215,44 +210,6 @@ func startLogStreaming(ctx context.Context, ctr *testcontainers.DockerContainer,
 	ctr.FollowOutput(consumer)
 	//nolint:staticcheck
 	return ctr.StartLogProducer(ctx)
-}
-
-// waitForHealthy waits for a container's Docker healthcheck to pass, if one is defined.
-// If the container has no healthcheck, this returns immediately.
-func waitForHealthy(ctx context.Context, ctr *testcontainers.DockerContainer, serviceName string, timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	inspect, err := ctr.Inspect(ctx)
-	if err != nil {
-		return err
-	}
-
-	// no healthcheck defined, skip
-	if inspect.Config == nil || inspect.Config.Healthcheck == nil || len(inspect.Config.Healthcheck.Test) == 0 {
-		return nil
-	}
-
-	logger.Log.Infof("waiting for service %s to become healthy...", serviceName)
-
-	pollInterval := 500 * time.Millisecond
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for %s to become healthy", serviceName)
-		default:
-			state, err := ctr.State(ctx)
-			if err != nil {
-				return err
-			}
-			if state.Health != nil && state.Health.Status == "healthy" {
-				logger.Log.Infof("service %s is healthy", serviceName)
-				return nil
-			}
-			logger.Log.Debugf("service %s health status: %v", serviceName, state.Health)
-			time.Sleep(pollInterval)
-		}
-	}
 }
 
 // waitForPort waits until the container port is ready by:
