@@ -83,14 +83,20 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 			continue
 		}
 
+		// start log streaming for all services
+		if err := startLogStreaming(ctx, ctr, svc.name); err != nil {
+			logger.Log.Warnf("could not start log streaming for %s: %v", svc.name, err)
+		}
+
+		// only wait and export for services with ports (matches old behavior)
+		if len(svc.ports) == 0 {
+			logger.Log.Infof("service %s has no ports, skipping wait and export", svc.name)
+			continue
+		}
+
 		// wait for container healthcheck if defined
 		if err := waitForHealthy(ctx, ctr, svc.name, waitTimeout); err != nil {
 			return fmt.Errorf("wait for %s healthy error: %v", svc.name, err)
-		}
-
-		// start log streaming
-		if err := startLogStreaming(ctx, ctr, svc.name); err != nil {
-			logger.Log.Warnf("could not start log streaming for %s: %v", svc.name, err)
 		}
 
 		// export host env
@@ -100,11 +106,6 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 		}
 		if err := exportComposeEnv(fmt.Sprintf("%s_host", svc.name), host, svc.name); err != nil {
 			return err
-		}
-
-		// wait for each port to be ready, then export mappings
-		if len(svc.ports) == 0 {
-			logger.Log.Infof("service %s has no ports to wait for", svc.name)
 		}
 		for _, port := range svc.ports {
 			portStr := fmt.Sprintf("%d/tcp", port)
