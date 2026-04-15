@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/apache/skywalking-infra-e2e/internal/constant"
@@ -118,7 +119,9 @@ func (c *K8sClusterInfo) ToRESTMapper() (meta.RESTMapper, error) {
 	}
 
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
-	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
+	expander := restmapper.NewShortcutExpander(mapper, discoveryClient, func(warning string) {
+		logger.Log.Warnf("REST mapper warning: %s", warning)
+	})
 	return expander, nil
 }
 
