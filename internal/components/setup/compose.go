@@ -32,6 +32,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/apache/skywalking-infra-e2e/internal/config"
+	"github.com/apache/skywalking-infra-e2e/internal/constant"
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 	"github.com/apache/skywalking-infra-e2e/internal/util"
 )
@@ -53,6 +54,13 @@ func ComposeSetup(e2eConfig *config.E2EConfig) error {
 	if e2eConfig.Setup.InitSystemEnvironment != "" {
 		profilePath := util.ResolveAbs(e2eConfig.Setup.InitSystemEnvironment)
 		util.ExportEnvVars(profilePath)
+	}
+
+	// Disable Ryuk reaper when cleanup.on is "never" so containers survive process exit.
+	if e2eConfig.Cleanup.On == constant.CleanUpNever {
+		if err := os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true"); err != nil {
+			return fmt.Errorf("failed to disable Ryuk reaper: %v", err)
+		}
 	}
 
 	// create compose stack
