@@ -20,5 +20,5 @@ package constant
 
 const (
 	Compose        = "compose"
-	ComposeCommand = "docker-compose"
+	ComposeCommand = "docker compose"
 )

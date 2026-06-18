@@ -24,6 +24,17 @@ setup:
 cleanup:
   # always never success failure
   on: always
+  # Exercise the compose log collector in CI so a regression to Docker Compose v1 is
+  # caught: GitHub-hosted runners ship only Compose v2, so the collector must use
+  # `docker compose`. Auto-collect is off here; the verify case below invokes
+  # `e2e collect` explicitly and asserts a file was collected.
+  collect:
+    on: never
+    output-dir: /tmp/e2e-collect-check
+    items:
+      - service: httpbin
+        paths:
+          - /etc/hostname
 
 verify:
   # verify with retry strategy
@@ -55,4 +66,14 @@ verify:
     - name: currency & non-fail-fast mode
       query: './bin/linux/e2e verify -c  ./test/e2e/concurrency/non-fail-fast/internal/verify.yaml --summary-only -o yaml'
       expected: ./concurrency/non-fail-fast/expected.yaml
+
+    # Guards the compose log collector against a regression to Docker Compose v1
+    # (which is absent on GitHub-hosted runners). Runs `e2e collect` against the
+    # already-running compose stack and asserts a container file was collected.
+    - name: compose log collector works on Docker Compose v2
+      query: |
+        rm -rf /tmp/e2e-collect-check
+        ./bin/linux/e2e collect -c ./test/e2e/e2e.yaml > /dev/null 2>&1 || true
+        if [ -s /tmp/e2e-collect-check/httpbin/etc/hostname ]; then echo 'collected: "true"'; else echo 'collected: "false"'; fi
+      expected: ./collect-expected.yaml
 
