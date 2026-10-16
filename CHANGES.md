@@ -2,6 +2,14 @@ Changes by Version
 ==================
 Release Notes.
 
+Unreleased
+------------------
+#### Bug Fixes
+
+* Upgrade Go dependencies affected by known security advisories: `golang.org/x/crypto`, `github.com/containerd/containerd/v2`, `google.golang.org/grpc`, `github.com/moby/go-archive`, `github.com/moby/spdystream`, `github.com/moby/buildkit`, and the OpenTelemetry SDK and OTLP trace exporters.
+* Upgrade `testcontainers-go` to v0.44.0 so Docker Compose no longer imports a BuildKit package removed in the patched release.
+* Use `github.com/moby/moby/client` for Docker Engine API calls. `github.com/docker/docker` has no patched release for its advisories.
+
 1.4.0
 ------------------
 #### Features

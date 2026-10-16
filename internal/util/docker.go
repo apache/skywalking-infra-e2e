@@ -22,7 +22,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 
 	"github.com/apache/skywalking-infra-e2e/internal/logger"
 )
@@ -30,12 +30,12 @@ import (
 // CheckDockerDaemon checks if docker daemon is running.
 func CheckDockerDaemon() error {
 	logger.Log.Debug("checking docker daemon")
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.New(client.FromEnv)
 	if err == nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		_, err = cli.Ping(ctx)
+		_, err = cli.Ping(ctx, client.PingOptions{})
 	}
 
 	if err != nil {
