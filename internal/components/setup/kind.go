@@ -211,13 +211,8 @@ func KindSetup(e2eConfig *config.E2EConfig) error {
 		if err != nil {
 			return err
 		}
-		for _, image := range images {
-			args := []string{"load", "docker-image", image, "--name", clusterName}
-
-			logger.Log.Infof("import docker images: %s", image)
-			if err := kind.Run(kindcmd.NewLogger(), kindcmd.StandardIOStreams(), args); err != nil {
-				return err
-			}
+		if err := importImages(context.Background(), images, clusterName); err != nil {
+			return err
 		}
 	}
 

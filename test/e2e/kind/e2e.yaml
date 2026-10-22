@@ -21,7 +21,9 @@ setup:
   timeout: 10m
   kind:
     import-images:
-      - busybox:latest
+      # a multi-platform image pulled from a registry, and an image built locally
+      - busybox:1.37.0
+      - skywalking-infra-e2e/kind-local:test
   steps:
     - name: deploy test pod
       command: kubectl apply -f test/e2e/kind/deployment.yaml
@@ -36,4 +38,7 @@ verify:
   cases:
     - name: verify pod running with imported image
       query: kubectl get pod import-test -o jsonpath='{.status.phase}'
+      expected: expected.yaml
+    - name: verify pod running with imported image on the control-plane
+      query: kubectl get pod import-test-control-plane -o jsonpath='{.status.phase}'
       expected: expected.yaml
