@@ -25,7 +25,7 @@ on:
 jobs:
   lint-and-test:
     name: Lint and Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: linux
           - os: windows-latest
             target: windows
@@ -69,11 +69,11 @@ jobs:
       - name: Build
         run: make ${{ matrix.target }}
       - name: Build Docker Image
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-26.04'
         run: make docker
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - lint-and-test
       - build-platform
@@ -81,4 +81,4 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v4
       - name: Result
-        run: echo "Lint and Test, Build (ubuntu-latest), Build (windows-latest), Build (macos-latest) completed successfully!"
+        run: echo "Lint and Test, Build (ubuntu-26.04), Build (windows-latest), Build (macos-latest) completed successfully!"
