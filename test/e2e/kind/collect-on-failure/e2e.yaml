@@ -23,7 +23,7 @@ setup:
   timeout: 10m
   kind:
     import-images:
-      - busybox:latest
+      - busybox:1.37.0
   steps:
     - name: deploy collect-test pod
       command: kubectl apply -f test/e2e/kind/collect-on-failure/deployment.yaml

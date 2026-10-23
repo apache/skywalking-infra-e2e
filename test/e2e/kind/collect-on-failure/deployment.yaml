@@ -22,7 +22,7 @@ metadata:
 spec:
   containers:
     - name: test
-      image: busybox:latest
+      image: busybox:1.37.0
       imagePullPolicy: Never
       command:
         - sh

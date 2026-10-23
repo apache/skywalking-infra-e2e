@@ -20,6 +20,33 @@ metadata:
 spec:
   containers:
     - name: test
-      image: busybox:latest
+      image: busybox:1.37.0
       imagePullPolicy: Never  # Force using locally imported image
+      command: ["sleep", "3600"]
+    - name: local
+      image: skywalking-infra-e2e/kind-local:test
+      imagePullPolicy: Never
+      command: ["sleep", "3600"]
+---
+# The control-plane is tainted, so the pod above runs on the worker;
+# this one checks the images were loaded into the control-plane too.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: import-test-control-plane
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  containers:
+    - name: test
+      image: busybox:1.37.0
+      imagePullPolicy: Never
+      command: ["sleep", "3600"]
+    - name: local
+      image: skywalking-infra-e2e/kind-local:test
+      imagePullPolicy: Never
       command: ["sleep", "3600"]

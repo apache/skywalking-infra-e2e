@@ -120,7 +120,8 @@ e2e-test: $(GOOS)
 # Run E2E test with KinD to verify import-images functionality
 e2e-test-kind:
 	$(MAKE) $(GOOS)
-	docker pull busybox:latest
+	docker pull busybox:1.37.0
+	printf 'FROM busybox:1.37.0\n' | docker build -t skywalking-infra-e2e/kind-local:test -
 	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/e2e.yaml
 
 .PHONY: e2e-test-kind-collect
@@ -129,7 +130,7 @@ e2e-test-kind:
 # It succeeds if the collected files exist at the expected output directory.
 e2e-test-kind-collect:
 	$(MAKE) $(GOOS)
-	docker pull busybox:latest
+	docker pull busybox:1.37.0
 	rm -rf /tmp/e2e-collect-test
 	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/collect-on-failure/e2e.yaml || true
 	@echo "Verifying collected files..."

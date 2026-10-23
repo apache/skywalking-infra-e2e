@@ -29,8 +29,14 @@ on:
 
 jobs:
   build:
-    name: E2E Test
-    runs-on: ubuntu-latest
+    name: E2E Test (${{ matrix.os }})
+    # ubuntu-24.04 has Docker 28 with the classic image store,
+    # ubuntu-26.04 has Docker 29 with the containerd image store.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
         uses: actions/setup-go@v5

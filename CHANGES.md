@@ -9,6 +9,7 @@ Unreleased
 * Upgrade Go dependencies affected by known security advisories: `golang.org/x/crypto`, `github.com/containerd/containerd/v2`, `google.golang.org/grpc`, `github.com/moby/go-archive`, `github.com/moby/spdystream`, `github.com/moby/buildkit`, and the OpenTelemetry SDK and OTLP trace exporters.
 * Upgrade `testcontainers-go` to v0.44.0 so Docker Compose no longer imports a BuildKit package removed in the patched release.
 * Use `github.com/moby/moby/client` for Docker Engine API calls. `github.com/docker/docker` has no patched release for its advisories.
+* Fix `setup.kind.import-images` failing with `ctr: content digest ... not found` when Docker uses the containerd image store (the default from Docker 29, e.g. on `ubuntu-26.04` runners). Images are now saved for the kind nodes' platform and loaded with `kind load image-archive`; Docker with the classic image store keeps `kind load docker-image`.
 
 1.4.0
 ------------------
