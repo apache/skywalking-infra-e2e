@@ -45,10 +45,11 @@ const (
 	// loadDockerImage runs `kind load docker-image`: kind saves the whole image
 	// and the nodes import it with `ctr images import --all-platforms`.
 	loadDockerImage imageLoadMode = iota
-	// loadPlatformArchive saves only the platform of the kind nodes, then runs
-	// `kind load image-archive`. With docker's containerd image store, a pulled
-	// multi-platform image only holds the content of the platform it was pulled
-	// for, so importing all of its platforms fails with
+	// loadPlatformArchive saves only the platform of the kind nodes, leaves the
+	// referrers of the image, such as attestations, out of the archive, then
+	// runs `kind load image-archive`. With docker's containerd image store, a
+	// pulled multi-platform image only holds the content of the platform it was
+	// pulled for, so importing all of its platforms fails with
 	// "content digest ... not found" (kubernetes-sigs/kind#3795).
 	loadPlatformArchive
 )
@@ -145,8 +146,8 @@ func importImages(ctx context.Context, images []string, clusterName string) erro
 	return nil
 }
 
-// loadImageArchive saves the platform of the image to a temporary archive and
-// loads it with `kind load image-archive`.
+// loadImageArchive saves the platform of the image to a temporary archive,
+// without its referrers, and loads it with `kind load image-archive`.
 func loadImageArchive(ctx context.Context, cli *docker.Client, image string, platform ocispec.Platform, clusterName string) error {
 	archive, err := os.CreateTemp(util.WorkDir, "kind-image-*.tar")
 	if err != nil {
@@ -164,6 +165,13 @@ func loadImageArchive(ctx context.Context, cli *docker.Client, image string, pla
 	}
 	if err := archive.Close(); err != nil {
 		return fmt.Errorf("write image archive error: %w", err)
+	}
+	dropped, err := dropReferrers(archive.Name())
+	if err != nil {
+		return err
+	}
+	if dropped > 0 {
+		logger.Log.Infof("left %d referrer(s) of %s, such as attestations, out of the archive", dropped, image)
 	}
 	return runKindLoad("load", "image-archive", archive.Name(), "--name", clusterName)
 }

@@ -1,0 +1,27 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# kind v0.25's kindest/node:v1.28.15 runs containerd 1.7, as node images built
+# by kind v0.20 to v0.26 do. It creates an image for every manifest at the top
+# level of an imported archive and unpacks it, referrers such as attestations
+# included. kind's default node runs containerd 2, which only unpacks manifests
+# that have filesystem layers, so the import test on the default node cannot
+# tell.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: containerd17
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.28.15@sha256:a7c05c7ae043a0b8c818f5a06188bc2c4098f6cb59ca7d1856df00375d839251

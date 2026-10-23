@@ -124,6 +124,12 @@ e2e-test-kind:
 	printf 'FROM busybox:1.37.0\n' | docker build -t skywalking-infra-e2e/kind-local:test -
 	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/e2e.yaml
 
+.PHONY: e2e-test-kind-containerd-1.7
+# Run E2E test with KinD on a containerd 1.7 node (kind v0.25's kindest/node:v1.28.15)
+e2e-test-kind-containerd-1.7:
+	$(MAKE) $(GOOS)
+	./bin/$(GOOS)/$(PROJECT) run -c ./test/e2e/kind/containerd-1.7/e2e.yaml
+
 .PHONY: e2e-test-kind-collect
 # Run E2E test with KinD to verify collect-on-failure functionality
 # This test intentionally fails verification to trigger file collection.
