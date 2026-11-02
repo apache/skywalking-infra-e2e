@@ -36,7 +36,7 @@ runs:
       run: |
         echo "DOCKER_API_VERSION=$(docker version --format '{{.Server.APIVersion}}')" >> "$GITHUB_ENV"
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v7
       with:
         go-version: 1.26
         cache-dependency-path: ${{ github.action_path }}/go.sum
